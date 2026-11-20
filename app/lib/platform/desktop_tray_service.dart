@@ -28,8 +28,8 @@ class DesktopTrayService with TrayListener, WindowListener {
       trayManager.addListener(this);
       await trayManager.setIcon(
         Platform.isWindows
-            ? 'assets/icons/libremiel.ico'
-            : 'assets/icons/libremiel.png',
+            ? 'assets/icons/tray_icon.ico'
+            : 'assets/icons/tray_icon.png',
       );
       await trayManager.setContextMenu(
         Menu(

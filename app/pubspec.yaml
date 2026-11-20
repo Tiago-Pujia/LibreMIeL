@@ -77,7 +77,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icons/libremiel.png
-    - assets/icons/libremiel.ico
+    - assets/icons/tray_icon.png
+    - assets/icons/tray_icon.ico
 
   # To add assets to your application, add an assets section, like this:
   # assets:
