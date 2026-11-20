@@ -315,17 +315,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'Contraseña:',
                   style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
-                InkWell(
-                  onTap: () => _openExternal(
-                    '$kMielBaseUrl/principal/event/recuperarClave/',
-                  ),
-                  child: const Text(
-                    'Olvidé mi contraseña',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      decoration: TextDecoration.underline,
-                      decorationColor: Colors.white,
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => _openExternal(
+                      '$kMielBaseUrl/principal/event/recuperarClave/',
+                    ),
+                    child: const Text(
+                      'Olvidé mi contraseña',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -394,15 +397,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(width: 8),
                 Flexible(
-                  child: GestureDetector(
-                    onTap: _submitting
-                        ? null
-                        : () => setState(
-                            () => _rememberCredentials = !_rememberCredentials,
-                          ),
-                    child: const Text(
-                      'Mantener mi sesión activa.',
-                      style: TextStyle(color: Colors.white, fontSize: 14),
+                  child: MouseRegion(
+                    cursor: _submitting
+                        ? SystemMouseCursors.basic
+                        : SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: _submitting
+                          ? null
+                          : () => setState(
+                              () =>
+                                  _rememberCredentials = !_rememberCredentials,
+                            ),
+                      child: const Text(
+                        'Mantener mi sesión activa.',
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
                     ),
                   ),
                 ),

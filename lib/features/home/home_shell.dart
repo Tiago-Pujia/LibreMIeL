@@ -139,7 +139,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       activeSubject: activeSubject,
       activeTool: _activeTool,
       activeModuleSectionIndex: _activeModuleSectionIndex,
+      unreadAlertsCount: unreadCount,
       onSelectHome: _goHome,
+      onSelectNovedades: _goNovedades,
       onSelectAjustes: _goAjustes,
       onSelectModuleSection: (idx) {
         setState(() => _activeModuleSectionIndex = idx);
@@ -375,12 +377,6 @@ class _MielDoubleHeader extends StatelessWidget {
                                   ),
                                   _TopLinkDot(color: palette.textMuted),
                                   _TopLink(
-                                    label: 'Sincronizar',
-                                    color: palette.linkAccent,
-                                    onTap: onSyncNow,
-                                  ),
-                                  _TopLinkDot(color: palette.textMuted),
-                                  _TopLink(
                                     label: 'Cerrar sesión',
                                     color: palette.linkAccent,
                                     onTap: onLogout,
@@ -447,8 +443,8 @@ class _MielDoubleHeader extends StatelessWidget {
                 _NavTextAction(
                   label: switch (section) {
                     _ShellSection.home => 'Menú principal',
-                    _ShellSection.novedades => 'Novedades',
-                    _ShellSection.ajustes => 'Alertas y ajustes',
+                    _ShellSection.novedades => 'Notificaciones',
+                    _ShellSection.ajustes => 'Ajustes',
                     _ShellSection.moduleDraft => 'Menú principal',
                   },
                   onTap: onGoHome,
@@ -947,7 +943,9 @@ class _MielSidebar extends ConsumerWidget {
     required this.activeSubject,
     required this.activeTool,
     required this.activeModuleSectionIndex,
+    required this.unreadAlertsCount,
     required this.onSelectHome,
+    required this.onSelectNovedades,
     required this.onSelectAjustes,
     required this.onSelectModuleSection,
     required this.onOpenExternal,
@@ -957,7 +955,9 @@ class _MielSidebar extends ConsumerWidget {
   final Subject? activeSubject;
   final MielToolKind activeTool;
   final int activeModuleSectionIndex;
+  final int unreadAlertsCount;
   final VoidCallback onSelectHome;
+  final VoidCallback onSelectNovedades;
   final VoidCallback onSelectAjustes;
   final ValueChanged<int> onSelectModuleSection;
   final ValueChanged<String> onOpenExternal;
@@ -981,75 +981,108 @@ class _MielSidebar extends ConsumerWidget {
                 const <SnapshotEntry>[])
           : const <SnapshotEntry>[];
 
-      return ListView(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _SidebarHeading(title: activeTool.fullLabel, palette: palette),
-          const SizedBox(height: 6),
-          for (var i = 0; i < items.length; i++)
-            _SidebarItem(
-              icon: items[i].icon,
-              label: items[i].label,
-              selected: i == activeModuleSectionIndex,
-              onTap: () => onSelectModuleSection(i),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              children: [
+                _SidebarHeading(title: activeTool.fullLabel, palette: palette),
+                const SizedBox(height: 6),
+                for (var i = 0; i < items.length; i++)
+                  _SidebarItem(
+                    icon: items[i].icon,
+                    label: items[i].label,
+                    selected: i == activeModuleSectionIndex,
+                    onTap: () => onSelectModuleSection(i),
+                  ),
+                if (cachedForoTopics.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  for (final topic in cachedForoTopics.take(12))
+                    _SidebarItem(
+                      icon: Icons.message,
+                      label: topic.summary.isNotEmpty
+                          ? topic.summary
+                          : 'Tema #${topic.itemId}',
+                      selected: false,
+                      onTap: () => onSelectModuleSection(0),
+                    ),
+                ],
+                const SizedBox(height: 18),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Divider(color: palette.divider, height: 1),
+                ),
+                const SizedBox(height: 10),
+                _SidebarItem(
+                  icon: Icons.arrow_back,
+                  label: 'Materias Activas',
+                  selected: false,
+                  onTap: onSelectHome,
+                ),
+              ],
             ),
-          if (cachedForoTopics.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            for (final topic in cachedForoTopics.take(12))
-              _SidebarItem(
-                icon: Icons.message,
-                label: topic.summary.isNotEmpty
-                    ? topic.summary
-                    : 'Tema #${topic.itemId}',
-                selected: false,
-                onTap: () => onSelectModuleSection(0),
-              ),
-          ],
-          const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Divider(color: palette.divider, height: 1),
           ),
-          const SizedBox(height: 10),
-          _SidebarItem(
-            icon: Icons.arrow_back,
-            label: 'Materias activas',
-            selected: false,
-            onTap: onSelectHome,
+          Divider(color: palette.divider, height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: _SidebarItem(
+              icon: Icons.open_in_new,
+              label: 'Abrir MIeL web',
+              selected: false,
+              onTap: () => onOpenExternal('$kMielBaseUrl/principal/interno/'),
+            ),
           ),
         ],
       );
     }
 
-    // Menú lateral limpio de LibreMIEL
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+    // Menú lateral personalizado de LibreMIEL:
+    // Utilidades (Materias Activas) + Funcionalidades (Ajustes, Notificaciones) + Abrir MIeL web abajo
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SidebarHeading(title: 'Utilidades', palette: palette),
-        const SizedBox(height: 6),
-        _SidebarItem(
-          icon: Icons.home,
-          label: 'Materias activas',
-          selected: section == _ShellSection.home,
-          onTap: onSelectHome,
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            children: [
+              _SidebarHeading(title: 'Utilidades', palette: palette),
+              const SizedBox(height: 6),
+              _SidebarItem(
+                icon: Icons.home,
+                label: 'Materias Activas',
+                selected: section == _ShellSection.home,
+                onTap: onSelectHome,
+              ),
+              const SizedBox(height: 22),
+              _SidebarHeading(title: 'Funcionalidades', palette: palette),
+              const SizedBox(height: 6),
+              _SidebarItem(
+                icon: Icons.tune,
+                label: 'Ajustes',
+                selected: section == _ShellSection.ajustes,
+                onTap: onSelectAjustes,
+              ),
+              _SidebarItem(
+                icon: Icons.notifications_active,
+                label: 'Notificaciones',
+                selected: section == _ShellSection.novedades,
+                badgeCount: unreadAlertsCount,
+                onTap: onSelectNovedades,
+              ),
+            ],
+          ),
         ),
-        _SidebarItem(
-          icon: Icons.notifications_active,
-          label: 'Alertas y ajustes',
-          selected: section == _ShellSection.ajustes,
-          onTap: onSelectAjustes,
-        ),
-        const SizedBox(height: 14),
+        Divider(color: palette.divider, height: 1),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Divider(color: palette.divider, height: 1),
-        ),
-        const SizedBox(height: 10),
-        _SidebarItem(
-          icon: Icons.open_in_new,
-          label: 'Abrir MIeL Web',
-          selected: false,
-          onTap: () => onOpenExternal('$kMielBaseUrl/principal/interno/'),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: _SidebarItem(
+            icon: Icons.open_in_new,
+            label: 'Abrir MIeL web',
+            selected: false,
+            onTap: () => onOpenExternal('$kMielBaseUrl/principal/interno/'),
+          ),
         ),
       ],
     );
@@ -1069,7 +1102,7 @@ class _SidebarHeading extends StatelessWidget {
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 28,
+          fontSize: 24,
           fontWeight: FontWeight.w300,
           height: 1.25,
           color: palette.textPrimary,
@@ -1085,12 +1118,14 @@ class _SidebarItem extends StatefulWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   State<_SidebarItem> createState() => _SidebarItemState();
@@ -1144,6 +1179,14 @@ class _SidebarItemState extends State<_SidebarItem> {
                       ),
                     ),
                   ),
+                  if (widget.badgeCount > 0) ...[
+                    const SizedBox(width: 6),
+                    MielRedBadge(
+                      count: widget.badgeCount,
+                      backgroundColor: palette.badgeRed,
+                      compact: true,
+                    ),
+                  ],
                 ],
               ),
             ),

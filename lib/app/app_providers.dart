@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart' show Brightness, ThemeMode;
 
 import '../core/models/miel_models.dart';
 import '../core/network/miel_client.dart';
+import '../core/parsers/miel_parsers.dart';
 import '../core/storage/app_database.dart';
 import '../core/sync/sync_engine.dart';
 import '../platform/android_background_worker.dart';
@@ -452,4 +453,26 @@ final subjectSnapshotsProvider =
       return ref
           .watch(databaseProvider)
           .watchSnapshotsForSubject(key.idComision, key.module);
+    });
+
+/// Consulta en modo solo lectura `GET /principal/cursoDetalles/id/{idComision}` para el modal ⋮.
+final courseDetailsProvider = FutureProvider.autoDispose
+    .family<CourseDetails?, String>((ref, idComision) async {
+      try {
+        final client = await ref.read(mielClientProvider.future);
+        final html = await client.fetchCursoDetallesHtml(idComision);
+        final details = parseCursoDetallesHtml(html, idComision);
+        if (details.teachers.isNotEmpty) {
+          await ref
+              .read(databaseProvider)
+              .replaceTeachersForSubject(
+                idComision,
+                details.teachers,
+                DateTime.now(),
+              );
+        }
+        return details;
+      } catch (_) {
+        return null;
+      }
     });

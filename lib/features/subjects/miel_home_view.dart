@@ -33,16 +33,19 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  void _openSubjectDetail(Subject subject) {
+  /// Uso oficial de los 3 puntitos (⋮) en MIeL: ver detalle de comisión y docentes (`cursoDetalles`).
+  void _openCourseDetail(Subject subject) {
     showDialog<void>(
       context: context,
-      builder: (_) => _SubjectDetailDialog(
-        subject: subject,
-        onOpenModule: (tool) {
-          Navigator.of(context).pop();
-          widget.onOpenModule(subject, tool);
-        },
-      ),
+      builder: (_) => _MielCourseDetailDialog(subject: subject),
+    );
+  }
+
+  /// Campana de LibreMIEL junto a los 3 puntitos: configuración de notificaciones por materia/módulo.
+  void _openSubjectAlerts(Subject subject) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _SubjectAlertsDialog(subject: subject),
     );
   }
 
@@ -74,6 +77,9 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
         final isCompact = constraints.maxWidth < 680;
         final horizontalPadding = isCompact ? 16.0 : 26.0;
 
+        // Fiel a MIeL: "Ver materias ocultas" al lado de "Organizar materias".
+        // Al hacer click en "Organizar materias", el botón mantiene su color y texto original
+        // y alterna entre la botonera normal y la botonera vertical de organización.
         final actionButtons = Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -86,11 +92,7 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                 onTap: () => setState(() => _showHidden = !_showHidden),
               ),
             _MielSecondaryButton(
-              label: _organizeMode
-                  ? 'Finalizar organización'
-                  : 'Organizar materias',
-              icon: _organizeMode ? Icons.check : null,
-              active: _organizeMode,
+              label: 'Organizar materias',
               onPressed: () => setState(() => _organizeMode = !_organizeMode),
             ),
           ],
@@ -112,7 +114,6 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Cabecera "Materias activas" + botones "Ver materias ocultas" y "Organizar materias" juntos
                 if (isCompact) ...[
                   Text(
                     'Materias activas',
@@ -133,33 +134,6 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                       const SizedBox(width: 12),
                       actionButtons,
                     ],
-                  ),
-                ],
-
-                if (_organizeMode) ...[
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: palette.unreadBackground,
-                        border: Border(
-                          left: BorderSide(color: palette.primary, width: 4),
-                        ),
-                      ),
-                      child: Text(
-                        'Modo organizar materias: arrastrá desde ≡ para reordenar, '
-                        'usá ✕ para ocultar una materia o la campana para silenciar sus alertas.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: palette.textPrimary,
-                        ),
-                      ),
-                    ),
                   ),
                 ],
 
@@ -206,7 +180,7 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                                 ),
                               ),
                               Text(
-                                'Ver novedades',
+                                'Ver notificaciones',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -319,14 +293,10 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                                   dragIndex: index,
                                   onOpenModule: (tool) =>
                                       widget.onOpenModule(subject, tool),
-                                  onOpenDetail: () =>
-                                      _openSubjectDetail(subject),
-                                  onToggleMute: () => ref
-                                      .read(databaseProvider)
-                                      .updateSubjectPreferences(
-                                        idComision: subject.idComision,
-                                        muted: !subject.muted,
-                                      ),
+                                  onOpenCourseDetail: () =>
+                                      _openCourseDetail(subject),
+                                  onOpenAlerts: () =>
+                                      _openSubjectAlerts(subject),
                                   onToggleHidden: () => ref
                                       .read(databaseProvider)
                                       .setSubjectLocalVisibility(
@@ -346,13 +316,9 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                               isHiddenCard: false,
                               onOpenModule: (tool) =>
                                   widget.onOpenModule(subject, tool),
-                              onOpenDetail: () => _openSubjectDetail(subject),
-                              onToggleMute: () => ref
-                                  .read(databaseProvider)
-                                  .updateSubjectPreferences(
-                                    idComision: subject.idComision,
-                                    muted: !subject.muted,
-                                  ),
+                              onOpenCourseDetail: () =>
+                                  _openCourseDetail(subject),
+                              onOpenAlerts: () => _openSubjectAlerts(subject),
                               onToggleHidden: () => ref
                                   .read(databaseProvider)
                                   .setSubjectLocalVisibility(
@@ -363,7 +329,7 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                             const SizedBox(height: 14),
                           ],
 
-                        // Materias ocultas desplegadas (cuando el botón superior está activo)
+                        // Materias ocultas desplegadas
                         if (_showHidden && hidden.isNotEmpty) ...[
                           const SizedBox(height: 6),
                           Padding(
@@ -387,13 +353,9 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                                 isHiddenCard: true,
                                 onOpenModule: (tool) =>
                                     widget.onOpenModule(subject, tool),
-                                onOpenDetail: () => _openSubjectDetail(subject),
-                                onToggleMute: () => ref
-                                    .read(databaseProvider)
-                                    .updateSubjectPreferences(
-                                      idComision: subject.idComision,
-                                      muted: !subject.muted,
-                                    ),
+                                onOpenCourseDetail: () =>
+                                    _openCourseDetail(subject),
+                                onOpenAlerts: () => _openSubjectAlerts(subject),
                                 onToggleHidden: () => ref
                                     .read(databaseProvider)
                                     .setSubjectLocalVisibility(
@@ -421,14 +383,17 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                 ),
                 const SizedBox(height: 6),
                 Center(
-                  child: InkWell(
-                    onTap: _openMielWeb,
-                    child: Text(
-                      'Abrir MIeL oficial en el navegador',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w500,
-                        color: palette.linkAccent,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: _openMielWeb,
+                      child: Text(
+                        'Abrir MIeL oficial en el navegador',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w500,
+                          color: palette.linkAccent,
+                        ),
                       ),
                     ),
                   ),
@@ -449,8 +414,8 @@ class _MielSubjectCard extends StatefulWidget {
     required this.organizeMode,
     required this.isHiddenCard,
     required this.onOpenModule,
-    required this.onOpenDetail,
-    required this.onToggleMute,
+    required this.onOpenCourseDetail,
+    required this.onOpenAlerts,
     required this.onToggleHidden,
     this.dragIndex,
   });
@@ -461,8 +426,8 @@ class _MielSubjectCard extends StatefulWidget {
   final bool isHiddenCard;
   final int? dragIndex;
   final ValueChanged<MielToolKind> onOpenModule;
-  final VoidCallback onOpenDetail;
-  final VoidCallback onToggleMute;
+  final VoidCallback onOpenCourseDetail;
+  final VoidCallback onOpenAlerts;
   final VoidCallback onToggleHidden;
 
   @override
@@ -521,11 +486,11 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Columna izquierda: título, código/comisión/rol y controles (.botoneraDetalle / .botoneraOrganizar)
+          // Columna izquierda fija (318px) para que las herramientas no se desplacen al organizar
           SizedBox(
-            width: widget.organizeMode ? 356 : 318,
+            width: 318,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -547,34 +512,16 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
                             color: palette.textPrimary,
                           ),
                         ),
-                        if (subtitle.isNotEmpty || widget.subject.muted) ...[
+                        if (subtitle.isNotEmpty) ...[
                           const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              if (subtitle.isNotEmpty)
-                                Flexible(
-                                  child: Text(
-                                    subtitle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: palette.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                              if (widget.subject.muted) ...[
-                                const SizedBox(width: 6),
-                                Tooltip(
-                                  message: 'Notificaciones silenciadas',
-                                  child: Icon(
-                                    Icons.notifications_off_outlined,
-                                    size: 14,
-                                    color: palette.textMuted,
-                                  ),
-                                ),
-                              ],
-                            ],
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: palette.textSecondary,
+                            ),
                           ),
                         ],
                       ],
@@ -620,7 +567,7 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 8, 6),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Column(
@@ -635,29 +582,14 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
                         color: palette.textPrimary,
                       ),
                     ),
-                    if (subtitle.isNotEmpty || widget.subject.muted) ...[
+                    if (subtitle.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          if (subtitle.isNotEmpty)
-                            Flexible(
-                              child: Text(
-                                subtitle,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: palette.textSecondary,
-                                ),
-                              ),
-                            ),
-                          if (widget.subject.muted) ...[
-                            const SizedBox(width: 6),
-                            Icon(
-                              Icons.notifications_off_outlined,
-                              size: 14,
-                              color: palette.textMuted,
-                            ),
-                          ],
-                        ],
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: palette.textSecondary,
+                        ),
                       ),
                     ],
                   ],
@@ -693,93 +625,139 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
   }
 
   Widget _buildCardTrailingAction(MielPalette palette) {
-    // En tarjetas ocultas desplegadas, mostrar siempre acceso rápido para volver a mostrarla
+    // Tarjetas ocultas desplegadas: botón mostrar + detalle oficial MIeL
     if (widget.isHiddenCard) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
+          _CompactCardIcon(
             tooltip: 'Mostrar en Materias activas',
-            icon: Icon(Icons.visibility, size: 19, color: palette.linkAccent),
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-            onPressed: widget.onToggleHidden,
+            icon: Icons.visibility,
+            color: palette.linkAccent,
+            onTap: widget.onToggleHidden,
           ),
-          IconButton(
-            tooltip: 'Ver detalle y alertas',
-            icon: Icon(Icons.more_vert, size: 19, color: palette.textSecondary),
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            onPressed: widget.onOpenDetail,
+          _CompactCardIcon(
+            tooltip: 'Ver detalle',
+            icon: Icons.more_vert,
+            color: palette.textSecondary,
+            onTap: widget.onOpenCourseDetail,
           ),
         ],
       );
     }
 
+    // Modo organizar (fiel a .botoneraOrganizar de MIeL): vertical (arrastrar arriba, ocultar abajo)
     if (widget.organizeMode) {
-      return Row(
+      return Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton(
-            tooltip: widget.subject.muted
-                ? 'Activar notificaciones de esta materia'
-                : 'Silenciar notificaciones de esta materia',
-            icon: Icon(
-              widget.subject.muted
-                  ? Icons.notifications_off
-                  : Icons.notifications_active,
-              size: 19,
-              color: widget.subject.muted
-                  ? palette.textMuted
-                  : palette.linkAccent,
-            ),
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-            onPressed: widget.onToggleMute,
-          ),
-          IconButton(
-            tooltip: 'Ocultar materia',
-            icon: Icon(Icons.close, size: 19, color: palette.textSecondary),
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-            onPressed: widget.onToggleHidden,
-          ),
           if (widget.dragIndex != null)
             ReorderableDragStartListener(
               index: widget.dragIndex!,
               child: MouseRegion(
                 cursor: SystemMouseCursors.grab,
                 child: Tooltip(
-                  message: 'Arrastrar para reordenar',
+                  message: 'Arrastre para ordenar',
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 4,
+                      horizontal: 4,
+                      vertical: 2,
                     ),
                     child: Icon(
                       Icons.drag_handle,
-                      size: 20,
+                      size: 19,
                       color: palette.textSecondary,
                     ),
                   ),
                 ),
               ),
             ),
+          _CompactCardIcon(
+            tooltip: 'Ocultar materia',
+            icon: Icons.close,
+            color: palette.textSecondary,
+            size: 18,
+            onTap: widget.onToggleHidden,
+          ),
         ],
       );
     }
 
-    return IconButton(
-      tooltip: 'Ver detalle y alertas',
-      icon: Icon(Icons.more_vert, size: 19, color: palette.textSecondary),
-      visualDensity: VisualDensity.compact,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-      onPressed: widget.onOpenDetail,
+    // Modo normal: campana de notificaciones de LibreMIEL al lado de los 3 puntitos (Ver detalle de MIeL)
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _CompactCardIcon(
+          tooltip: widget.subject.muted
+              ? 'Notificaciones silenciadas (tocar para configurar)'
+              : 'Notificaciones de esta materia',
+          icon: widget.subject.muted
+              ? Icons.notifications_off_outlined
+              : Icons.notifications_active,
+          color: widget.subject.muted ? palette.textMuted : palette.linkAccent,
+          onTap: widget.onOpenAlerts,
+        ),
+        _CompactCardIcon(
+          tooltip: 'Ver detalle',
+          icon: Icons.more_vert,
+          color: palette.textSecondary,
+          onTap: widget.onOpenCourseDetail,
+        ),
+      ],
+    );
+  }
+}
+
+class _CompactCardIcon extends StatefulWidget {
+  const _CompactCardIcon({
+    required this.tooltip,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.size = 19,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final double size;
+
+  @override
+  State<_CompactCardIcon> createState() => _CompactCardIconState();
+}
+
+class _CompactCardIconState extends State<_CompactCardIcon> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MielPalette.of(context);
+    return Tooltip(
+      message: widget.tooltip,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 110),
+            width: 28,
+            height: 26,
+            decoration: BoxDecoration(
+              color: _hovered
+                  ? palette.divider.withValues(alpha: 0.65)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            alignment: Alignment.center,
+            child: Icon(widget.icon, size: widget.size, color: widget.color),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -869,17 +847,10 @@ class _MielToolTileState extends State<_MielToolTile> {
 }
 
 class _MielSecondaryButton extends StatefulWidget {
-  const _MielSecondaryButton({
-    required this.label,
-    required this.onPressed,
-    this.icon,
-    this.active = false,
-  });
+  const _MielSecondaryButton({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
-  final IconData? icon;
-  final bool active;
 
   @override
   State<_MielSecondaryButton> createState() => _MielSecondaryButtonState();
@@ -891,12 +862,9 @@ class _MielSecondaryButtonState extends State<_MielSecondaryButton> {
   @override
   Widget build(BuildContext context) {
     final palette = MielPalette.of(context);
-    final bg = widget.active
-        ? (_hovered ? palette.primaryHover : palette.primary)
-        : (_hovered
-              ? palette.buttonSecondaryHover
-              : palette.buttonSecondaryBackground);
-    final fg = widget.active ? Colors.white : palette.textPrimary;
+    final bg = _hovered
+        ? palette.buttonSecondaryHover
+        : palette.buttonSecondaryBackground;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -910,22 +878,13 @@ class _MielSecondaryButtonState extends State<_MielSecondaryButton> {
           borderRadius: BorderRadius.circular(3),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (widget.icon != null) ...[
-                  Icon(widget.icon, size: 16, color: fg),
-                  const SizedBox(width: 6),
-                ],
-                Text(
-                  widget.label,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: fg,
-                  ),
-                ),
-              ],
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: palette.textPrimary,
+              ),
             ),
           ),
         ),
@@ -1073,38 +1032,38 @@ class _EmptySubjectsPlaceholder extends StatelessWidget {
   }
 }
 
-/// Diálogo de detalle de comisión y configuración granular de alertas (al tocar ⋮ en una tarjeta).
-class _SubjectDetailDialog extends ConsumerWidget {
-  const _SubjectDetailDialog({
-    required this.subject,
-    required this.onOpenModule,
-  });
+/// Modal oficial de MIeL al tocar los 3 puntitos (⋮): Detalle del curso (`/principal/cursoDetalles/id/{id}`).
+class _MielCourseDetailDialog extends ConsumerWidget {
+  const _MielCourseDetailDialog({required this.subject});
 
   final Subject subject;
-  final ValueChanged<MielToolKind> onOpenModule;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = MielPalette.of(context);
-    final subjects = ref.watch(subjectsStreamProvider).value ?? const [];
-    final liveSubject = subjects.firstWhere(
-      (s) => s.idComision == subject.idComision,
-      orElse: () => subject,
+    final liveDetailsAsync = ref.watch(
+      courseDetailsProvider(subject.idComision),
     );
-    final teachersAsync = ref.watch(
-      subjectTeachersProvider(liveSubject.idComision),
-    );
-    final db = ref.read(databaseProvider);
+    final cachedTeachers =
+        ref.watch(subjectTeachersProvider(subject.idComision)).value ??
+        const <CachedTeacher>[];
+
+    final liveDetails = liveDetailsAsync.value;
+    final teacherEntries =
+        liveDetails != null && liveDetails.teachers.isNotEmpty
+        ? liveDetails.teachers.map((t) => (name: t.name, role: t.role)).toList()
+        : cachedTeachers
+              .map((t) => (name: t.displayName, role: t.role))
+              .toList();
 
     return Dialog(
       insetPadding: const EdgeInsets.all(20),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
+        constraints: const BoxConstraints(maxWidth: 500),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Cabecera verde esmeralda estilo modal de MIeL
             Container(
               padding: const EdgeInsets.fromLTRB(18, 14, 10, 14),
               decoration: BoxDecoration(
@@ -1119,22 +1078,261 @@ class _SubjectDetailDialog extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const Text(
+                          'Detalle de la comisión',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
                         Text(
-                          liveSubject.name,
+                          subject.name,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        if (liveSubject.formattedSubtitle.isNotEmpty)
-                          Text(
-                            liveSubject.formattedSubtitle,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.88),
-                              fontSize: 12.5,
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+
+            if (liveDetailsAsync.isLoading)
+              LinearProgressIndicator(
+                minHeight: 2,
+                color: palette.primary,
+                backgroundColor: palette.divider,
+              ),
+
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (subject.subjectCode.isNotEmpty)
+                      _DetailRow(
+                        label: 'Código de materia',
+                        value: subject.subjectCode,
+                        palette: palette,
+                      ),
+                    if (subject.commissionCode.isNotEmpty)
+                      _DetailRow(
+                        label: 'Comisión',
+                        value: subject.commissionCode,
+                        palette: palette,
+                      ),
+                    if (subject.roleLabel.isNotEmpty)
+                      _DetailRow(
+                        label: 'Rol',
+                        value: subject.roleLabel,
+                        palette: palette,
+                      ),
+                    if (liveDetails != null && liveDetails.term.isNotEmpty)
+                      _DetailRow(
+                        label: 'Cuatrimestre',
+                        value: liveDetails.term,
+                        palette: palette,
+                      ),
+                    if (liveDetails != null && liveDetails.modality.isNotEmpty)
+                      _DetailRow(
+                        label: 'Modalidad',
+                        value: liveDetails.modality,
+                        palette: palette,
+                      ),
+                    if (liveDetails != null && liveDetails.classroom.isNotEmpty)
+                      _DetailRow(
+                        label: 'Aula',
+                        value: liveDetails.classroom,
+                        palette: palette,
+                      ),
+
+                    const SizedBox(height: 12),
+                    Divider(color: palette.divider, height: 1),
+                    const SizedBox(height: 12),
+
+                    Text(
+                      'Docentes',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: palette.linkAccent,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (teacherEntries.isEmpty)
+                      Text(
+                        liveDetailsAsync.isLoading
+                            ? 'Consultando docentes en MIeL…'
+                            : 'Sin docentes registrados en caché todavía.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: palette.textMuted,
+                        ),
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final t in teacherEntries)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.person_outline,
+                                    size: 16,
+                                    color: palette.textMuted,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '${t.name} (${t.role})',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        color: palette.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+            Divider(color: palette.divider, height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: palette.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    required this.palette,
+  });
+
+  final String label;
+  final String value;
+  final MielPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 138,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: palette.textMuted,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 13.5, color: palette.textPrimary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Modal de configuración de notificaciones por materia (accesible desde la campana junto a ⋮).
+class _SubjectAlertsDialog extends ConsumerWidget {
+  const _SubjectAlertsDialog({required this.subject});
+
+  final Subject subject;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = MielPalette.of(context);
+    final subjects = ref.watch(subjectsStreamProvider).value ?? const [];
+    final liveSubject = subjects.firstWhere(
+      (s) => s.idComision == subject.idComision,
+      orElse: () => subject,
+    );
+    final db = ref.read(databaseProvider);
+
+    return Dialog(
+      insetPadding: const EdgeInsets.all(20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(18, 14, 10, 14),
+              decoration: BoxDecoration(
+                color: palette.primary,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.notifications_active,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Notificaciones de esta materia',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                        Text(
+                          liveSubject.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w500,
                           ),
+                        ),
                       ],
                     ),
                   ),
@@ -1148,82 +1346,10 @@ class _SubjectDetailDialog extends ConsumerWidget {
 
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Docentes cacheados
-                    Text(
-                      'Docentes (caché local)',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: palette.linkAccent,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    teachersAsync.when(
-                      loading: () =>
-                          const LinearProgressIndicator(minHeight: 2),
-                      error: (_, _) => Text(
-                        'No se pudo leer la lista de docentes.',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: palette.textMuted,
-                        ),
-                      ),
-                      data: (teachers) {
-                        if (teachers.isEmpty) {
-                          return Text(
-                            'Se completará automáticamente al sincronizar mensajes o foros de esta materia.',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: palette.textMuted,
-                            ),
-                          );
-                        }
-                        return Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            for (final t in teachers)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 9,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: palette.cardBackground,
-                                  borderRadius: BorderRadius.circular(3),
-                                  border: Border.all(color: palette.divider),
-                                ),
-                                child: Text(
-                                  '${t.displayName} (${t.role})',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: palette.textPrimary,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-                    Divider(color: palette.divider, height: 1),
-                    const SizedBox(height: 12),
-
-                    // Preferencias de notificaciones por materia y módulo
-                    Text(
-                      'Notificaciones de esta materia',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: palette.linkAccent,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
                     SwitchListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
@@ -1234,10 +1360,11 @@ class _SubjectDetailDialog extends ConsumerWidget {
                         muted: !active,
                       ),
                     ),
+                    Divider(color: palette.divider, height: 12),
                     if (liveSubject.hasContenidos)
                       SwitchListTile(
                         dense: true,
-                        contentPadding: const EdgeInsets.only(left: 12),
+                        contentPadding: const EdgeInsets.only(left: 8),
                         title: const Text('Contenidos (archivos y enlaces)'),
                         value: liveSubject.notifyContenidos,
                         onChanged: liveSubject.muted
@@ -1250,7 +1377,7 @@ class _SubjectDetailDialog extends ConsumerWidget {
                     if (liveSubject.hasPortafolio)
                       SwitchListTile(
                         dense: true,
-                        contentPadding: const EdgeInsets.only(left: 12),
+                        contentPadding: const EdgeInsets.only(left: 8),
                         title: const Text(
                           'Portafolio (prácticas y correcciones)',
                         ),
@@ -1265,7 +1392,7 @@ class _SubjectDetailDialog extends ConsumerWidget {
                     if (liveSubject.hasMensajeria)
                       SwitchListTile(
                         dense: true,
-                        contentPadding: const EdgeInsets.only(left: 12),
+                        contentPadding: const EdgeInsets.only(left: 8),
                         title: const Text('Mensajería'),
                         value: liveSubject.notifyMensajeria,
                         onChanged: liveSubject.muted
@@ -1278,7 +1405,7 @@ class _SubjectDetailDialog extends ConsumerWidget {
                     if (liveSubject.hasForo)
                       SwitchListTile(
                         dense: true,
-                        contentPadding: const EdgeInsets.only(left: 12),
+                        contentPadding: const EdgeInsets.only(left: 8),
                         title: const Text('Foros'),
                         value: liveSubject.notifyForos,
                         onChanged: liveSubject.muted
@@ -1291,7 +1418,7 @@ class _SubjectDetailDialog extends ConsumerWidget {
                     if (liveSubject.hasEvaluacion)
                       SwitchListTile(
                         dense: true,
-                        contentPadding: const EdgeInsets.only(left: 12),
+                        contentPadding: const EdgeInsets.only(left: 8),
                         title: const Text('Evaluaciones'),
                         value: liveSubject.notifyEvaluacion,
                         onChanged: liveSubject.muted
@@ -1312,21 +1439,6 @@ class _SubjectDetailDialog extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (liveSubject.enabledTools.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: () =>
-                          onOpenModule(liveSubject.enabledTools.first),
-                      icon: Icon(
-                        Icons.open_in_browser,
-                        size: 17,
-                        color: palette.linkAccent,
-                      ),
-                      label: Text(
-                        'Abrir borrador',
-                        style: TextStyle(color: palette.linkAccent),
-                      ),
-                    ),
-                  const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: ElevatedButton.styleFrom(
