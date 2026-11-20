@@ -118,17 +118,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Fondo degradado esmeralda -> verde lima estilo MIeL + hexágonos flotantes
-          Positioned.fill(
+          // Fondo degradado esmeralda -> verde lima estilo MIeL + hexágonos flotantes animados
+          const Positioned.fill(
             child: DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [Color(0xFF009674), Color(0xFF63CB5F)],
                 ),
               ),
-              child: CustomPaint(painter: _FloatingHexagonsPainter()),
+              child: RepaintBoundary(child: _AnimatedHexagonsBackground()),
             ),
           ),
 
@@ -545,34 +545,180 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-/// Pinta hexágonos blancos translúcidos inspirados en el fondo geométrico del login de MIeL.
+/// Fondo animado de hexágonos blancos translúcidos subiendo y rotando como en `/principal/home/` de MIeL.
+class _AnimatedHexagonsBackground extends StatefulWidget {
+  const _AnimatedHexagonsBackground();
+
+  @override
+  State<_AnimatedHexagonsBackground> createState() =>
+      _AnimatedHexagonsBackgroundState();
+}
+
+class _AnimatedHexagonsBackgroundState
+    extends State<_AnimatedHexagonsBackground>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 26),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _FloatingHexagonsPainter(progress: _controller),
+    );
+  }
+}
+
 class _FloatingHexagonsPainter extends CustomPainter {
+  _FloatingHexagonsPainter({required this.progress}) : super(repaint: progress);
+
+  final Animation<double> progress;
+
   static const _hexSpecs =
-      <({double x, double y, double r, double rot, double a})>[
-        (x: 0.06, y: 0.14, r: 62, rot: 0.25, a: 0.11),
-        (x: 0.08, y: 0.32, r: 92, rot: -0.18, a: 0.10),
-        (x: 0.20, y: 0.30, r: 22, rot: 0.12, a: 0.16),
-        (x: 0.31, y: 0.10, r: 82, rot: 0.40, a: 0.12),
-        (x: 0.30, y: 0.42, r: 68, rot: -0.25, a: 0.10),
-        (x: 0.09, y: 0.88, r: 58, rot: 0.35, a: 0.12),
-        (x: 0.36, y: 0.82, r: 44, rot: -0.15, a: 0.11),
-        (x: 0.62, y: 0.05, r: 64, rot: 0.10, a: 0.12),
-        (x: 0.92, y: 0.22, r: 36, rot: 0.30, a: 0.15),
-        (x: 0.98, y: 0.15, r: 68, rot: -0.22, a: 0.10),
+      <
+        ({
+          double x,
+          double phase,
+          double r,
+          double speed,
+          double rotSpeed,
+          double sway,
+          double maxAlpha,
+        })
+      >[
+        (
+          x: 0.07,
+          phase: 0.08,
+          r: 68,
+          speed: 1.0,
+          rotSpeed: 0.8,
+          sway: 16,
+          maxAlpha: 0.13,
+        ),
+        (
+          x: 0.14,
+          phase: 0.42,
+          r: 92,
+          speed: 0.75,
+          rotSpeed: -0.6,
+          sway: 20,
+          maxAlpha: 0.11,
+        ),
+        (
+          x: 0.22,
+          phase: 0.76,
+          r: 26,
+          speed: 1.45,
+          rotSpeed: 1.4,
+          sway: 12,
+          maxAlpha: 0.17,
+        ),
+        (
+          x: 0.31,
+          phase: 0.22,
+          r: 80,
+          speed: 0.85,
+          rotSpeed: 0.7,
+          sway: 18,
+          maxAlpha: 0.12,
+        ),
+        (
+          x: 0.41,
+          phase: 0.61,
+          r: 50,
+          speed: 1.15,
+          rotSpeed: -1.0,
+          sway: 14,
+          maxAlpha: 0.13,
+        ),
+        (
+          x: 0.52,
+          phase: 0.15,
+          r: 34,
+          speed: 1.35,
+          rotSpeed: 1.2,
+          sway: 10,
+          maxAlpha: 0.15,
+        ),
+        (
+          x: 0.63,
+          phase: 0.88,
+          r: 72,
+          speed: 0.9,
+          rotSpeed: -0.75,
+          sway: 16,
+          maxAlpha: 0.12,
+        ),
+        (
+          x: 0.76,
+          phase: 0.34,
+          r: 42,
+          speed: 1.25,
+          rotSpeed: 1.1,
+          sway: 15,
+          maxAlpha: 0.14,
+        ),
+        (
+          x: 0.87,
+          phase: 0.68,
+          r: 58,
+          speed: 1.05,
+          rotSpeed: -0.9,
+          sway: 18,
+          maxAlpha: 0.14,
+        ),
+        (
+          x: 0.94,
+          phase: 0.04,
+          r: 84,
+          speed: 0.8,
+          rotSpeed: 0.65,
+          sway: 14,
+          maxAlpha: 0.11,
+        ),
       ];
 
   @override
   void paint(Canvas canvas, Size size) {
+    final t = progress.value;
     for (final spec in _hexSpecs) {
+      final cycle = (spec.phase + t * spec.speed) % 1.0;
+      // Flota desde abajo (1.18) hacia arriba (-0.18)
+      final cy = size.height * (1.18 - cycle * 1.36);
+      final cx =
+          size.width * spec.x +
+          math.sin(cycle * math.pi * 2 + spec.phase * 6) * spec.sway;
+
+      // Fundido suave al entrar por abajo y salir por arriba
+      final edgeFade = cycle < 0.12
+          ? cycle / 0.12
+          : cycle > 0.86
+          ? (1.0 - cycle) / 0.14
+          : 1.0;
+      final alpha = (spec.maxAlpha * edgeFade).clamp(0.0, 1.0);
+      if (alpha <= 0.002) continue;
+
       final paint = Paint()
-        ..color = Colors.white.withValues(alpha: spec.a)
+        ..color = Colors.white.withValues(alpha: alpha)
         ..style = PaintingStyle.fill;
 
-      final cx = size.width * spec.x;
-      final cy = size.height * spec.y;
+      final rot = spec.phase * math.pi + t * spec.rotSpeed * math.pi * 2;
       final path = Path();
       for (var i = 0; i < 6; i++) {
-        final angle = spec.rot + (math.pi / 3) * i;
+        final angle = rot + (math.pi / 3) * i;
         final px = cx + spec.r * math.cos(angle);
         final py = cy + spec.r * math.sin(angle);
         if (i == 0) {
@@ -587,5 +733,6 @@ class _FloatingHexagonsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _FloatingHexagonsPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }

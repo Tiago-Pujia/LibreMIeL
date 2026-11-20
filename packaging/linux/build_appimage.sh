@@ -30,7 +30,6 @@ rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin" \
          "$APPDIR/usr/share/applications" \
          "$APPDIR/usr/share/icons/hicolor/256x256/apps" \
-         "$APPDIR/usr/share/icons/hicolor/scalable/apps" \
          "$OUT_DIR"
 
 cp -a "$BUNDLE_DIR/." "$APPDIR/usr/bin/"
@@ -38,7 +37,6 @@ cp packaging/linux/libremiel.desktop "$APPDIR/io.github.tiago_pujia.libremiel.de
 cp packaging/linux/libremiel.desktop "$APPDIR/usr/share/applications/io.github.tiago_pujia.libremiel.desktop"
 cp packaging/linux/libremiel.png "$APPDIR/io.github.tiago_pujia.libremiel.png"
 cp packaging/linux/libremiel.png "$APPDIR/usr/share/icons/hicolor/256x256/apps/io.github.tiago_pujia.libremiel.png"
-cp packaging/linux/libremiel.svg "$APPDIR/usr/share/icons/hicolor/scalable/apps/io.github.tiago_pujia.libremiel.svg"
 
 cat > "$APPDIR/AppRun" << 'EOF'
 #!/usr/bin/env bash

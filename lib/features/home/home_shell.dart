@@ -55,6 +55,28 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     _closeDrawerIfOpen();
   }
 
+  void _openUserProfile(AppSessionState session, List<Subject> subjects) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _UserProfileDialog(
+        session: session,
+        activeSubjectsCount: subjects
+            .where((s) => !s.isEffectivelyHidden)
+            .length,
+        hiddenSubjectsCount: subjects
+            .where((s) => s.isEffectivelyHidden)
+            .length,
+        storageLabel: ref.read(credentialsStoreProvider).storageBackendLabel,
+        onOpenMielProfile: () =>
+            _openExternal('$kMielBaseUrl/principal/perfil/'),
+        onLogout: () {
+          Navigator.of(context).pop();
+          ref.read(appSessionProvider.notifier).logout();
+        },
+      ),
+    );
+  }
+
   void _openModule(Subject subject, MielToolKind tool) {
     setState(() {
       _section = _ShellSection.moduleDraft;
@@ -107,7 +129,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           .firstOrNull;
     }
 
-    // Si se borró/reseteó la materia activa, volver a Inicio limpiamente
     final effectiveSection =
         (_section == _ShellSection.moduleDraft && activeSubject == null)
         ? _ShellSection.home
@@ -118,10 +139,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       activeSubject: activeSubject,
       activeTool: _activeTool,
       activeModuleSectionIndex: _activeModuleSectionIndex,
-      unreadAlertsCount: unreadCount,
-      globalNovedadesBadge: session.globalNovedadesBadge,
       onSelectHome: _goHome,
-      onSelectNovedades: _goNovedades,
       onSelectAjustes: _goAjustes,
       onSelectModuleSection: (idx) {
         setState(() => _activeModuleSectionIndex = idx);
@@ -174,7 +192,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
             onGoHome: _goHome,
             onGoNovedades: _goNovedades,
-            onGoAjustes: _goAjustes,
+            onOpenProfile: () => _openUserProfile(session, subjects),
             onSelectSubject: (subject) {
               final tools = subject.enabledTools;
               final nextTool = tools.contains(_activeTool)
@@ -265,8 +283,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 }
 
-/// Barra doble superior fiel a MIeL:
-/// 1) Barra de marca blanca/negra (`54px`)
+/// Barra doble superior fiel a MIeL con hovers visibles en todos los controles:
+/// 1) Barra de marca blanca/negra (`54px`) con perfil de usuario
 /// 2) Barra de navegación verde esmeralda `#menu-principal` (`40px`) con sombra
 class _MielDoubleHeader extends StatelessWidget {
   const _MielDoubleHeader({
@@ -281,7 +299,7 @@ class _MielDoubleHeader extends StatelessWidget {
     required this.onOpenDrawer,
     required this.onGoHome,
     required this.onGoNovedades,
-    required this.onGoAjustes,
+    required this.onOpenProfile,
     required this.onSelectSubject,
     required this.onSelectTool,
     required this.onSyncNow,
@@ -300,7 +318,7 @@ class _MielDoubleHeader extends StatelessWidget {
   final VoidCallback onOpenDrawer;
   final VoidCallback onGoHome;
   final VoidCallback onGoNovedades;
-  final VoidCallback onGoAjustes;
+  final VoidCallback onOpenProfile;
   final ValueChanged<Subject> onSelectSubject;
   final ValueChanged<MielToolKind> onSelectTool;
   final VoidCallback onSyncNow;
@@ -317,8 +335,8 @@ class _MielDoubleHeader extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Fila 1: Barra de marca (54px)
-        Container(
+        // Fila 1: Barra de marca (54px) usando Material para hovers reales
+        Material(
           color: palette.topBarBackground,
           child: SafeArea(
             bottom: false,
@@ -328,17 +346,11 @@ class _MielDoubleHeader extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: isMobileHeader
                     ? Center(
-                        child: InkWell(
-                          onTap: onGoHome,
-                          child: const LibreMielMark(size: 32),
-                        ),
+                        child: _HoverableBrandButton(onTap: onGoHome, size: 34),
                       )
                     : Row(
                         children: [
-                          InkWell(
-                            onTap: onGoHome,
-                            child: const LibreMielMark(size: 34),
-                          ),
+                          _HoverableBrandButton(onTap: onGoHome, size: 36),
                           const Spacer(),
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -357,9 +369,9 @@ class _MielDoubleHeader extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   _TopLink(
-                                    label: 'Ajustes',
+                                    label: 'Mi perfil',
                                     color: palette.linkAccent,
-                                    onTap: onGoAjustes,
+                                    onTap: onOpenProfile,
                                   ),
                                   _TopLinkDot(color: palette.textMuted),
                                   _TopLink(
@@ -378,16 +390,9 @@ class _MielDoubleHeader extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(width: 12),
-                          CircleAvatar(
-                            radius: 19,
-                            backgroundColor: palette.textMuted.withValues(
-                              alpha: 0.35,
-                            ),
-                            child: Icon(
-                              Icons.person,
-                              size: 26,
-                              color: palette.pageBackground,
-                            ),
+                          _HoverableAvatarButton(
+                            palette: palette,
+                            onTap: onOpenProfile,
                           ),
                         ],
                       ),
@@ -452,7 +457,7 @@ class _MielDoubleHeader extends StatelessWidget {
 
               const Spacer(),
 
-              // Derecha: Sincronizar + Campana de notificaciones + Contraste claro/oscuro (+ Ajustes/Salir en móvil)
+              // Derecha: Sincronizar + Campana de notificaciones + Contraste claro/oscuro (+ Usuario/Salir en móvil)
               if (session.isSyncing)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 10),
@@ -485,9 +490,9 @@ class _MielDoubleHeader extends StatelessWidget {
 
               if (isMobileHeader) ...[
                 _NavIconAction(
-                  tooltip: 'Alertas y ajustes',
-                  icon: Icons.tune,
-                  onTap: onGoAjustes,
+                  tooltip: 'Mi perfil',
+                  icon: Icons.person,
+                  onTap: onOpenProfile,
                 ),
                 _NavIconAction(
                   tooltip: 'Cerrar sesión',
@@ -503,7 +508,94 @@ class _MielDoubleHeader extends StatelessWidget {
   }
 }
 
-class _TopLink extends StatelessWidget {
+class _HoverableBrandButton extends StatefulWidget {
+  const _HoverableBrandButton({required this.onTap, required this.size});
+
+  final VoidCallback onTap;
+  final double size;
+
+  @override
+  State<_HoverableBrandButton> createState() => _HoverableBrandButtonState();
+}
+
+class _HoverableBrandButtonState extends State<_HoverableBrandButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 120),
+          opacity: _hovered ? 0.80 : 1.0,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: LibreMielMark(size: widget.size),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverableAvatarButton extends StatefulWidget {
+  const _HoverableAvatarButton({required this.palette, required this.onTap});
+
+  final MielPalette palette;
+  final VoidCallback onTap;
+
+  @override
+  State<_HoverableAvatarButton> createState() => _HoverableAvatarButtonState();
+}
+
+class _HoverableAvatarButtonState extends State<_HoverableAvatarButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Mi perfil',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: _hovered
+                    ? widget.palette.linkAccent
+                    : Colors.transparent,
+                width: 2,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 17,
+              backgroundColor: _hovered
+                  ? widget.palette.primary.withValues(alpha: 0.85)
+                  : widget.palette.textMuted.withValues(alpha: 0.35),
+              child: Icon(
+                Icons.person,
+                size: 24,
+                color: _hovered ? Colors.white : widget.palette.pageBackground,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TopLink extends StatefulWidget {
   const _TopLink({
     required this.label,
     required this.color,
@@ -515,17 +607,41 @@ class _TopLink extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_TopLink> createState() => _TopLinkState();
+}
+
+class _TopLinkState extends State<_TopLink> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: color,
+    final palette = MielPalette.of(context);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 110),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? palette.primary.withValues(alpha: 0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: widget.color,
+              decoration: _hovered
+                  ? TextDecoration.underline
+                  : TextDecoration.none,
+              decorationColor: widget.color,
+            ),
           ),
         ),
       ),
@@ -541,9 +657,52 @@ class _TopLinkDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Text('·', style: TextStyle(color: color, fontSize: 12)),
     );
+  }
+}
+
+/// Contenedor reutilizable con estado hover claro para todos los ítems de la barra verde superior.
+class _HoverableGreenNavTile extends StatefulWidget {
+  const _HoverableGreenNavTile({required this.child, this.onTap, this.tooltip});
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final String? tooltip;
+
+  @override
+  State<_HoverableGreenNavTile> createState() => _HoverableGreenNavTileState();
+}
+
+class _HoverableGreenNavTileState extends State<_HoverableGreenNavTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget content = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 110),
+        color: _hovered
+            ? Colors.black.withValues(alpha: 0.18)
+            : Colors.transparent,
+        child: widget.onTap != null
+            ? GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onTap,
+                child: widget.child,
+              )
+            : widget.child,
+      ),
+    );
+
+    if (widget.tooltip != null) {
+      content = Tooltip(message: widget.tooltip!, child: content);
+    }
+    return content;
   }
 }
 
@@ -560,20 +719,13 @@ class _NavIconAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = MielPalette.of(context);
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          hoverColor: palette.primaryHover,
-          child: SizedBox(
-            height: 40,
-            width: 40,
-            child: Icon(icon, size: 21, color: Colors.white),
-          ),
-        ),
+    return _HoverableGreenNavTile(
+      tooltip: tooltip,
+      onTap: onTap,
+      child: SizedBox(
+        height: 40,
+        width: 40,
+        child: Icon(icon, size: 21, color: Colors.white),
       ),
     );
   }
@@ -591,41 +743,35 @@ class _NavNotificationAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MielPalette.of(context);
-    return Tooltip(
-      message: unreadCount > 0
+    return _HoverableGreenNavTile(
+      tooltip: unreadCount > 0
           ? 'Novedades ($unreadCount sin leer)'
           : 'Novedades',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          hoverColor: palette.primaryHover,
-          child: SizedBox(
-            height: 40,
-            width: 42,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  unreadCount > 0
-                      ? Icons.notifications_active
-                      : Icons.notifications_none,
-                  size: 21,
-                  color: Colors.white,
-                ),
-                if (unreadCount > 0)
-                  Positioned(
-                    top: 4,
-                    right: 3,
-                    child: MielRedBadge(
-                      count: unreadCount,
-                      backgroundColor: palette.badgeRed,
-                      compact: true,
-                    ),
-                  ),
-              ],
+      onTap: onTap,
+      child: SizedBox(
+        height: 40,
+        width: 42,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              unreadCount > 0
+                  ? Icons.notifications_active
+                  : Icons.notifications_none,
+              size: 21,
+              color: Colors.white,
             ),
-          ),
+            if (unreadCount > 0)
+              Positioned(
+                top: 4,
+                right: 3,
+                child: MielRedBadge(
+                  count: unreadCount,
+                  backgroundColor: palette.badgeRed,
+                  compact: true,
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -640,23 +786,18 @@ class _NavTextAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = MielPalette.of(context);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        hoverColor: palette.primaryHover,
-        child: Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
+    return _HoverableGreenNavTile(
+      onTap: onTap,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
           ),
         ),
       ),
@@ -680,52 +821,54 @@ class _SubjectBreadcrumbDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MielPalette.of(context);
-    final activeList = subjects.where((s) => !s.isHiddenInMiel).toList();
+    final activeList = subjects.where((s) => !s.isEffectivelyHidden).toList();
     final itemsList = activeList.isNotEmpty ? activeList : subjects;
 
-    return PopupMenuButton<String>(
-      tooltip: 'Cambiar de materia',
-      color: palette.dropdownBackground,
-      offset: const Offset(0, 40),
-      onSelected: (id) {
-        final found = itemsList.where((s) => s.idComision == id).firstOrNull;
-        if (found != null) onSelected(found);
-      },
-      itemBuilder: (_) => [
-        for (final s in itemsList)
-          PopupMenuItem<String>(
-            value: s.idComision,
-            child: Text(
-              s.breadcrumbLabel,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: s.idComision == activeSubject.idComision
-                    ? FontWeight.w600
-                    : FontWeight.w400,
-                color: palette.textPrimary,
-              ),
-            ),
-          ),
-      ],
-      child: Container(
-        height: 40,
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
+    return _HoverableGreenNavTile(
+      child: PopupMenuButton<String>(
+        tooltip: 'Cambiar de materia',
+        color: palette.dropdownBackground,
+        offset: const Offset(0, 40),
+        onSelected: (id) {
+          final found = itemsList.where((s) => s.idComision == id).firstOrNull;
+          if (found != null) onSelected(found);
+        },
+        itemBuilder: (_) => [
+          for (final s in itemsList)
+            PopupMenuItem<String>(
+              value: s.idComision,
               child: Text(
-                activeSubject.breadcrumbLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                s.breadcrumbLabel,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: s.idComision == activeSubject.idComision
+                      ? FontWeight.w600
+                      : FontWeight.w400,
+                  color: palette.textPrimary,
+                ),
               ),
             ),
-            const SizedBox(width: 2),
-            const Icon(Icons.arrow_drop_down, size: 20, color: Colors.white),
-          ],
+        ],
+        child: Container(
+          height: 40,
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  activeSubject.breadcrumbLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                ),
+              ),
+              const SizedBox(width: 2),
+              const Icon(Icons.arrow_drop_down, size: 20, color: Colors.white),
+            ],
+          ),
         ),
       ),
     );
@@ -748,47 +891,49 @@ class _ToolBreadcrumbDropdown extends StatelessWidget {
     final palette = MielPalette.of(context);
     final options = availableTools.isNotEmpty ? availableTools : [activeTool];
 
-    return PopupMenuButton<MielToolKind>(
-      tooltip: 'Cambiar de herramienta',
-      color: palette.dropdownBackground,
-      offset: const Offset(0, 40),
-      onSelected: onSelected,
-      itemBuilder: (_) => [
-        for (final t in options)
-          PopupMenuItem<MielToolKind>(
-            value: t,
-            child: Row(
-              children: [
-                Icon(t.icon, size: 18, color: palette.textSecondary),
-                const SizedBox(width: 8),
-                Text(
-                  t.fullLabel,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: t == activeTool
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: palette.textPrimary,
+    return _HoverableGreenNavTile(
+      child: PopupMenuButton<MielToolKind>(
+        tooltip: 'Cambiar de herramienta',
+        color: palette.dropdownBackground,
+        offset: const Offset(0, 40),
+        onSelected: onSelected,
+        itemBuilder: (_) => [
+          for (final t in options)
+            PopupMenuItem<MielToolKind>(
+              value: t,
+              child: Row(
+                children: [
+                  Icon(t.icon, size: 18, color: palette.textSecondary),
+                  const SizedBox(width: 8),
+                  Text(
+                    t.fullLabel,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: t == activeTool
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: palette.textPrimary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+        ],
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                activeTool.fullLabel,
+                style: const TextStyle(color: Colors.white, fontSize: 13.5),
+              ),
+              const SizedBox(width: 2),
+              const Icon(Icons.arrow_drop_down, size: 20, color: Colors.white),
+            ],
           ),
-      ],
-      child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              activeTool.fullLabel,
-              style: const TextStyle(color: Colors.white, fontSize: 13.5),
-            ),
-            const SizedBox(width: 2),
-            const Icon(Icons.arrow_drop_down, size: 20, color: Colors.white),
-          ],
         ),
       ),
     );
@@ -802,10 +947,7 @@ class _MielSidebar extends ConsumerWidget {
     required this.activeSubject,
     required this.activeTool,
     required this.activeModuleSectionIndex,
-    required this.unreadAlertsCount,
-    required this.globalNovedadesBadge,
     required this.onSelectHome,
-    required this.onSelectNovedades,
     required this.onSelectAjustes,
     required this.onSelectModuleSection,
     required this.onOpenExternal,
@@ -815,10 +957,7 @@ class _MielSidebar extends ConsumerWidget {
   final Subject? activeSubject;
   final MielToolKind activeTool;
   final int activeModuleSectionIndex;
-  final int unreadAlertsCount;
-  final int globalNovedadesBadge;
   final VoidCallback onSelectHome;
-  final VoidCallback onSelectNovedades;
   final VoidCallback onSelectAjustes;
   final ValueChanged<int> onSelectModuleSection;
   final ValueChanged<String> onOpenExternal;
@@ -827,7 +966,7 @@ class _MielSidebar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = MielPalette.of(context);
 
-    // Si estamos dentro de un módulo (Fase 2 borrador), el sidebar replica el sub-menú del módulo
+    // Dentro de un módulo (Fase 2 borrador), el sidebar replica el sub-menú del módulo
     if (section == _ShellSection.moduleDraft && activeSubject != null) {
       final items = mielSectionsForTool(activeTool);
       final cachedForoTopics = activeTool == MielToolKind.foro
@@ -882,11 +1021,7 @@ class _MielSidebar extends ConsumerWidget {
       );
     }
 
-    // Menú principal: Utilidades + Ayuda (fiel a /principal/interno/)
-    final novedadesBadge = unreadAlertsCount > 0
-        ? unreadAlertsCount
-        : globalNovedadesBadge;
-
+    // Menú lateral limpio de LibreMIEL
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 14),
       children: [
@@ -899,45 +1034,17 @@ class _MielSidebar extends ConsumerWidget {
           onTap: onSelectHome,
         ),
         _SidebarItem(
-          icon: Icons.campaign,
-          label: 'Novedades',
-          selected: section == _ShellSection.novedades,
-          badgeCount: novedadesBadge,
-          onTap: onSelectNovedades,
-        ),
-        _SidebarItem(
           icon: Icons.notifications_active,
           label: 'Alertas y ajustes',
           selected: section == _ShellSection.ajustes,
           onTap: onSelectAjustes,
         ),
-        _SidebarItem(
-          icon: Icons.calendar_today,
-          label: 'Calendario',
-          selected: false,
-          onTap: () => onOpenExternal('$kMielBaseUrl/calendario/'),
+        const SizedBox(height: 14),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Divider(color: palette.divider, height: 1),
         ),
-        _SidebarItem(
-          icon: Icons.local_library,
-          label: 'Biblioteca BiDi',
-          selected: false,
-          onTap: () => onOpenExternal('$kMielBaseUrl/principal/interno/'),
-        ),
-        const SizedBox(height: 22),
-        _SidebarHeading(title: 'Ayuda', palette: palette),
-        const SizedBox(height: 6),
-        _SidebarItem(
-          icon: Icons.subscriptions,
-          label: 'Tutoriales',
-          selected: false,
-          onTap: () => onOpenExternal('$kMielBaseUrl/ayuda/tutoriales/'),
-        ),
-        _SidebarItem(
-          icon: Icons.help,
-          label: 'Preguntas frecuentes',
-          selected: false,
-          onTap: () => onOpenExternal('$kMielBaseUrl/ayuda/faq/'),
-        ),
+        const SizedBox(height: 10),
         _SidebarItem(
           icon: Icons.open_in_new,
           label: 'Abrir MIeL Web',
@@ -978,14 +1085,12 @@ class _SidebarItem extends StatefulWidget {
     required this.label,
     required this.selected,
     required this.onTap,
-    this.badgeCount = 0,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  final int badgeCount;
 
   @override
   State<_SidebarItem> createState() => _SidebarItemState();
@@ -1039,20 +1144,221 @@ class _SidebarItemState extends State<_SidebarItem> {
                       ),
                     ),
                   ),
-                  if (widget.badgeCount > 0) ...[
-                    const SizedBox(width: 6),
-                    MielRedBadge(
-                      count: widget.badgeCount,
-                      backgroundColor: palette.badgeRed,
-                      compact: true,
-                    ),
-                  ],
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Modal "Mi perfil" accesible desde el enlace de usuario o avatar en la barra superior.
+class _UserProfileDialog extends StatelessWidget {
+  const _UserProfileDialog({
+    required this.session,
+    required this.activeSubjectsCount,
+    required this.hiddenSubjectsCount,
+    required this.storageLabel,
+    required this.onOpenMielProfile,
+    required this.onLogout,
+  });
+
+  final AppSessionState session;
+  final int activeSubjectsCount;
+  final int hiddenSubjectsCount;
+  final String storageLabel;
+  final VoidCallback onOpenMielProfile;
+  final VoidCallback onLogout;
+
+  String _formatLastSync(DateTime? dt) {
+    if (dt == null) return 'Aún no sincronizado';
+    final l = dt.toLocal();
+    final d = l.day.toString().padLeft(2, '0');
+    final m = l.month.toString().padLeft(2, '0');
+    final hh = l.hour.toString().padLeft(2, '0');
+    final mm = l.minute.toString().padLeft(2, '0');
+    return '$d/$m ${l.year} $hh:$mm';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MielPalette.of(context);
+    final name = session.studentName.isNotEmpty
+        ? session.studentName
+        : 'Estudiante MIeL';
+
+    return Dialog(
+      insetPadding: const EdgeInsets.all(20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(18, 14, 10, 14),
+              decoration: BoxDecoration(
+                color: palette.primary,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.white24,
+                    child: Icon(Icons.person, color: Colors.white, size: 26),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Mi perfil',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ProfileInfoRow(
+                    icon: Icons.school_outlined,
+                    label: 'Materias',
+                    value: hiddenSubjectsCount > 0
+                        ? '$activeSubjectsCount activas · $hiddenSubjectsCount ocultas'
+                        : '$activeSubjectsCount activas',
+                    palette: palette,
+                  ),
+                  const SizedBox(height: 10),
+                  _ProfileInfoRow(
+                    icon: Icons.sync,
+                    label: 'Última sincronización',
+                    value: _formatLastSync(session.lastSyncAt),
+                    palette: palette,
+                  ),
+                  const SizedBox(height: 10),
+                  _ProfileInfoRow(
+                    icon: Icons.key_outlined,
+                    label: 'Credenciales',
+                    value: storageLabel,
+                    palette: palette,
+                  ),
+                ],
+              ),
+            ),
+            Divider(color: palette.divider, height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  TextButton.icon(
+                    onPressed: onLogout,
+                    icon: Icon(Icons.logout, size: 17, color: palette.badgeRed),
+                    label: Text(
+                      'Cerrar sesión',
+                      style: TextStyle(color: palette.badgeRed),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: onOpenMielProfile,
+                    icon: Icon(
+                      Icons.open_in_new,
+                      size: 17,
+                      color: palette.linkAccent,
+                    ),
+                    label: Text(
+                      'Perfil en MIeL',
+                      style: TextStyle(color: palette.linkAccent),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: palette.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileInfoRow extends StatelessWidget {
+  const _ProfileInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.palette,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final MielPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: palette.linkAccent),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 12, color: palette.textMuted),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: palette.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

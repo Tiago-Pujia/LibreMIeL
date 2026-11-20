@@ -476,10 +476,17 @@ extension SubjectMielUiExt on Subject {
     if (hasPortafolio) MielToolKind.portafolio,
     if (hasMensajeria) MielToolKind.mensajeria,
     if (hasForo) MielToolKind.foro,
-    if (hasChat) MielToolKind.chat,
     if (hasEncuestas) MielToolKind.encuestas,
     if (hasEvaluacion) MielToolKind.evaluacion,
   ];
+
+  /// Determina si la materia está oculta considerando el override local del usuario.
+  /// `localVisibilityOverride`: `0` = seguir a MIeL, `1` = forzar visible, `-1` = ocultar localmente.
+  bool get isEffectivelyHidden {
+    if (localVisibilityOverride == -1) return true;
+    if (localVisibilityOverride == 1) return false;
+    return isHiddenInMiel;
+  }
 
   int badgeFor(MielToolKind tool) {
     switch (tool) {

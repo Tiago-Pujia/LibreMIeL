@@ -84,6 +84,46 @@ class SettingsScreen extends ConsumerWidget {
 
                 const SizedBox(height: 20),
 
+                // Inicio con el sistema
+                _SectionHeader(title: 'Inicio del sistema', palette: palette),
+                const SizedBox(height: 8),
+                _MielPanel(
+                  palette: palette,
+                  child: session.autostartSupported
+                      ? SwitchListTile(
+                          secondary: Icon(
+                            Icons.power_settings_new,
+                            color: palette.linkAccent,
+                          ),
+                          title: const Text(
+                            'Ejecutar LibreMIEL al iniciar el sistema',
+                          ),
+                          subtitle: Text(
+                            'Inicia la aplicación automáticamente al encender tu equipo '
+                            'para recibir notificaciones en segundo plano.',
+                            style: TextStyle(color: palette.textMuted),
+                          ),
+                          value: session.launchAtStartup,
+                          onChanged: controller.updateLaunchAtStartup,
+                        )
+                      : ListTile(
+                          leading: Icon(
+                            Icons.power_settings_new,
+                            color: palette.linkAccent,
+                          ),
+                          title: const Text(
+                            'Inicio automático en segundo plano',
+                          ),
+                          subtitle: Text(
+                            'En Android, la sincronización periódica se reanuda '
+                            'automáticamente tras reiniciar el dispositivo.',
+                            style: TextStyle(color: palette.textMuted),
+                          ),
+                        ),
+                ),
+
+                const SizedBox(height: 20),
+
                 // Sincronización
                 _SectionHeader(title: 'Sincronización', palette: palette),
                 const SizedBox(height: 8),
@@ -304,11 +344,12 @@ class _MielPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.cardBackground,
+    return Material(
+      color: palette.cardBackground,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: palette.cardBorder),
+        side: BorderSide(color: palette.cardBorder),
       ),
       child: child,
     );

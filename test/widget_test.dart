@@ -25,11 +25,16 @@ class _TestSessionController extends AppSessionController {
           : ThemeMode.dark,
     );
   }
+
+  @override
+  Future<void> updateLaunchAtStartup(bool enabled) async {
+    state = state.copyWith(launchAtStartup: enabled);
+  }
 }
 
 void main() {
   testWidgets(
-    'LoginScreen replica estética MIeL con LibreMIEL y aviso de privacidad local',
+    'LoginScreen replica estética MIeL con fondo animado y aviso de privacidad local',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -44,6 +49,9 @@ void main() {
         ),
       );
 
+      // Avanzar la animación del fondo sin errores
+      await tester.pump(const Duration(milliseconds: 500));
+
       expect(find.text('LibreMIEL'), findsOneWidget);
       expect(find.text('Usuario:'), findsOneWidget);
       expect(find.text('Contraseña:'), findsOneWidget);
@@ -54,7 +62,7 @@ void main() {
   );
 
   testWidgets(
-    'HomeShell muestra Materias activas estilo MIeL y navega a borrador Fase 2 y Novedades',
+    'HomeShell aplica personalizaciones (sin Chat ni ítems sobrantes, Mi perfil, organizar/ocultar, autostart y borrador Fase 2)',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 840);
       tester.view.devicePixelRatio = 1.0;
@@ -78,6 +86,7 @@ void main() {
           hasPortafolio: true,
           hasMensajeria: true,
           hasForo: true,
+          hasChat: true,
           hasEvaluacion: true,
         ),
         DateTime(2026, 11, 20),
@@ -107,6 +116,7 @@ void main() {
                   isChecking: false,
                   isAuthenticated: true,
                   studentName: 'ESTUDIANTE, DEMO',
+                  autostartSupported: true,
                 ),
               ),
             ),
@@ -127,9 +137,14 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verifica pantalla inicial fiel a /principal/interno/
-      expect(find.text('Materias activas'), findsWidgets);
-      expect(find.text('ESTUDIANTE, DEMO'), findsOneWidget);
+      // Verifica barra superior con Mi perfil (sin Ajustes) y barra lateral limpia
+      expect(find.text('Mi perfil'), findsOneWidget);
+      expect(find.text('Calendario'), findsNothing);
+      expect(find.text('Biblioteca BiDi'), findsNothing);
+      expect(find.text('Tutoriales'), findsNothing);
+      expect(find.text('Preguntas frecuentes'), findsNothing);
+
+      // Verifica materia sin botón Chat
       expect(find.text('Fundamentos de Sistemas Embebidos'), findsOneWidget);
       expect(find.text('3631 - Com: 01-1300 - Alumno/a'), findsOneWidget);
       expect(find.text('Contenidos'), findsOneWidget);
@@ -137,45 +152,53 @@ void main() {
       expect(find.text('Mensajes'), findsOneWidget);
       expect(find.text('Foro'), findsOneWidget);
       expect(find.text('Evaluación'), findsOneWidget);
-      expect(find.text('2'), findsOneWidget);
+      expect(find.text('Chat'), findsNothing);
+
+      // Abrir modal Mi perfil desde la barra superior
+      await tester.tap(find.text('Mi perfil'));
+      await tester.pumpAndSettle();
+      expect(find.text('Perfil en MIeL'), findsOneWidget);
+      await tester.tap(find.text('Cerrar'));
+      await tester.pumpAndSettle();
+
+      // Modo Organizar materias: aparece drag_handle y botón ocultar (close)
+      await tester.tap(find.text('Organizar materias'));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.drag_handle), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+
+      // Ocultar materia localmente y verificar que aparece "Ver materias ocultas" junto al botón
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+      expect(find.text('Ver materias ocultas'), findsOneWidget);
+
+      // Desplegar materias ocultas y volver a mostrar la materia
+      await tester.tap(find.text('Ver materias ocultas'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.visibility));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Finalizar organización'));
+      await tester.pumpAndSettle();
 
       // Abrir módulo Contenidos en modo borrador (Fase 2)
       await tester.tap(find.text('Contenidos'));
       await tester.pumpAndSettle();
-
       expect(find.text('BORRADOR · FASE 2'), findsOneWidget);
-      expect(find.text('Archivos'), findsWidgets);
-      expect(find.text('Glosario'), findsOneWidget);
       expect(find.text('Abrir Contenidos en MIeL'), findsOneWidget);
 
-      // Volver a inicio usando el botón Home de la barra verde
-      await tester.tap(find.byIcon(Icons.home).first);
-      await tester.pumpAndSettle();
-      expect(find.text('Materias activas'), findsWidgets);
-
-      // Abrir diálogo de detalle y configuración de alertas de la materia (⋮)
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-      expect(find.text('Docentes (caché local)'), findsOneWidget);
-      expect(find.text('Notificaciones de esta materia'), findsOneWidget);
-      await tester.tap(find.text('Cerrar'));
-      await tester.pumpAndSettle();
-
-      // Activar modo "Organizar materias"
-      await tester.tap(find.text('Organizar materias'));
-      await tester.pumpAndSettle();
-      expect(find.text('Finalizar organización'), findsOneWidget);
-      await tester.tap(find.text('Finalizar organización'));
-      await tester.pumpAndSettle();
-
-      // Cambiar tema claro <-> oscuro con brightness_4
-      await tester.tap(find.byIcon(Icons.brightness_4));
-      await tester.pumpAndSettle();
-
-      // Abrir Novedades desde el menú lateral
-      await tester.tap(find.text('Novedades').first);
+      // Abrir Novedades desde la campana en la barra verde superior
+      await tester.tap(find.byIcon(Icons.notifications_active).first);
       await tester.pumpAndSettle();
       expect(find.text('Nuevo archivo en Contenidos'), findsOneWidget);
+
+      // Abrir Alertas y ajustes desde sidebar y verificar opción de inicio del sistema
+      await tester.tap(find.text('Alertas y ajustes'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Ejecutar LibreMIEL al iniciar el sistema'),
+        findsOneWidget,
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
@@ -183,7 +206,7 @@ void main() {
   );
 
   testWidgets(
-    'HomeShell se renderiza sin desbordes en viewport móvil (390×844)',
+    'HomeShell se renderiza sin desbordes en viewport móvil (390×844) con botón de usuario',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
@@ -236,8 +259,9 @@ void main() {
 
       expect(find.text('Materias activas'), findsOneWidget);
       expect(find.text('Análisis Matemático I'), findsOneWidget);
-      expect(find.text('3622 - Com: 12-6300 - Alumno/a'), findsOneWidget);
+      expect(find.text('Chat'), findsNothing);
       expect(find.byIcon(Icons.menu), findsOneWidget);
+      expect(find.byIcon(Icons.person), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

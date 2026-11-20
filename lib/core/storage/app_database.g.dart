@@ -322,6 +322,30 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _localVisibilityOverrideMeta =
+      const VerificationMeta('localVisibilityOverride');
+  @override
+  late final GeneratedColumn<int> localVisibilityOverride =
+      GeneratedColumn<int>(
+        'local_visibility_override',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0),
+      );
   static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
     'lastSyncedAt',
   );
@@ -358,6 +382,8 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
     lastContenidosBadge,
     lastMensajesBadge,
     lastForoBadge,
+    sortOrder,
+    localVisibilityOverride,
     lastSyncedAt,
   ];
   @override
@@ -565,6 +591,21 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
         ),
       );
     }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('local_visibility_override')) {
+      context.handle(
+        _localVisibilityOverrideMeta,
+        localVisibilityOverride.isAcceptableOrUnknown(
+          data['local_visibility_override']!,
+          _localVisibilityOverrideMeta,
+        ),
+      );
+    }
     if (data.containsKey('last_synced_at')) {
       context.handle(
         _lastSyncedAtMeta,
@@ -675,6 +716,14 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
         DriftSqlType.int,
         data['${effectivePrefix}last_foro_badge'],
       )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      localVisibilityOverride: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}local_visibility_override'],
+      )!,
       lastSyncedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_synced_at'],
@@ -712,6 +761,8 @@ class Subject extends DataClass implements Insertable<Subject> {
   final int lastContenidosBadge;
   final int lastMensajesBadge;
   final int lastForoBadge;
+  final int sortOrder;
+  final int localVisibilityOverride;
   final DateTime? lastSyncedAt;
   const Subject({
     required this.idComision,
@@ -737,6 +788,8 @@ class Subject extends DataClass implements Insertable<Subject> {
     required this.lastContenidosBadge,
     required this.lastMensajesBadge,
     required this.lastForoBadge,
+    required this.sortOrder,
+    required this.localVisibilityOverride,
     this.lastSyncedAt,
   });
   @override
@@ -765,6 +818,8 @@ class Subject extends DataClass implements Insertable<Subject> {
     map['last_contenidos_badge'] = Variable<int>(lastContenidosBadge);
     map['last_mensajes_badge'] = Variable<int>(lastMensajesBadge);
     map['last_foro_badge'] = Variable<int>(lastForoBadge);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['local_visibility_override'] = Variable<int>(localVisibilityOverride);
     if (!nullToAbsent || lastSyncedAt != null) {
       map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
     }
@@ -796,6 +851,8 @@ class Subject extends DataClass implements Insertable<Subject> {
       lastContenidosBadge: Value(lastContenidosBadge),
       lastMensajesBadge: Value(lastMensajesBadge),
       lastForoBadge: Value(lastForoBadge),
+      sortOrder: Value(sortOrder),
+      localVisibilityOverride: Value(localVisibilityOverride),
       lastSyncedAt: lastSyncedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(lastSyncedAt),
@@ -833,6 +890,10 @@ class Subject extends DataClass implements Insertable<Subject> {
       ),
       lastMensajesBadge: serializer.fromJson<int>(json['lastMensajesBadge']),
       lastForoBadge: serializer.fromJson<int>(json['lastForoBadge']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      localVisibilityOverride: serializer.fromJson<int>(
+        json['localVisibilityOverride'],
+      ),
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
     );
   }
@@ -863,6 +924,10 @@ class Subject extends DataClass implements Insertable<Subject> {
       'lastContenidosBadge': serializer.toJson<int>(lastContenidosBadge),
       'lastMensajesBadge': serializer.toJson<int>(lastMensajesBadge),
       'lastForoBadge': serializer.toJson<int>(lastForoBadge),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'localVisibilityOverride': serializer.toJson<int>(
+        localVisibilityOverride,
+      ),
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
     };
   }
@@ -891,6 +956,8 @@ class Subject extends DataClass implements Insertable<Subject> {
     int? lastContenidosBadge,
     int? lastMensajesBadge,
     int? lastForoBadge,
+    int? sortOrder,
+    int? localVisibilityOverride,
     Value<DateTime?> lastSyncedAt = const Value.absent(),
   }) => Subject(
     idComision: idComision ?? this.idComision,
@@ -916,6 +983,9 @@ class Subject extends DataClass implements Insertable<Subject> {
     lastContenidosBadge: lastContenidosBadge ?? this.lastContenidosBadge,
     lastMensajesBadge: lastMensajesBadge ?? this.lastMensajesBadge,
     lastForoBadge: lastForoBadge ?? this.lastForoBadge,
+    sortOrder: sortOrder ?? this.sortOrder,
+    localVisibilityOverride:
+        localVisibilityOverride ?? this.localVisibilityOverride,
     lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
   );
   Subject copyWithCompanion(SubjectsCompanion data) {
@@ -979,6 +1049,10 @@ class Subject extends DataClass implements Insertable<Subject> {
       lastForoBadge: data.lastForoBadge.present
           ? data.lastForoBadge.value
           : this.lastForoBadge,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      localVisibilityOverride: data.localVisibilityOverride.present
+          ? data.localVisibilityOverride.value
+          : this.localVisibilityOverride,
       lastSyncedAt: data.lastSyncedAt.present
           ? data.lastSyncedAt.value
           : this.lastSyncedAt,
@@ -1011,6 +1085,8 @@ class Subject extends DataClass implements Insertable<Subject> {
           ..write('lastContenidosBadge: $lastContenidosBadge, ')
           ..write('lastMensajesBadge: $lastMensajesBadge, ')
           ..write('lastForoBadge: $lastForoBadge, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('localVisibilityOverride: $localVisibilityOverride, ')
           ..write('lastSyncedAt: $lastSyncedAt')
           ..write(')'))
         .toString();
@@ -1041,6 +1117,8 @@ class Subject extends DataClass implements Insertable<Subject> {
     lastContenidosBadge,
     lastMensajesBadge,
     lastForoBadge,
+    sortOrder,
+    localVisibilityOverride,
     lastSyncedAt,
   ]);
   @override
@@ -1070,6 +1148,8 @@ class Subject extends DataClass implements Insertable<Subject> {
           other.lastContenidosBadge == this.lastContenidosBadge &&
           other.lastMensajesBadge == this.lastMensajesBadge &&
           other.lastForoBadge == this.lastForoBadge &&
+          other.sortOrder == this.sortOrder &&
+          other.localVisibilityOverride == this.localVisibilityOverride &&
           other.lastSyncedAt == this.lastSyncedAt);
 }
 
@@ -1097,6 +1177,8 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
   final Value<int> lastContenidosBadge;
   final Value<int> lastMensajesBadge;
   final Value<int> lastForoBadge;
+  final Value<int> sortOrder;
+  final Value<int> localVisibilityOverride;
   final Value<DateTime?> lastSyncedAt;
   final Value<int> rowid;
   const SubjectsCompanion({
@@ -1123,6 +1205,8 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     this.lastContenidosBadge = const Value.absent(),
     this.lastMensajesBadge = const Value.absent(),
     this.lastForoBadge = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.localVisibilityOverride = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1150,6 +1234,8 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     this.lastContenidosBadge = const Value.absent(),
     this.lastMensajesBadge = const Value.absent(),
     this.lastForoBadge = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.localVisibilityOverride = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : idComision = Value(idComision),
@@ -1178,6 +1264,8 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     Expression<int>? lastContenidosBadge,
     Expression<int>? lastMensajesBadge,
     Expression<int>? lastForoBadge,
+    Expression<int>? sortOrder,
+    Expression<int>? localVisibilityOverride,
     Expression<DateTime>? lastSyncedAt,
     Expression<int>? rowid,
   }) {
@@ -1206,6 +1294,9 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
         'last_contenidos_badge': lastContenidosBadge,
       if (lastMensajesBadge != null) 'last_mensajes_badge': lastMensajesBadge,
       if (lastForoBadge != null) 'last_foro_badge': lastForoBadge,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (localVisibilityOverride != null)
+        'local_visibility_override': localVisibilityOverride,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1235,6 +1326,8 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     Value<int>? lastContenidosBadge,
     Value<int>? lastMensajesBadge,
     Value<int>? lastForoBadge,
+    Value<int>? sortOrder,
+    Value<int>? localVisibilityOverride,
     Value<DateTime?>? lastSyncedAt,
     Value<int>? rowid,
   }) {
@@ -1262,6 +1355,9 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
       lastContenidosBadge: lastContenidosBadge ?? this.lastContenidosBadge,
       lastMensajesBadge: lastMensajesBadge ?? this.lastMensajesBadge,
       lastForoBadge: lastForoBadge ?? this.lastForoBadge,
+      sortOrder: sortOrder ?? this.sortOrder,
+      localVisibilityOverride:
+          localVisibilityOverride ?? this.localVisibilityOverride,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1339,6 +1435,14 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     if (lastForoBadge.present) {
       map['last_foro_badge'] = Variable<int>(lastForoBadge.value);
     }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (localVisibilityOverride.present) {
+      map['local_visibility_override'] = Variable<int>(
+        localVisibilityOverride.value,
+      );
+    }
     if (lastSyncedAt.present) {
       map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
     }
@@ -1374,6 +1478,8 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
           ..write('lastContenidosBadge: $lastContenidosBadge, ')
           ..write('lastMensajesBadge: $lastMensajesBadge, ')
           ..write('lastForoBadge: $lastForoBadge, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('localVisibilityOverride: $localVisibilityOverride, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3027,6 +3133,8 @@ typedef $$SubjectsTableCreateCompanionBuilder = SubjectsCompanion Function({
   Value<int> lastContenidosBadge,
   Value<int> lastMensajesBadge,
   Value<int> lastForoBadge,
+  Value<int> sortOrder,
+  Value<int> localVisibilityOverride,
   Value<DateTime?> lastSyncedAt,
   Value<int> rowid,
 });
@@ -3054,6 +3162,8 @@ typedef $$SubjectsTableUpdateCompanionBuilder = SubjectsCompanion Function({
   Value<int> lastContenidosBadge,
   Value<int> lastMensajesBadge,
   Value<int> lastForoBadge,
+  Value<int> sortOrder,
+  Value<int> localVisibilityOverride,
   Value<DateTime?> lastSyncedAt,
   Value<int> rowid,
 });
@@ -3179,6 +3289,16 @@ class $$SubjectsTableFilterComposer
 
   ColumnFilters<int> get lastForoBadge => $composableBuilder(
     column: $table.lastForoBadge,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get localVisibilityOverride => $composableBuilder(
+    column: $table.localVisibilityOverride,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3312,6 +3432,16 @@ class $$SubjectsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get localVisibilityOverride => $composableBuilder(
+    column: $table.localVisibilityOverride,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
     column: $table.lastSyncedAt,
     builder: (column) => ColumnOrderings(column),
@@ -3432,6 +3562,14 @@ class $$SubjectsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<int> get localVisibilityOverride => $composableBuilder(
+    column: $table.localVisibilityOverride,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
     column: $table.lastSyncedAt,
     builder: (column) => column,
@@ -3489,6 +3627,8 @@ class $$SubjectsTableTableManager
                 Value<int> lastContenidosBadge = const Value.absent(),
                 Value<int> lastMensajesBadge = const Value.absent(),
                 Value<int> lastForoBadge = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> localVisibilityOverride = const Value.absent(),
                 Value<DateTime?> lastSyncedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SubjectsCompanion(
@@ -3515,6 +3655,8 @@ class $$SubjectsTableTableManager
                 lastContenidosBadge: lastContenidosBadge,
                 lastMensajesBadge: lastMensajesBadge,
                 lastForoBadge: lastForoBadge,
+                sortOrder: sortOrder,
+                localVisibilityOverride: localVisibilityOverride,
                 lastSyncedAt: lastSyncedAt,
                 rowid: rowid,
               ),
@@ -3543,6 +3685,8 @@ class $$SubjectsTableTableManager
                 Value<int> lastContenidosBadge = const Value.absent(),
                 Value<int> lastMensajesBadge = const Value.absent(),
                 Value<int> lastForoBadge = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> localVisibilityOverride = const Value.absent(),
                 Value<DateTime?> lastSyncedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SubjectsCompanion.insert(
@@ -3569,6 +3713,8 @@ class $$SubjectsTableTableManager
                 lastContenidosBadge: lastContenidosBadge,
                 lastMensajesBadge: lastMensajesBadge,
                 lastForoBadge: lastForoBadge,
+                sortOrder: sortOrder,
+                localVisibilityOverride: localVisibilityOverride,
                 lastSyncedAt: lastSyncedAt,
                 rowid: rowid,
               ),

@@ -10,6 +10,7 @@ import '../core/network/miel_client.dart';
 import '../core/storage/app_database.dart';
 import '../core/sync/sync_engine.dart';
 import '../platform/android_background_worker.dart';
+import '../platform/autostart_service.dart';
 import '../platform/desktop_tray_service.dart';
 import '../platform/notification_service.dart';
 import '../platform/secure_credentials_store.dart';
@@ -26,6 +27,10 @@ final credentialsStoreProvider = Provider<SecureCredentialsStore>((ref) {
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService();
+});
+
+final autostartServiceProvider = Provider<AutostartService>((ref) {
+  return AutostartService();
 });
 
 final mielClientProvider = FutureProvider<MielApiClient>((ref) async {
@@ -46,6 +51,8 @@ class AppSessionState {
     this.monitorEvaluaciones = true,
     this.themeMode = ThemeMode.system,
     this.globalNovedadesBadge = 0,
+    this.launchAtStartup = false,
+    this.autostartSupported = false,
   });
 
   final bool isChecking;
@@ -60,6 +67,8 @@ class AppSessionState {
   final bool monitorEvaluaciones;
   final ThemeMode themeMode;
   final int globalNovedadesBadge;
+  final bool launchAtStartup;
+  final bool autostartSupported;
 
   AppSessionState copyWith({
     bool? isChecking,
@@ -75,6 +84,8 @@ class AppSessionState {
     bool? monitorEvaluaciones,
     ThemeMode? themeMode,
     int? globalNovedadesBadge,
+    bool? launchAtStartup,
+    bool? autostartSupported,
   }) {
     return AppSessionState(
       isChecking: isChecking ?? this.isChecking,
@@ -91,6 +102,8 @@ class AppSessionState {
       monitorEvaluaciones: monitorEvaluaciones ?? this.monitorEvaluaciones,
       themeMode: themeMode ?? this.themeMode,
       globalNovedadesBadge: globalNovedadesBadge ?? this.globalNovedadesBadge,
+      launchAtStartup: launchAtStartup ?? this.launchAtStartup,
+      autostartSupported: autostartSupported ?? this.autostartSupported,
     );
   }
 }
@@ -122,6 +135,7 @@ class AppSessionController extends Notifier<AppSessionState> {
     final db = ref.read(databaseProvider);
     final credsStore = ref.read(credentialsStoreProvider);
     final notifService = ref.read(notificationServiceProvider);
+    final autostart = ref.read(autostartServiceProvider);
 
     await notifService.initialize();
 
@@ -136,6 +150,10 @@ class AppSessionController extends Notifier<AppSessionState> {
     final lastSyncAt = lastCycle1Raw != null
         ? DateTime.tryParse(lastCycle1Raw)
         : null;
+    final autostartSupported = autostart.isSupported;
+    final launchAtStartup = autostartSupported
+        ? await autostart.isEnabled()
+        : false;
 
     MielCredentials? savedCreds;
     try {
@@ -155,6 +173,8 @@ class AppSessionController extends Notifier<AppSessionState> {
       monitorEvaluaciones: monitorEval,
       themeMode: _parseThemeMode(themeRaw),
       globalNovedadesBadge: int.tryParse(globalNovRaw ?? '') ?? 0,
+      launchAtStartup: launchAtStartup,
+      autostartSupported: autostartSupported,
       lastSyncAt: lastSyncAt,
     );
 
@@ -314,12 +334,22 @@ class AppSessionController extends Notifier<AppSessionState> {
     await updateThemeMode(nextMode);
   }
 
+  Future<void> updateLaunchAtStartup(bool enabled) async {
+    final autostart = ref.read(autostartServiceProvider);
+    final actual = await autostart.setEnabled(enabled);
+    final db = ref.read(databaseProvider);
+    await db.setSetting(SettingKeys.launchAtStartup, actual.toString());
+    state = state.copyWith(launchAtStartup: actual);
+  }
+
   Future<void> logout({bool wipeLocalData = false}) async {
     _desktopCycle1Timer?.cancel();
     _desktopCycle2Timer?.cancel();
     _memoryCredentials = null;
 
     final preservedTheme = state.themeMode;
+    final preservedAutostart = state.launchAtStartup;
+    final preservedAutostartSupported = state.autostartSupported;
     final client = await ref.read(mielClientProvider.future);
     await client.clearSession();
     await ref.read(credentialsStoreProvider).clear();
@@ -336,6 +366,8 @@ class AppSessionController extends Notifier<AppSessionState> {
       isChecking: false,
       isAuthenticated: false,
       themeMode: preservedTheme,
+      launchAtStartup: preservedAutostart,
+      autostartSupported: preservedAutostartSupported,
     );
   }
 

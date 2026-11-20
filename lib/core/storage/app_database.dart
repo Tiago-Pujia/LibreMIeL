@@ -38,6 +38,9 @@ class Subjects extends Table {
       integer().withDefault(const Constant(0))();
   IntColumn get lastMensajesBadge => integer().withDefault(const Constant(0))();
   IntColumn get lastForoBadge => integer().withDefault(const Constant(0))();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  IntColumn get localVisibilityOverride =>
+      integer().withDefault(const Constant(0))();
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
 
   @override
@@ -103,6 +106,7 @@ class SettingKeys {
   static const String lastCycle1At = 'last_cycle1_at';
   static const String lastCycle2At = 'last_cycle2_at';
   static const String themeMode = 'theme_mode';
+  static const String launchAtStartup = 'launch_at_startup';
 }
 
 @DriftDatabase(
@@ -119,7 +123,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'libremiel'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -134,6 +138,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(subjects, subjects.hasForo);
         await m.addColumn(subjects, subjects.hasChat);
         await m.addColumn(subjects, subjects.hasEncuestas);
+      }
+      if (from < 3) {
+        await m.addColumn(subjects, subjects.sortOrder);
+        await m.addColumn(subjects, subjects.localVisibilityOverride);
       }
     },
   );
@@ -183,7 +191,7 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<Subject>> getAllSubjects() {
     return (select(subjects)..orderBy([
-          (t) => OrderingTerm.asc(t.isHiddenInMiel),
+          (t) => OrderingTerm.asc(t.sortOrder),
           (t) => OrderingTerm.asc(t.name),
         ]))
         .get();
@@ -191,7 +199,7 @@ class AppDatabase extends _$AppDatabase {
 
   Stream<List<Subject>> watchAllSubjects() {
     return (select(subjects)..orderBy([
-          (t) => OrderingTerm.asc(t.isHiddenInMiel),
+          (t) => OrderingTerm.asc(t.sortOrder),
           (t) => OrderingTerm.asc(t.name),
         ]))
         .watch();
@@ -258,6 +266,28 @@ class AppDatabase extends _$AppDatabase {
       );
     }
     return (await getSubject(summary.idComision))!;
+  }
+
+  Future<void> updateSubjectsOrder(List<String> orderedIds) async {
+    await transaction(() async {
+      for (var i = 0; i < orderedIds.length; i++) {
+        await (update(subjects)
+              ..where((t) => t.idComision.equals(orderedIds[i])))
+            .write(SubjectsCompanion(sortOrder: Value(i + 1)));
+      }
+    });
+  }
+
+  /// `overrideValue`: `-1` ocultar localmente, `1` forzar visible, `0` seguir a MIeL.
+  Future<void> setSubjectLocalVisibility(
+    String idComision,
+    int overrideValue,
+  ) async {
+    await (update(
+      subjects,
+    )..where((t) => t.idComision.equals(idComision))).write(
+      SubjectsCompanion(localVisibilityOverride: Value(overrideValue)),
+    );
   }
 
   Future<void> updateSubjectPreferences({

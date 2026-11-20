@@ -46,6 +46,19 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
     );
   }
 
+  Future<void> _reorderVisibleSubjects(
+    List<Subject> visible,
+    int oldIndex,
+    int newIndex,
+  ) async {
+    final updated = List<Subject>.from(visible);
+    final moved = updated.removeAt(oldIndex);
+    updated.insert(newIndex, moved);
+    await ref
+        .read(databaseProvider)
+        .updateSubjectsOrder(updated.map((s) => s.idComision).toList());
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = MielPalette.of(context);
@@ -53,10 +66,35 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
     final subjectsAsync = ref.watch(subjectsStreamProvider);
     final unreadCount = ref.watch(unreadNotificationsCountProvider).value ?? 0;
 
+    final allSubjects = subjectsAsync.value ?? const <Subject>[];
+    final hiddenCount = allSubjects.where((s) => s.isEffectivelyHidden).length;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 680;
         final horizontalPadding = isCompact ? 16.0 : 26.0;
+
+        final actionButtons = Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (hiddenCount > 0)
+              _HiddenSubjectsToggle(
+                count: hiddenCount,
+                expanded: _showHidden,
+                onTap: () => setState(() => _showHidden = !_showHidden),
+              ),
+            _MielSecondaryButton(
+              label: _organizeMode
+                  ? 'Finalizar organización'
+                  : 'Organizar materias',
+              icon: _organizeMode ? Icons.check : null,
+              active: _organizeMode,
+              onPressed: () => setState(() => _organizeMode = !_organizeMode),
+            ),
+          ],
+        );
 
         return RefreshIndicator(
           color: palette.primary,
@@ -74,28 +112,29 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Cabecera "Materias activas" + botón "Organizar materias" (desktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Materias activas',
-                        style: Theme.of(context).textTheme.headlineLarge,
+                // Cabecera "Materias activas" + botones "Ver materias ocultas" y "Organizar materias" juntos
+                if (isCompact) ...[
+                  Text(
+                    'Materias activas',
+                    style: Theme.of(context).textTheme.headlineLarge,
+                  ),
+                  const SizedBox(height: 10),
+                  actionButtons,
+                ] else ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Materias activas',
+                          style: Theme.of(context).textTheme.headlineLarge,
+                        ),
                       ),
-                    ),
-                    if (!isCompact)
-                      _MielSecondaryButton(
-                        label: _organizeMode
-                            ? 'Finalizar organización'
-                            : 'Organizar materias',
-                        icon: _organizeMode ? Icons.check : null,
-                        active: _organizeMode,
-                        onPressed: () =>
-                            setState(() => _organizeMode = !_organizeMode),
-                      ),
-                  ],
-                ),
+                      const SizedBox(width: 12),
+                      actionButtons,
+                    ],
+                  ),
+                ],
 
                 if (_organizeMode) ...[
                   const SizedBox(height: 10),
@@ -113,8 +152,8 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                         ),
                       ),
                       child: Text(
-                        'Modo organizar alertas: activá o silenciá notificaciones rápidamente '
-                        'por materia, o usá el menú ⋮ para elegir cada módulo individual.',
+                        'Modo organizar materias: arrastrá desde ≡ para reordenar, '
+                        'usá ✕ para ocultar una materia o la campana para silenciar sus alertas.',
                         style: TextStyle(
                           fontSize: 13,
                           color: palette.textPrimary,
@@ -221,69 +260,63 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                     }
 
                     final visible = subjects
-                        .where((s) => !s.isHiddenInMiel)
+                        .where((s) => !s.isEffectivelyHidden)
                         .toList();
                     final hidden = subjects
-                        .where((s) => s.isHiddenInMiel)
+                        .where((s) => s.isEffectivelyHidden)
                         .toList();
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        for (final subject in visible) ...[
-                          _MielSubjectCard(
-                            subject: subject,
-                            isCompact: isCompact,
-                            organizeMode: _organizeMode,
-                            onOpenModule: (tool) =>
-                                widget.onOpenModule(subject, tool),
-                            onOpenDetail: () => _openSubjectDetail(subject),
-                            onToggleMute: () => ref
-                                .read(databaseProvider)
-                                .updateSubjectPreferences(
-                                  idComision: subject.idComision,
-                                  muted: !subject.muted,
-                                ),
-                          ),
-                          const SizedBox(height: 14),
-                        ],
-
-                        // Botón organizar materias en móvil (abajo, igual que en MIeL)
-                        if (isCompact) ...[
-                          _MielSecondaryButton(
-                            label: _organizeMode
-                                ? 'Finalizar organización'
-                                : 'Organizar materias',
-                            icon: _organizeMode ? Icons.check : Icons.tune,
-                            active: _organizeMode,
-                            fullWidth: true,
-                            onPressed: () =>
-                                setState(() => _organizeMode = !_organizeMode),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-
-                        // Sección "Ver materias ocultas" fiel a MIeL
-                        if (hidden.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: _HiddenSubjectsToggle(
-                              count: hidden.length,
-                              expanded: _showHidden,
-                              onTap: () =>
-                                  setState(() => _showHidden = !_showHidden),
+                        if (visible.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            margin: const EdgeInsets.only(bottom: 14),
+                            decoration: BoxDecoration(
+                              color: palette.cardBackground,
+                              borderRadius: BorderRadius.circular(3),
+                              border: Border.all(color: palette.cardBorder),
                             ),
-                          ),
-                          if (_showHidden) ...[
-                            const SizedBox(height: 14),
-                            for (final subject in hidden) ...[
-                              Opacity(
-                                opacity: 0.72,
+                            child: Text(
+                              'Todas las materias están ocultas. Usá "Ver materias ocultas" '
+                              'arriba para volver a mostrarlas.',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                color: palette.textSecondary,
+                              ),
+                            ),
+                          )
+                        else if (_organizeMode)
+                          ReorderableListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            buildDefaultDragHandles: false,
+                            itemCount: visible.length,
+                            onReorderItem: (oldIndex, newIndex) =>
+                                _reorderVisibleSubjects(
+                                  visible,
+                                  oldIndex,
+                                  newIndex,
+                                ),
+                            proxyDecorator: (child, index, animation) {
+                              return Material(
+                                color: Colors.transparent,
+                                elevation: 6,
+                                child: child,
+                              );
+                            },
+                            itemBuilder: (context, index) {
+                              final subject = visible[index];
+                              return Padding(
+                                key: ValueKey('vis_${subject.idComision}'),
+                                padding: const EdgeInsets.only(bottom: 14),
                                 child: _MielSubjectCard(
                                   subject: subject,
                                   isCompact: isCompact,
-                                  organizeMode: _organizeMode,
+                                  organizeMode: true,
+                                  isHiddenCard: false,
+                                  dragIndex: index,
                                   onOpenModule: (tool) =>
                                       widget.onOpenModule(subject, tool),
                                   onOpenDetail: () =>
@@ -294,10 +327,82 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                                         idComision: subject.idComision,
                                         muted: !subject.muted,
                                       ),
+                                  onToggleHidden: () => ref
+                                      .read(databaseProvider)
+                                      .setSubjectLocalVisibility(
+                                        subject.idComision,
+                                        -1,
+                                      ),
                                 ),
+                              );
+                            },
+                          )
+                        else
+                          for (final subject in visible) ...[
+                            _MielSubjectCard(
+                              subject: subject,
+                              isCompact: isCompact,
+                              organizeMode: false,
+                              isHiddenCard: false,
+                              onOpenModule: (tool) =>
+                                  widget.onOpenModule(subject, tool),
+                              onOpenDetail: () => _openSubjectDetail(subject),
+                              onToggleMute: () => ref
+                                  .read(databaseProvider)
+                                  .updateSubjectPreferences(
+                                    idComision: subject.idComision,
+                                    muted: !subject.muted,
+                                  ),
+                              onToggleHidden: () => ref
+                                  .read(databaseProvider)
+                                  .setSubjectLocalVisibility(
+                                    subject.idComision,
+                                    -1,
+                                  ),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+
+                        // Materias ocultas desplegadas (cuando el botón superior está activo)
+                        if (_showHidden && hidden.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Text(
+                              'Materias ocultas (${hidden.length})',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w300,
+                                color: palette.textSecondary,
                               ),
-                              const SizedBox(height: 14),
-                            ],
+                            ),
+                          ),
+                          for (final subject in hidden) ...[
+                            Opacity(
+                              opacity: 0.76,
+                              child: _MielSubjectCard(
+                                subject: subject,
+                                isCompact: isCompact,
+                                organizeMode: _organizeMode,
+                                isHiddenCard: true,
+                                onOpenModule: (tool) =>
+                                    widget.onOpenModule(subject, tool),
+                                onOpenDetail: () => _openSubjectDetail(subject),
+                                onToggleMute: () => ref
+                                    .read(databaseProvider)
+                                    .updateSubjectPreferences(
+                                      idComision: subject.idComision,
+                                      muted: !subject.muted,
+                                    ),
+                                onToggleHidden: () => ref
+                                    .read(databaseProvider)
+                                    .setSubjectLocalVisibility(
+                                      subject.idComision,
+                                      1,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
                           ],
                         ],
                       ],
@@ -342,17 +447,23 @@ class _MielSubjectCard extends StatefulWidget {
     required this.subject,
     required this.isCompact,
     required this.organizeMode,
+    required this.isHiddenCard,
     required this.onOpenModule,
     required this.onOpenDetail,
     required this.onToggleMute,
+    required this.onToggleHidden,
+    this.dragIndex,
   });
 
   final Subject subject;
   final bool isCompact;
   final bool organizeMode;
+  final bool isHiddenCard;
+  final int? dragIndex;
   final ValueChanged<MielToolKind> onOpenModule;
   final VoidCallback onOpenDetail;
   final VoidCallback onToggleMute;
+  final VoidCallback onToggleHidden;
 
   @override
   State<_MielSubjectCard> createState() => _MielSubjectCardState();
@@ -410,13 +521,13 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Columna izquierda: título, código/comisión/rol y botón ⋮
+          // Columna izquierda: título, código/comisión/rol y controles (.botoneraDetalle / .botoneraOrganizar)
           SizedBox(
-            width: 318,
+            width: widget.organizeMode ? 356 : 318,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
                     child: Column(
@@ -582,20 +693,83 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
   }
 
   Widget _buildCardTrailingAction(MielPalette palette) {
+    // En tarjetas ocultas desplegadas, mostrar siempre acceso rápido para volver a mostrarla
+    if (widget.isHiddenCard) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: 'Mostrar en Materias activas',
+            icon: Icon(Icons.visibility, size: 19, color: palette.linkAccent),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+            onPressed: widget.onToggleHidden,
+          ),
+          IconButton(
+            tooltip: 'Ver detalle y alertas',
+            icon: Icon(Icons.more_vert, size: 19, color: palette.textSecondary),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            onPressed: widget.onOpenDetail,
+          ),
+        ],
+      );
+    }
+
     if (widget.organizeMode) {
-      return IconButton(
-        tooltip: widget.subject.muted
-            ? 'Activar notificaciones de esta materia'
-            : 'Silenciar notificaciones de esta materia',
-        icon: Icon(
-          widget.subject.muted
-              ? Icons.notifications_off
-              : Icons.notifications_active,
-          size: 20,
-          color: widget.subject.muted ? palette.textMuted : palette.linkAccent,
-        ),
-        visualDensity: VisualDensity.compact,
-        onPressed: widget.onToggleMute,
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: widget.subject.muted
+                ? 'Activar notificaciones de esta materia'
+                : 'Silenciar notificaciones de esta materia',
+            icon: Icon(
+              widget.subject.muted
+                  ? Icons.notifications_off
+                  : Icons.notifications_active,
+              size: 19,
+              color: widget.subject.muted
+                  ? palette.textMuted
+                  : palette.linkAccent,
+            ),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+            onPressed: widget.onToggleMute,
+          ),
+          IconButton(
+            tooltip: 'Ocultar materia',
+            icon: Icon(Icons.close, size: 19, color: palette.textSecondary),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+            onPressed: widget.onToggleHidden,
+          ),
+          if (widget.dragIndex != null)
+            ReorderableDragStartListener(
+              index: widget.dragIndex!,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: Tooltip(
+                  message: 'Arrastrar para reordenar',
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 4,
+                    ),
+                    child: Icon(
+                      Icons.drag_handle,
+                      size: 20,
+                      color: palette.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       );
     }
 
@@ -694,65 +868,73 @@ class _MielToolTileState extends State<_MielToolTile> {
   }
 }
 
-class _MielSecondaryButton extends StatelessWidget {
+class _MielSecondaryButton extends StatefulWidget {
   const _MielSecondaryButton({
     required this.label,
     required this.onPressed,
     this.icon,
     this.active = false,
-    this.fullWidth = false,
   });
 
   final String label;
   final VoidCallback onPressed;
   final IconData? icon;
   final bool active;
-  final bool fullWidth;
+
+  @override
+  State<_MielSecondaryButton> createState() => _MielSecondaryButtonState();
+}
+
+class _MielSecondaryButtonState extends State<_MielSecondaryButton> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     final palette = MielPalette.of(context);
-    final bg = active ? palette.primary : palette.buttonSecondaryBackground;
-    final fg = active ? Colors.white : palette.textPrimary;
+    final bg = widget.active
+        ? (_hovered ? palette.primaryHover : palette.primary)
+        : (_hovered
+              ? palette.buttonSecondaryHover
+              : palette.buttonSecondaryBackground);
+    final fg = widget.active ? Colors.white : palette.textPrimary;
 
-    final child = Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(3),
-      child: InkWell(
-        onTap: onPressed,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Material(
+        color: bg,
         borderRadius: BorderRadius.circular(3),
-        hoverColor: active
-            ? palette.primaryHover
-            : palette.buttonSecondaryHover,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          child: Row(
-            mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 16, color: fg),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: fg,
+        child: InkWell(
+          onTap: widget.onPressed,
+          borderRadius: BorderRadius.circular(3),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(widget.icon, size: 16, color: fg),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: fg,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
-
-    return fullWidth ? SizedBox(width: double.infinity, child: child) : child;
   }
 }
 
-class _HiddenSubjectsToggle extends StatelessWidget {
+class _HiddenSubjectsToggle extends StatefulWidget {
   const _HiddenSubjectsToggle({
     required this.count,
     required this.expanded,
@@ -764,47 +946,67 @@ class _HiddenSubjectsToggle extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_HiddenSubjectsToggle> createState() => _HiddenSubjectsToggleState();
+}
+
+class _HiddenSubjectsToggleState extends State<_HiddenSubjectsToggle> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final palette = MielPalette.of(context);
-    return Material(
-      color: palette.buttonSecondaryBackground,
-      borderRadius: BorderRadius.circular(3),
-      child: InkWell(
-        onTap: onTap,
+    final bg = _hovered
+        ? palette.buttonSecondaryHover
+        : palette.buttonSecondaryBackground;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Material(
+        color: bg,
         borderRadius: BorderRadius.circular(3),
-        hoverColor: palette.buttonSecondaryHover,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                expanded ? Icons.visibility_off : Icons.visibility,
-                size: 17,
-                color: palette.textSecondary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                expanded ? 'Ocultar materias ocultas' : 'Ver materias ocultas',
-                style: TextStyle(fontSize: 13, color: palette.textPrimary),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                decoration: BoxDecoration(
-                  color: palette.divider,
-                  borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(3),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  widget.expanded ? Icons.visibility_off : Icons.visibility,
+                  size: 17,
+                  color: palette.textSecondary,
                 ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: palette.textPrimary,
+                const SizedBox(width: 7),
+                Text(
+                  widget.expanded
+                      ? 'Ocultar materias ocultas'
+                      : 'Ver materias ocultas',
+                  style: TextStyle(fontSize: 13, color: palette.textPrimary),
+                ),
+                const SizedBox(width: 7),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: palette.divider,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${widget.count}',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: palette.textPrimary,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
