@@ -1,43 +1,39 @@
 # LibreMIEL
 
-Una alternativa **gratuita, libre y de código abierto (*open source*)** para usar **MIEL (UNLaM)** desde tus dispositivos, creada por y para estudiantes.
+Alternativa **gratuita, libre y open source** para usar **MIEL** desde tus dispositivos, creada por y para estudiantes.
 
-> **Aviso:** LibreMIEL es un proyecto independiente de la comunidad. No es una aplicación oficial ni está afiliado a la Universidad Nacional de La Matanza (UNLaM).
+> **Aviso:** LibreMIEL es un proyecto independiente de la comunidad. No es una aplicación oficial ni está afiliado a la Universidad Nacional de La Matanza.
 
 ---
 
 ## 🎯 Objetivo
 
-Mejorar la experiencia diaria de cursada incorporando poco a poco funciones útiles que hoy faltan en la plataforma oficial, abiertas a que cualquier estudiante pueda usarlas, proponer ideas o modificarlas.
+Mejorar la experiencia diaria de cursada incorporando poco a poco funciones útiles que hoy faltan en la plataforma oficial.
 
-**Primer gran paso — Notificaciones:**  
+**Notificaciones:**  
 Enterarte a tiempo cuando un docente sube material en **Contenidos**, publica o corrige algo en **Portafolio**, envía un aviso por **Mensajería** o responde en los **Foros**, sin tener que entrar manualmente materia por materia.
 
-A futuro, el proyecto buscará ir sumando más herramientas y comodidades para el día a día universitario.
+---
+
+## 💻 Sistemas Compatibles
+
+| Sistema Operativo | Arquitecturas | Formatos disponibles |
+|---|---|---|
+| **Windows** (10 / 11) | `x86_64` (64 bits) y `ARM64` | Instalador (`.exe`) y portable (`.zip`) |
+| **macOS** | Universal (`Intel x86_64` + `Apple Silicon ARM64`) | Instalador (`.dmg`) y portable (`.zip`) |
+| **Linux** (Debian/Ubuntu, Fedora/Red Hat, Arch y derivadas) | `x86_64` (`amd64`) y `ARM64` (`aarch64`) | `AppImage`, `.deb`, `.rpm`, `.pkg.tar.zst` y portable (`.tar.gz`) |
+| **Android** | Universal, `ARM64` (`arm64-v8a`), `ARMv7` (`armeabi-v7a`) y `x86_64` | Instalador `.apk` |
 
 ---
 
-## 💻 Sistemas Compatibles (Objetivo)
+## 📖 Documentación
 
-- **Escritorio:** Windows, macOS y Linux (distintas distribuciones).
-- **Celular:** Android.
-
----
-
-## 🌱 Principios
-
-- **Gratis y Open Source:** Cualquiera puede revisar el proyecto, adaptarlo y colaborar (Licencia [MIT](LICENSE)).
-- **Privacidad:** Pensado para funcionar directamente en tus dispositivos, sin terceros que almacenen tus datos.
-
----
-
-## 📖 Guía de Documentación
-
-Toda la documentación del proyecto se encuentra organizada dentro de la carpeta [`docs/`](docs/):
-
-- **[Índice General](docs/README.md):** Punto de entrada a toda la documentación del proyecto.
-- **[Estado del Proyecto](docs/STATUS.md):** Tabla actualizada con lo que ya está listo, lo que está en progreso y los próximos pasos.
-- **[Historial de Cambios](docs/CHANGELOG.md):** Registro de novedades y versiones del proyecto.
-- **[Cómo Colaborar](docs/CONTRIBUTING.md):** Guía para sumar ideas, reportar problemas o participar en el desarrollo.
-- **[Uso de Ramas y Versiones](docs/GIT_WORKFLOW.md):** Explicación práctica para organizar cambios y futuras versiones.
-- **[Guía para Asistentes de IA](docs/AGENTS.md):** Reglas y referencias orientativas para asistentes automatizados que ayuden en el proyecto.
+| Qué | Dónde |
+|---|---|
+| Índice general de la documentación | [docs/README.md](docs/README.md) |
+| Estado del proyecto y próximos pasos | [docs/STATUS.md](docs/STATUS.md) |
+| Historial de cambios y versiones | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
+| Cómo colaborar y reportar problemas | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) |
+| Uso de ramas Git y publicación de versiones | [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md) |
+| Reglas y contexto para asistentes de IA | [docs/AGENTS.md](docs/AGENTS.md) |
+| Licencia del proyecto (MIT) | [LICENSE](LICENSE) |
