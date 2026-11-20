@@ -35,6 +35,44 @@ void main() {
       },
     );
 
+    test('parseInternoHtml extrae subjectCode, commissionCode con guiones y roleLabel', () {
+      const html = '''
+        <html><body>
+          <div class="materia-bloque" data-id="11001">
+            <div class="materia-titulo">Programación Inicial</div>
+            <div class="w3-small">3623 - Com: 08-4300 - Alumno/a</div>
+            <div class="materia-herramientas">
+              <a href="/contenido/archivos/comision/11001">Contenidos</a>
+              <a href="/autoguia/index/comision/11001">Autoguía</a>
+              <a href="/encuesta/encuestas/comision/11001">Encuestas</a>
+            </div>
+          </div>
+          <div class="materia-bloque" data-id="11002">
+            <div class="materia-titulo">Tutorías-DIIT</div>
+            <div class="w3-small">TUTO_DIIT - Com: 2026-INFORMATICA-02 - Alumno/a</div>
+            <div class="materia-herramientas">
+              <a href="/chat/salas/comision/11002">Chat</a>
+            </div>
+          </div>
+        </body></html>
+        ''';
+      final overview = parseInternoHtml(html);
+      expect(overview.subjects, hasLength(2));
+
+      final s1 = overview.subjects[0];
+      expect(s1.subjectCode, '3623');
+      expect(s1.commissionCode, '08-4300');
+      expect(s1.roleLabel, 'Alumno/a');
+      expect(s1.hasAutoguia, isTrue);
+      expect(s1.hasEncuestas, isTrue);
+
+      final s2 = overview.subjects[1];
+      expect(s2.subjectCode, 'TUTO_DIIT');
+      expect(s2.commissionCode, '2026-INFORMATICA-02');
+      expect(s2.roleLabel, 'Alumno/a');
+      expect(s2.hasChat, isTrue);
+    });
+
     test('parseCursoDetallesHtml extrae docentes Tutor/a normalizados', () {
       final details = parseCursoDetallesHtml(fixtureCursoDetalles, '117967');
       expect(details.term, '2C 2026');

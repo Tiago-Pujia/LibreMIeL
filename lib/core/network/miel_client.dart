@@ -11,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import '../models/miel_models.dart';
 import '../parsers/text_normalizer.dart';
 
+export '../parsers/text_normalizer.dart' show kMielBaseUrl;
+
 /// Contrato abstracto de acceso HTTP de solo lectura a MIEL.
 ///
 /// Nota de diseño: intencionalmente NO expone `/mensajeria/verEntrada/...`

@@ -1,7 +1,12 @@
-import 'package:material_ui/material_ui.dart';
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_providers.dart';
+import '../../core/network/miel_client.dart';
+import '../../core/theme/libremiel_brand.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -26,6 +31,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  String _greetingForNow() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) return '¡Buenos días!';
+    if (hour >= 12 && hour < 20) return '¡Buenas tardes!';
+    return '¡Buenas noches!';
+  }
+
+  Future<void> _openExternal(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -45,167 +64,528 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() {
       _submitting = false;
       if (!result.isSuccess) {
-        _errorText = result.message ?? 'No se pudo iniciar sesión en MIEL.';
+        _errorText = result.message ?? 'No se pudo iniciar sesión en MIeL.';
       }
     });
   }
 
+  InputDecoration _mielInputDecoration({String? hint, Widget? suffixIcon}) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(3),
+      borderSide: BorderSide(
+        color: Colors.white.withValues(alpha: 0.55),
+        width: 1,
+      ),
+    );
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(3),
+      borderSide: BorderSide(
+        color: Colors.white.withValues(alpha: 0.92),
+        width: 1.2,
+      ),
+    );
+    final errorBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(3),
+      borderSide: const BorderSide(color: Color(0xFFFFD6D6), width: 1.2),
+    );
+
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.55)),
+      filled: true,
+      fillColor: Colors.black.withValues(alpha: 0.12),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: border,
+      enabledBorder: border,
+      focusedBorder: focusedBorder,
+      errorBorder: errorBorder,
+      focusedErrorBorder: errorBorder,
+      errorStyle: const TextStyle(
+        color: Color(0xFFFFF3C4),
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
+      suffixIcon: suffixIcon,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width >= 768;
+
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Stack(
+        children: [
+          // Fondo degradado esmeralda -> verde lima estilo MIeL + hexágonos flotantes
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF009674), Color(0xFF63CB5F)],
+                ),
+              ),
+              child: CustomPaint(painter: _FloatingHexagonsPainter()),
+            ),
+          ),
+
+          // Contenido principal con barra superior oscura
+          Column(
+            children: [
+              // Header fijo superior (rgba(0, 22, 6, 0.9))
+              Container(
+                height: isWide ? 68 : 54,
+                width: double.infinity,
+                color: const Color.fromRGBO(0, 22, 6, 0.90),
+                padding: EdgeInsets.symmetric(horizontal: isWide ? 24 : 16),
+                child: SafeArea(
+                  bottom: false,
+                  child: Row(
                     children: [
-                      Icon(
-                        Icons.hive_rounded,
-                        size: 56,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'LibreMIEL',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Cliente alternativo open source para MIEL (UNLaM)',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      TextFormField(
-                        controller: _userController,
-                        enabled: !_submitting,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Usuario / DNI',
-                          prefixIcon: Icon(Icons.badge_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Ingresá tu usuario o DNI de MIEL';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _passController,
-                        enabled: !_submitting,
-                        obscureText: _obscurePassword,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _submit(),
-                        decoration: InputDecoration(
-                          labelText: 'Contraseña',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          border: const OutlineInputBorder(),
-                          suffixIcon: IconButton(
-                            tooltip: _obscurePassword ? 'Mostrar' : 'Ocultar',
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                            ),
-                            onPressed: () {
-                              setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              );
-                            },
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Ingresá tu contraseña';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      CheckboxListTile(
-                        value: _rememberCredentials,
-                        onChanged: _submitting
-                            ? null
-                            : (v) => setState(
-                                () => _rememberCredentials = v ?? true,
-                              ),
-                        controlAffinity: ListTileControlAffinity.leading,
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text(
-                          'Guardar en el llavero seguro del dispositivo',
-                        ),
-                        subtitle: const Text(
-                          'Necesario para revisar novedades en segundo plano.',
-                        ),
-                      ),
-                      if (_errorText != null) ...[
-                        const SizedBox(height: 8),
+                      LibreMielMark(size: isWide ? 36 : 30, lightText: true),
+                      if (isWide) ...[
+                        const SizedBox(width: 14),
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.errorContainer,
-                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(3),
                           ),
                           child: Text(
-                            _errorText!,
+                            'Cliente no oficial · Open Source',
                             style: TextStyle(
-                              color: theme.colorScheme.onErrorContainer,
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 12,
                             ),
                           ),
                         ),
                       ],
-                      const SizedBox(height: 20),
-                      FilledButton.icon(
-                        onPressed: _submitting ? null : _submit,
-                        icon: _submitting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.login),
-                        label: Text(
-                          _submitting ? 'Conectando con MIEL…' : 'Ingresar',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Privacidad local: tus credenciales se conectan directo a '
-                        'miel.unlam.edu.ar y nunca pasan por servidores externos.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
                     ],
                   ),
                 ),
               ),
-            ),
+
+              // Área Hero (2 columnas en desktop, 1 columna centrada en mobile)
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isWide ? 36 : 18,
+                      vertical: 28,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1120),
+                      child: isWide
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(flex: 6, child: _buildHeroTitles()),
+                                const SizedBox(width: 48),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 440,
+                                  ),
+                                  child: _buildLoginCard(),
+                                ),
+                              ],
+                            )
+                          : Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 440,
+                                ),
+                                child: _buildLoginCard(),
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroTitles() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Materias\nInteractivas\nen Línea',
+          style: TextStyle(
+            fontSize: 60,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            height: 1.02,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 18),
+        Text(
+          'Cliente libre y multiplataforma para MIeL\nde la Universidad Nacional de La Matanza',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w300,
+            color: Colors.white.withValues(alpha: 0.95),
+            height: 1.25,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'Notificaciones locales de contenidos, portafolio, mensajería y foros.\n'
+          'Conexión directa a miel.unlam.edu.ar sin servidores intermedios.',
+          style: TextStyle(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w400,
+            color: Colors.white.withValues(alpha: 0.85),
+            height: 1.45,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoginCard() {
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _greetingForNow(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w300,
+                color: Colors.white,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            // Campo Usuario
+            const Text(
+              'Usuario:',
+              style: TextStyle(color: Colors.white, fontSize: 14),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _userController,
+              enabled: !_submitting,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+              cursorColor: Colors.white,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              decoration: _mielInputDecoration(hint: 'DNI o usuario MIeL'),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Ingresá tu usuario o DNI de MIeL';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Campo Contraseña + link "Olvidé mi contraseña"
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 2,
+              children: [
+                const Text(
+                  'Contraseña:',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                InkWell(
+                  onTap: () => _openExternal(
+                    '$kMielBaseUrl/principal/event/recuperarClave/',
+                  ),
+                  child: const Text(
+                    'Olvidé mi contraseña',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _passController,
+              enabled: !_submitting,
+              obscureText: _obscurePassword,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _submit(),
+              cursorColor: Colors.white,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              decoration: _mielInputDecoration(
+                suffixIcon: IconButton(
+                  tooltip: _obscurePassword ? 'Mostrar' : 'Ocultar',
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: Colors.white.withValues(alpha: 0.85),
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    setState(() => _obscurePassword = !_obscurePassword);
+                  },
+                ),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Ingresá tu contraseña';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+
+            // Checkbox "Mantener mi sesión activa." + tooltip de ayuda
+            Row(
+              children: [
+                SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: Checkbox(
+                    value: _rememberCredentials,
+                    onChanged: _submitting
+                        ? null
+                        : (v) =>
+                              setState(() => _rememberCredentials = v ?? true),
+                    fillColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Colors.white;
+                      }
+                      return Colors.transparent;
+                    }),
+                    checkColor: const Color(0xFF009674),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: GestureDetector(
+                    onTap: _submitting
+                        ? null
+                        : () => setState(
+                            () => _rememberCredentials = !_rememberCredentials,
+                          ),
+                    child: const Text(
+                      'Mantener mi sesión activa.',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Tooltip(
+                  message:
+                      'Guarda tus credenciales en el llavero seguro del dispositivo '
+                      'para revisar novedades de MIeL en segundo plano.',
+                  child: Icon(
+                    Icons.help_outline,
+                    size: 18,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+              ],
+            ),
+
+            if (_errorText != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4A1616).withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(
+                    color: const Color(0xFFFFB4AB).withValues(alpha: 0.6),
+                  ),
+                ),
+                child: Text(
+                  _errorText!,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 18),
+
+            // Botón primario blanco con texto #009674 (.primary-button)
+            SizedBox(
+              height: 44,
+              child: ElevatedButton(
+                onPressed: _submitting ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.92),
+                  foregroundColor: const Color(0xFF009674),
+                  disabledBackgroundColor: Colors.white.withValues(alpha: 0.65),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                child: _submitting
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Color(0xFF009674),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            'Conectando con MIeL…',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      )
+                    : const Text(
+                        'Ingresar',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            Divider(color: Colors.white.withValues(alpha: 0.3), height: 1),
+            const SizedBox(height: 16),
+
+            // Botón secundario translúcido
+            SizedBox(
+              height: 42,
+              child: TextButton(
+                onPressed: () => _openExternal('$kMielBaseUrl/principal/home/'),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.20),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Abrir MIeL en el navegador',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Icon(Icons.chevron_right, size: 20),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+            Text(
+              'Privacidad local: tus credenciales se envían directo a '
+              'miel.unlam.edu.ar y nunca pasan por servidores externos.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.82),
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+/// Pinta hexágonos blancos translúcidos inspirados en el fondo geométrico del login de MIeL.
+class _FloatingHexagonsPainter extends CustomPainter {
+  static const _hexSpecs =
+      <({double x, double y, double r, double rot, double a})>[
+        (x: 0.06, y: 0.14, r: 62, rot: 0.25, a: 0.11),
+        (x: 0.08, y: 0.32, r: 92, rot: -0.18, a: 0.10),
+        (x: 0.20, y: 0.30, r: 22, rot: 0.12, a: 0.16),
+        (x: 0.31, y: 0.10, r: 82, rot: 0.40, a: 0.12),
+        (x: 0.30, y: 0.42, r: 68, rot: -0.25, a: 0.10),
+        (x: 0.09, y: 0.88, r: 58, rot: 0.35, a: 0.12),
+        (x: 0.36, y: 0.82, r: 44, rot: -0.15, a: 0.11),
+        (x: 0.62, y: 0.05, r: 64, rot: 0.10, a: 0.12),
+        (x: 0.92, y: 0.22, r: 36, rot: 0.30, a: 0.15),
+        (x: 0.98, y: 0.15, r: 68, rot: -0.22, a: 0.10),
+      ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final spec in _hexSpecs) {
+      final paint = Paint()
+        ..color = Colors.white.withValues(alpha: spec.a)
+        ..style = PaintingStyle.fill;
+
+      final cx = size.width * spec.x;
+      final cy = size.height * spec.y;
+      final path = Path();
+      for (var i = 0; i < 6; i++) {
+        final angle = spec.rot + (math.pi / 3) * i;
+        final px = cx + spec.r * math.cos(angle);
+        final py = cy + spec.r * math.sin(angle);
+        if (i == 0) {
+          path.moveTo(px, py);
+        } else {
+          path.lineTo(px, py);
+        }
+      }
+      path.close();
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

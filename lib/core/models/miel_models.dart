@@ -29,6 +29,105 @@ enum MielModuleType {
   sistema,
 }
 
+/// Categoría visual semántica de cada herramienta en el panel de MIeL.
+enum MielToolCategory { materials, communication, evaluation }
+
+/// Herramientas que aparecen en la barra horizontal de cada tarjeta de materia en MIeL.
+enum MielToolKind {
+  contenidos(
+    shortLabel: 'Contenidos',
+    fullLabel: 'Contenidos',
+    category: MielToolCategory.materials,
+  ),
+  autoguia(
+    shortLabel: 'Autoguía',
+    fullLabel: 'Autoguía',
+    category: MielToolCategory.materials,
+  ),
+  portafolio(
+    shortLabel: 'Portafolio',
+    fullLabel: 'Portafolio',
+    category: MielToolCategory.materials,
+  ),
+  mensajeria(
+    shortLabel: 'Mensajes',
+    fullLabel: 'Mensajería',
+    category: MielToolCategory.communication,
+  ),
+  foro(
+    shortLabel: 'Foro',
+    fullLabel: 'Foros',
+    category: MielToolCategory.communication,
+  ),
+  chat(
+    shortLabel: 'Chat',
+    fullLabel: 'Chat',
+    category: MielToolCategory.communication,
+  ),
+  encuestas(
+    shortLabel: 'Encuestas',
+    fullLabel: 'Encuestas',
+    category: MielToolCategory.evaluation,
+  ),
+  evaluacion(
+    shortLabel: 'Evaluación',
+    fullLabel: 'Evaluación',
+    category: MielToolCategory.evaluation,
+  );
+
+  const MielToolKind({
+    required this.shortLabel,
+    required this.fullLabel,
+    required this.category,
+  });
+
+  final String shortLabel;
+  final String fullLabel;
+  final MielToolCategory category;
+
+  /// Ruta relativa oficial en MIeL para la comisión indicada.
+  String pathForCommission(String idComision) {
+    switch (this) {
+      case MielToolKind.contenidos:
+        return '/contenido/archivos/comision/$idComision';
+      case MielToolKind.autoguia:
+        return '/autoguia/index/comision/$idComision';
+      case MielToolKind.portafolio:
+        return '/portafolio/practicas/comision/$idComision';
+      case MielToolKind.mensajeria:
+        return '/mensajeria/entrada/comision/$idComision';
+      case MielToolKind.foro:
+        return '/forov2/temas/comision/$idComision';
+      case MielToolKind.chat:
+        return '/chat/salas/comision/$idComision';
+      case MielToolKind.encuestas:
+        return '/encuesta/encuestas/comision/$idComision';
+      case MielToolKind.evaluacion:
+        return '/evaluacion/evaluaciones/comision/$idComision';
+    }
+  }
+
+  /// Clave de snapshots locales en SQLite asociada al módulo, si aplica.
+  String? get snapshotModuleKey {
+    switch (this) {
+      case MielToolKind.contenidos:
+        return 'contenidos';
+      case MielToolKind.portafolio:
+        return 'portafolio';
+      case MielToolKind.mensajeria:
+        return 'mensajeria';
+      case MielToolKind.foro:
+        return 'foro_temas';
+      case MielToolKind.evaluacion:
+        return 'evaluacion';
+      case MielToolKind.autoguia:
+      case MielToolKind.chat:
+      case MielToolKind.encuestas:
+        return null;
+    }
+  }
+}
+
 enum ForumSyncMode {
   /// Consulta solo /forov2/temas/comision/{id} sin abrir hilos (no borra badges en MIEL web).
   nonInvasive,
@@ -50,6 +149,8 @@ class MielSubjectBadgeSummary {
     required this.name,
     required this.commissionCode,
     required this.isHidden,
+    this.subjectCode = '',
+    this.roleLabel = '',
     this.contenidosBadge = 0,
     this.mensajesBadge = 0,
     this.foroBadge = 0,
@@ -65,7 +166,9 @@ class MielSubjectBadgeSummary {
 
   final String idComision;
   final String name;
+  final String subjectCode;
   final String commissionCode;
+  final String roleLabel;
   final bool isHidden;
   final int contenidosBadge;
   final int mensajesBadge;

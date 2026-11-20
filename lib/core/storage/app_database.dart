@@ -9,7 +9,9 @@ part 'app_database.g.dart';
 class Subjects extends Table {
   TextColumn get idComision => text()();
   TextColumn get name => text()();
+  TextColumn get subjectCode => text().withDefault(const Constant(''))();
   TextColumn get commissionCode => text().withDefault(const Constant(''))();
+  TextColumn get roleLabel => text().withDefault(const Constant(''))();
   BoolColumn get isHiddenInMiel =>
       boolean().withDefault(const Constant(false))();
   BoolColumn get muted => boolean().withDefault(const Constant(false))();
@@ -22,8 +24,14 @@ class Subjects extends Table {
   BoolColumn get notifyForos => boolean().withDefault(const Constant(true))();
   BoolColumn get notifyEvaluacion =>
       boolean().withDefault(const Constant(true))();
+  BoolColumn get hasContenidos => boolean().withDefault(const Constant(true))();
+  BoolColumn get hasAutoguia => boolean().withDefault(const Constant(false))();
   BoolColumn get hasPortafolio =>
       boolean().withDefault(const Constant(false))();
+  BoolColumn get hasMensajeria => boolean().withDefault(const Constant(true))();
+  BoolColumn get hasForo => boolean().withDefault(const Constant(true))();
+  BoolColumn get hasChat => boolean().withDefault(const Constant(false))();
+  BoolColumn get hasEncuestas => boolean().withDefault(const Constant(false))();
   BoolColumn get hasEvaluacion =>
       boolean().withDefault(const Constant(false))();
   IntColumn get lastContenidosBadge =>
@@ -94,6 +102,7 @@ class SettingKeys {
   static const String globalNovedadesBadge = 'global_novedades_badge';
   static const String lastCycle1At = 'last_cycle1_at';
   static const String lastCycle2At = 'last_cycle2_at';
+  static const String themeMode = 'theme_mode';
 }
 
 @DriftDatabase(
@@ -110,7 +119,24 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'libremiel'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(subjects, subjects.subjectCode);
+        await m.addColumn(subjects, subjects.roleLabel);
+        await m.addColumn(subjects, subjects.hasContenidos);
+        await m.addColumn(subjects, subjects.hasAutoguia);
+        await m.addColumn(subjects, subjects.hasMensajeria);
+        await m.addColumn(subjects, subjects.hasForo);
+        await m.addColumn(subjects, subjects.hasChat);
+        await m.addColumn(subjects, subjects.hasEncuestas);
+      }
+    },
+  );
 
   // --- Settings ---
 
@@ -187,10 +213,18 @@ class AppDatabase extends _$AppDatabase {
         SubjectsCompanion.insert(
           idComision: summary.idComision,
           name: summary.name,
+          subjectCode: Value(summary.subjectCode),
           commissionCode: Value(summary.commissionCode),
+          roleLabel: Value(summary.roleLabel),
           isHiddenInMiel: Value(summary.isHidden),
           muted: Value(summary.isHidden),
+          hasContenidos: Value(summary.hasContenidos),
+          hasAutoguia: Value(summary.hasAutoguia),
           hasPortafolio: Value(summary.hasPortafolio),
+          hasMensajeria: Value(summary.hasMensajeria),
+          hasForo: Value(summary.hasForo),
+          hasChat: Value(summary.hasChat),
+          hasEncuestas: Value(summary.hasEncuestas),
           hasEvaluacion: Value(summary.hasEvaluacion),
           lastContenidosBadge: Value(summary.contenidosBadge),
           lastMensajesBadge: Value(summary.mensajesBadge),
@@ -204,9 +238,17 @@ class AppDatabase extends _$AppDatabase {
       )..where((t) => t.idComision.equals(summary.idComision))).write(
         SubjectsCompanion(
           name: Value(summary.name),
+          subjectCode: Value(summary.subjectCode),
           commissionCode: Value(summary.commissionCode),
+          roleLabel: Value(summary.roleLabel),
           isHiddenInMiel: Value(summary.isHidden),
+          hasContenidos: Value(summary.hasContenidos),
+          hasAutoguia: Value(summary.hasAutoguia),
           hasPortafolio: Value(summary.hasPortafolio),
+          hasMensajeria: Value(summary.hasMensajeria),
+          hasForo: Value(summary.hasForo),
+          hasChat: Value(summary.hasChat),
+          hasEncuestas: Value(summary.hasEncuestas),
           hasEvaluacion: Value(summary.hasEvaluacion),
           lastContenidosBadge: Value(summary.contenidosBadge),
           lastMensajesBadge: Value(summary.mensajesBadge),
@@ -259,6 +301,13 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.idComision.equals(idComision))).get();
   }
 
+  Stream<List<CachedTeacher>> watchTeachersForSubject(String idComision) {
+    return (select(cachedTeachers)
+          ..where((t) => t.idComision.equals(idComision))
+          ..orderBy([(t) => OrderingTerm.asc(t.displayName)]))
+        .watch();
+  }
+
   Future<void> replaceTeachersForSubject(
     String idComision,
     List<CourseTeacher> teachers,
@@ -294,6 +343,18 @@ class AppDatabase extends _$AppDatabase {
             ))
             .get();
     return {for (final r in rows) r.itemId: r};
+  }
+
+  Stream<List<SnapshotEntry>> watchSnapshotsForSubject(
+    String idComision,
+    String module,
+  ) {
+    return (select(snapshotEntries)
+          ..where(
+            (t) => t.idComision.equals(idComision) & t.module.equals(module),
+          )
+          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+        .watch();
   }
 
   Future<void> upsertSnapshot({
@@ -358,6 +419,12 @@ class AppDatabase extends _$AppDatabase {
       query.where((t) => t.module.equals(module));
     }
     return query.watch();
+  }
+
+  Stream<int> watchUnreadNotificationsCount() {
+    final query = select(notificationLogs)
+      ..where((t) => t.isRead.equals(false));
+    return query.watch().map((rows) => rows.length);
   }
 
   Future<void> markNotificationRead(int id, {bool isRead = true}) async {

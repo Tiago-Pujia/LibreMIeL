@@ -20,10 +20,10 @@ Este tablero resume el avance de **LibreMIEL** por fase y componente.
 | **Fase 0 — Core** | Motor de sincronización en 2 ciclos (`SyncEngine`) | ✅ Completado | Baseline silencioso + Ciclo 1 (`/principal/interno/`) + Ciclo 2 (`Portafolio`/`Evaluación`) + tests de invariantes |
 | **Fase 1 — MVP** | Almacenamiento seguro de credenciales (`flutter_secure_storage`) | ✅ Completado | Keystore / Credential Manager / Keychain / `libsecret` |
 | **Fase 1 — MVP** | Notificaciones nativas + Tray de escritorio + Worker Android | ✅ Completado | `flutter_local_notifications`, `tray_manager`, `window_manager`, `workmanager` |
-| **Fase 1 — MVP** | Pantallas MVP (Login, Feed unificado, Materias, Ajustes) | ✅ Completado | Material 3 responsive para escritorio (`NavigationRail`) y Android (`NavigationBar`) |
+| **Fase 1 — MVP** | Interfaz fiel a MIeL (Login, Materias activas, Novedades, Ajustes) | ✅ Completado | Estética oficial de MIeL en modo claro y oscuro (`#009674` / `#128268`), tarjetas con herramientas y badges rojos, barra doble + sidebar responsive |
 | **CI/CD y Releases** | Workflows de GitHub Actions (`ci.yml` y `release.yml`) + `packaging/` | ✅ Completado | Windows x64/ARM64 (`.exe` + `.zip`), macOS Universal x86_64+ARM64 (`.dmg` + `.zip`), Linux x64/ARM64 (`AppImage`, `.deb`, `.rpm`, `.pkg.tar.zst`, `.tar.gz`), Android (`universal`, `arm64-v8a`, `armeabi-v7a`, `x86_64`) |
 | **Verificación local** | Compilación Linux, Android APK, paquetes Linux y prueba real en MIEL | ✅ Completado | Compilado `linux-x64` (`28 MB`), `AppImage`/`.deb`/`.rpm`/`.pkg.tar.zst` (`12 MB`), Android APKs (`arm64-v8a`, `armeabi-v7a`, `x86_64`, universal) y validado `SyncEngine` + parsers en vivo (solo lectura) |
-| **Fase 2 — Lectura** | Visor nativo de Contenidos, Mensajería unificada, Portafolio y Foros | ⏳ Pendiente | Planificado para `v0.2` – `v0.3` |
+| **Fase 2 — Lectura** | Visor nativo de Contenidos, Mensajería unificada, Portafolio y Foros | 🔄 En borrador | Estructura de navegación (breadcrumbs y sidebar contextual) + previsualización en borrador con caché local SQLite y acceso directo a MIeL web; lectura completa planificada para `v0.2` – `v0.3` |
 | **Fase 3 — Interacción** | Responder foros/mensajes, exportar a Markdown, Evaluaciones y Calendario | ⏳ Pendiente | Planificado para `v1.0+` |
 
 ---

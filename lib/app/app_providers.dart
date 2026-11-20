@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart' show Brightness, ThemeMode;
 
 import '../core/models/miel_models.dart';
 import '../core/network/miel_client.dart';
@@ -43,6 +44,8 @@ class AppSessionState {
     this.syncIntervalMinutes = 15,
     this.forumSyncMode = ForumSyncMode.nonInvasive,
     this.monitorEvaluaciones = true,
+    this.themeMode = ThemeMode.system,
+    this.globalNovedadesBadge = 0,
   });
 
   final bool isChecking;
@@ -55,6 +58,8 @@ class AppSessionState {
   final int syncIntervalMinutes;
   final ForumSyncMode forumSyncMode;
   final bool monitorEvaluaciones;
+  final ThemeMode themeMode;
+  final int globalNovedadesBadge;
 
   AppSessionState copyWith({
     bool? isChecking,
@@ -68,6 +73,8 @@ class AppSessionState {
     int? syncIntervalMinutes,
     ForumSyncMode? forumSyncMode,
     bool? monitorEvaluaciones,
+    ThemeMode? themeMode,
+    int? globalNovedadesBadge,
   }) {
     return AppSessionState(
       isChecking: isChecking ?? this.isChecking,
@@ -82,6 +89,8 @@ class AppSessionState {
       syncIntervalMinutes: syncIntervalMinutes ?? this.syncIntervalMinutes,
       forumSyncMode: forumSyncMode ?? this.forumSyncMode,
       monitorEvaluaciones: monitorEvaluaciones ?? this.monitorEvaluaciones,
+      themeMode: themeMode ?? this.themeMode,
+      globalNovedadesBadge: globalNovedadesBadge ?? this.globalNovedadesBadge,
     );
   }
 }
@@ -103,6 +112,12 @@ class AppSessionController extends Notifier<AppSessionState> {
     return const AppSessionState();
   }
 
+  ThemeMode _parseThemeMode(String? raw) {
+    if (raw == 'light') return ThemeMode.light;
+    if (raw == 'dark') return ThemeMode.dark;
+    return ThemeMode.system;
+  }
+
   Future<void> _bootstrap() async {
     final db = ref.read(databaseProvider);
     final credsStore = ref.read(credentialsStoreProvider);
@@ -115,6 +130,8 @@ class AppSessionController extends Notifier<AppSessionState> {
     final monitorEval = await db.getMonitorEvaluaciones();
     final pausedReason = await db.getSetting(SettingKeys.accountPausedReason);
     final studentName = (await db.getSetting(SettingKeys.studentName)) ?? '';
+    final themeRaw = await db.getSetting(SettingKeys.themeMode);
+    final globalNovRaw = await db.getSetting(SettingKeys.globalNovedadesBadge);
     final lastCycle1Raw = await db.getSetting(SettingKeys.lastCycle1At);
     final lastSyncAt = lastCycle1Raw != null
         ? DateTime.tryParse(lastCycle1Raw)
@@ -136,6 +153,8 @@ class AppSessionController extends Notifier<AppSessionState> {
       syncIntervalMinutes: interval,
       forumSyncMode: forumMode,
       monitorEvaluaciones: monitorEval,
+      themeMode: _parseThemeMode(themeRaw),
+      globalNovedadesBadge: int.tryParse(globalNovRaw ?? '') ?? 0,
       lastSyncAt: lastSyncAt,
     );
 
@@ -227,6 +246,10 @@ class AppSessionController extends Notifier<AppSessionState> {
 
       final studentName =
           (await db.getSetting(SettingKeys.studentName)) ?? state.studentName;
+      final globalNovRaw = await db.getSetting(
+        SettingKeys.globalNovedadesBadge,
+      );
+      final globalNov = int.tryParse(globalNovRaw ?? '') ?? 0;
       final msg = summary1.authPaused
           ? (summary1.authErrorMessage ??
                 'Sincronización pausada por error de cuenta.')
@@ -239,6 +262,7 @@ class AppSessionController extends Notifier<AppSessionState> {
       state = state.copyWith(
         isSyncing: false,
         studentName: studentName,
+        globalNovedadesBadge: globalNov,
         authPausedReason: summary1.authPaused
             ? summary1.authErrorMessage
             : null,
@@ -277,11 +301,25 @@ class AppSessionController extends Notifier<AppSessionState> {
     state = state.copyWith(monitorEvaluaciones: enabled);
   }
 
+  Future<void> updateThemeMode(ThemeMode mode) async {
+    final db = ref.read(databaseProvider);
+    await db.setSetting(SettingKeys.themeMode, mode.name);
+    state = state.copyWith(themeMode: mode);
+  }
+
+  Future<void> toggleThemeMode(Brightness currentBrightness) async {
+    final nextMode = currentBrightness == Brightness.dark
+        ? ThemeMode.light
+        : ThemeMode.dark;
+    await updateThemeMode(nextMode);
+  }
+
   Future<void> logout({bool wipeLocalData = false}) async {
     _desktopCycle1Timer?.cancel();
     _desktopCycle2Timer?.cancel();
     _memoryCredentials = null;
 
+    final preservedTheme = state.themeMode;
     final client = await ref.read(mielClientProvider.future);
     await client.clearSession();
     await ref.read(credentialsStoreProvider).clear();
@@ -289,9 +327,16 @@ class AppSessionController extends Notifier<AppSessionState> {
 
     if (wipeLocalData) {
       await ref.read(databaseProvider).clearAllLocalData();
+      await ref
+          .read(databaseProvider)
+          .setSetting(SettingKeys.themeMode, preservedTheme.name);
     }
 
-    state = const AppSessionState(isChecking: false, isAuthenticated: false);
+    state = AppSessionState(
+      isChecking: false,
+      isAuthenticated: false,
+      themeMode: preservedTheme,
+    );
   }
 
   Future<void> _startBackgroundSchedulers(int intervalMinutes) async {
@@ -343,4 +388,36 @@ final notificationsStreamProvider =
       return ref
           .watch(databaseProvider)
           .watchNotifications(module: moduleFilter);
+    });
+
+final subjectNotificationsProvider =
+    StreamProvider.family<
+      List<NotificationLog>,
+      ({String idComision, String? module})
+    >((ref, filter) {
+      return ref
+          .watch(databaseProvider)
+          .watchNotifications(
+            idComision: filter.idComision,
+            module: filter.module,
+          );
+    });
+
+final unreadNotificationsCountProvider = StreamProvider<int>((ref) {
+  return ref.watch(databaseProvider).watchUnreadNotificationsCount();
+});
+
+final subjectTeachersProvider =
+    StreamProvider.family<List<CachedTeacher>, String>((ref, idComision) {
+      return ref.watch(databaseProvider).watchTeachersForSubject(idComision);
+    });
+
+final subjectSnapshotsProvider =
+    StreamProvider.family<
+      List<SnapshotEntry>,
+      ({String idComision, String module})
+    >((ref, key) {
+      return ref
+          .watch(databaseProvider)
+          .watchSnapshotsForSubject(key.idComision, key.module);
     });

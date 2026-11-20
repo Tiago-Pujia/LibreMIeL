@@ -28,12 +28,36 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _subjectCodeMeta = const VerificationMeta(
+    'subjectCode',
+  );
+  @override
+  late final GeneratedColumn<String> subjectCode = GeneratedColumn<String>(
+    'subject_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _commissionCodeMeta = const VerificationMeta(
     'commissionCode',
   );
   @override
   late final GeneratedColumn<String> commissionCode = GeneratedColumn<String>(
     'commission_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _roleLabelMeta = const VerificationMeta(
+    'roleLabel',
+  );
+  @override
+  late final GeneratedColumn<String> roleLabel = GeneratedColumn<String>(
+    'role_label',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -143,6 +167,36 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _hasContenidosMeta = const VerificationMeta(
+    'hasContenidos',
+  );
+  @override
+  late final GeneratedColumn<bool> hasContenidos = GeneratedColumn<bool>(
+    'has_contenidos',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_contenidos" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _hasAutoguiaMeta = const VerificationMeta(
+    'hasAutoguia',
+  );
+  @override
+  late final GeneratedColumn<bool> hasAutoguia = GeneratedColumn<bool>(
+    'has_autoguia',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_autoguia" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _hasPortafolioMeta = const VerificationMeta(
     'hasPortafolio',
   );
@@ -155,6 +209,66 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("has_portafolio" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _hasMensajeriaMeta = const VerificationMeta(
+    'hasMensajeria',
+  );
+  @override
+  late final GeneratedColumn<bool> hasMensajeria = GeneratedColumn<bool>(
+    'has_mensajeria',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_mensajeria" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _hasForoMeta = const VerificationMeta(
+    'hasForo',
+  );
+  @override
+  late final GeneratedColumn<bool> hasForo = GeneratedColumn<bool>(
+    'has_foro',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_foro" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _hasChatMeta = const VerificationMeta(
+    'hasChat',
+  );
+  @override
+  late final GeneratedColumn<bool> hasChat = GeneratedColumn<bool>(
+    'has_chat',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_chat" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _hasEncuestasMeta = const VerificationMeta(
+    'hasEncuestas',
+  );
+  @override
+  late final GeneratedColumn<bool> hasEncuestas = GeneratedColumn<bool>(
+    'has_encuestas',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_encuestas" IN (0, 1))',
     ),
     defaultValue: const Constant(false),
   );
@@ -223,7 +337,9 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
   List<GeneratedColumn> get $columns => [
     idComision,
     name,
+    subjectCode,
     commissionCode,
+    roleLabel,
     isHiddenInMiel,
     muted,
     notifyContenidos,
@@ -231,7 +347,13 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
     notifyMensajeria,
     notifyForos,
     notifyEvaluacion,
+    hasContenidos,
+    hasAutoguia,
     hasPortafolio,
+    hasMensajeria,
+    hasForo,
+    hasChat,
+    hasEncuestas,
     hasEvaluacion,
     lastContenidosBadge,
     lastMensajesBadge,
@@ -266,6 +388,15 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
+    if (data.containsKey('subject_code')) {
+      context.handle(
+        _subjectCodeMeta,
+        subjectCode.isAcceptableOrUnknown(
+          data['subject_code']!,
+          _subjectCodeMeta,
+        ),
+      );
+    }
     if (data.containsKey('commission_code')) {
       context.handle(
         _commissionCodeMeta,
@@ -273,6 +404,12 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
           data['commission_code']!,
           _commissionCodeMeta,
         ),
+      );
+    }
+    if (data.containsKey('role_label')) {
+      context.handle(
+        _roleLabelMeta,
+        roleLabel.isAcceptableOrUnknown(data['role_label']!, _roleLabelMeta),
       );
     }
     if (data.containsKey('is_hidden_in_miel')) {
@@ -335,12 +472,60 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
         ),
       );
     }
+    if (data.containsKey('has_contenidos')) {
+      context.handle(
+        _hasContenidosMeta,
+        hasContenidos.isAcceptableOrUnknown(
+          data['has_contenidos']!,
+          _hasContenidosMeta,
+        ),
+      );
+    }
+    if (data.containsKey('has_autoguia')) {
+      context.handle(
+        _hasAutoguiaMeta,
+        hasAutoguia.isAcceptableOrUnknown(
+          data['has_autoguia']!,
+          _hasAutoguiaMeta,
+        ),
+      );
+    }
     if (data.containsKey('has_portafolio')) {
       context.handle(
         _hasPortafolioMeta,
         hasPortafolio.isAcceptableOrUnknown(
           data['has_portafolio']!,
           _hasPortafolioMeta,
+        ),
+      );
+    }
+    if (data.containsKey('has_mensajeria')) {
+      context.handle(
+        _hasMensajeriaMeta,
+        hasMensajeria.isAcceptableOrUnknown(
+          data['has_mensajeria']!,
+          _hasMensajeriaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('has_foro')) {
+      context.handle(
+        _hasForoMeta,
+        hasForo.isAcceptableOrUnknown(data['has_foro']!, _hasForoMeta),
+      );
+    }
+    if (data.containsKey('has_chat')) {
+      context.handle(
+        _hasChatMeta,
+        hasChat.isAcceptableOrUnknown(data['has_chat']!, _hasChatMeta),
+      );
+    }
+    if (data.containsKey('has_encuestas')) {
+      context.handle(
+        _hasEncuestasMeta,
+        hasEncuestas.isAcceptableOrUnknown(
+          data['has_encuestas']!,
+          _hasEncuestasMeta,
         ),
       );
     }
@@ -406,9 +591,17 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      subjectCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_code'],
+      )!,
       commissionCode: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}commission_code'],
+      )!,
+      roleLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role_label'],
       )!,
       isHiddenInMiel: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -438,9 +631,33 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
         DriftSqlType.bool,
         data['${effectivePrefix}notify_evaluacion'],
       )!,
+      hasContenidos: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_contenidos'],
+      )!,
+      hasAutoguia: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_autoguia'],
+      )!,
       hasPortafolio: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}has_portafolio'],
+      )!,
+      hasMensajeria: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_mensajeria'],
+      )!,
+      hasForo: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_foro'],
+      )!,
+      hasChat: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_chat'],
+      )!,
+      hasEncuestas: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_encuestas'],
       )!,
       hasEvaluacion: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -474,7 +691,9 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
 class Subject extends DataClass implements Insertable<Subject> {
   final String idComision;
   final String name;
+  final String subjectCode;
   final String commissionCode;
+  final String roleLabel;
   final bool isHiddenInMiel;
   final bool muted;
   final bool notifyContenidos;
@@ -482,7 +701,13 @@ class Subject extends DataClass implements Insertable<Subject> {
   final bool notifyMensajeria;
   final bool notifyForos;
   final bool notifyEvaluacion;
+  final bool hasContenidos;
+  final bool hasAutoguia;
   final bool hasPortafolio;
+  final bool hasMensajeria;
+  final bool hasForo;
+  final bool hasChat;
+  final bool hasEncuestas;
   final bool hasEvaluacion;
   final int lastContenidosBadge;
   final int lastMensajesBadge;
@@ -491,7 +716,9 @@ class Subject extends DataClass implements Insertable<Subject> {
   const Subject({
     required this.idComision,
     required this.name,
+    required this.subjectCode,
     required this.commissionCode,
+    required this.roleLabel,
     required this.isHiddenInMiel,
     required this.muted,
     required this.notifyContenidos,
@@ -499,7 +726,13 @@ class Subject extends DataClass implements Insertable<Subject> {
     required this.notifyMensajeria,
     required this.notifyForos,
     required this.notifyEvaluacion,
+    required this.hasContenidos,
+    required this.hasAutoguia,
     required this.hasPortafolio,
+    required this.hasMensajeria,
+    required this.hasForo,
+    required this.hasChat,
+    required this.hasEncuestas,
     required this.hasEvaluacion,
     required this.lastContenidosBadge,
     required this.lastMensajesBadge,
@@ -511,7 +744,9 @@ class Subject extends DataClass implements Insertable<Subject> {
     final map = <String, Expression>{};
     map['id_comision'] = Variable<String>(idComision);
     map['name'] = Variable<String>(name);
+    map['subject_code'] = Variable<String>(subjectCode);
     map['commission_code'] = Variable<String>(commissionCode);
+    map['role_label'] = Variable<String>(roleLabel);
     map['is_hidden_in_miel'] = Variable<bool>(isHiddenInMiel);
     map['muted'] = Variable<bool>(muted);
     map['notify_contenidos'] = Variable<bool>(notifyContenidos);
@@ -519,7 +754,13 @@ class Subject extends DataClass implements Insertable<Subject> {
     map['notify_mensajeria'] = Variable<bool>(notifyMensajeria);
     map['notify_foros'] = Variable<bool>(notifyForos);
     map['notify_evaluacion'] = Variable<bool>(notifyEvaluacion);
+    map['has_contenidos'] = Variable<bool>(hasContenidos);
+    map['has_autoguia'] = Variable<bool>(hasAutoguia);
     map['has_portafolio'] = Variable<bool>(hasPortafolio);
+    map['has_mensajeria'] = Variable<bool>(hasMensajeria);
+    map['has_foro'] = Variable<bool>(hasForo);
+    map['has_chat'] = Variable<bool>(hasChat);
+    map['has_encuestas'] = Variable<bool>(hasEncuestas);
     map['has_evaluacion'] = Variable<bool>(hasEvaluacion);
     map['last_contenidos_badge'] = Variable<int>(lastContenidosBadge);
     map['last_mensajes_badge'] = Variable<int>(lastMensajesBadge);
@@ -534,7 +775,9 @@ class Subject extends DataClass implements Insertable<Subject> {
     return SubjectsCompanion(
       idComision: Value(idComision),
       name: Value(name),
+      subjectCode: Value(subjectCode),
       commissionCode: Value(commissionCode),
+      roleLabel: Value(roleLabel),
       isHiddenInMiel: Value(isHiddenInMiel),
       muted: Value(muted),
       notifyContenidos: Value(notifyContenidos),
@@ -542,7 +785,13 @@ class Subject extends DataClass implements Insertable<Subject> {
       notifyMensajeria: Value(notifyMensajeria),
       notifyForos: Value(notifyForos),
       notifyEvaluacion: Value(notifyEvaluacion),
+      hasContenidos: Value(hasContenidos),
+      hasAutoguia: Value(hasAutoguia),
       hasPortafolio: Value(hasPortafolio),
+      hasMensajeria: Value(hasMensajeria),
+      hasForo: Value(hasForo),
+      hasChat: Value(hasChat),
+      hasEncuestas: Value(hasEncuestas),
       hasEvaluacion: Value(hasEvaluacion),
       lastContenidosBadge: Value(lastContenidosBadge),
       lastMensajesBadge: Value(lastMensajesBadge),
@@ -561,7 +810,9 @@ class Subject extends DataClass implements Insertable<Subject> {
     return Subject(
       idComision: serializer.fromJson<String>(json['idComision']),
       name: serializer.fromJson<String>(json['name']),
+      subjectCode: serializer.fromJson<String>(json['subjectCode']),
       commissionCode: serializer.fromJson<String>(json['commissionCode']),
+      roleLabel: serializer.fromJson<String>(json['roleLabel']),
       isHiddenInMiel: serializer.fromJson<bool>(json['isHiddenInMiel']),
       muted: serializer.fromJson<bool>(json['muted']),
       notifyContenidos: serializer.fromJson<bool>(json['notifyContenidos']),
@@ -569,7 +820,13 @@ class Subject extends DataClass implements Insertable<Subject> {
       notifyMensajeria: serializer.fromJson<bool>(json['notifyMensajeria']),
       notifyForos: serializer.fromJson<bool>(json['notifyForos']),
       notifyEvaluacion: serializer.fromJson<bool>(json['notifyEvaluacion']),
+      hasContenidos: serializer.fromJson<bool>(json['hasContenidos']),
+      hasAutoguia: serializer.fromJson<bool>(json['hasAutoguia']),
       hasPortafolio: serializer.fromJson<bool>(json['hasPortafolio']),
+      hasMensajeria: serializer.fromJson<bool>(json['hasMensajeria']),
+      hasForo: serializer.fromJson<bool>(json['hasForo']),
+      hasChat: serializer.fromJson<bool>(json['hasChat']),
+      hasEncuestas: serializer.fromJson<bool>(json['hasEncuestas']),
       hasEvaluacion: serializer.fromJson<bool>(json['hasEvaluacion']),
       lastContenidosBadge: serializer.fromJson<int>(
         json['lastContenidosBadge'],
@@ -585,7 +842,9 @@ class Subject extends DataClass implements Insertable<Subject> {
     return <String, dynamic>{
       'idComision': serializer.toJson<String>(idComision),
       'name': serializer.toJson<String>(name),
+      'subjectCode': serializer.toJson<String>(subjectCode),
       'commissionCode': serializer.toJson<String>(commissionCode),
+      'roleLabel': serializer.toJson<String>(roleLabel),
       'isHiddenInMiel': serializer.toJson<bool>(isHiddenInMiel),
       'muted': serializer.toJson<bool>(muted),
       'notifyContenidos': serializer.toJson<bool>(notifyContenidos),
@@ -593,7 +852,13 @@ class Subject extends DataClass implements Insertable<Subject> {
       'notifyMensajeria': serializer.toJson<bool>(notifyMensajeria),
       'notifyForos': serializer.toJson<bool>(notifyForos),
       'notifyEvaluacion': serializer.toJson<bool>(notifyEvaluacion),
+      'hasContenidos': serializer.toJson<bool>(hasContenidos),
+      'hasAutoguia': serializer.toJson<bool>(hasAutoguia),
       'hasPortafolio': serializer.toJson<bool>(hasPortafolio),
+      'hasMensajeria': serializer.toJson<bool>(hasMensajeria),
+      'hasForo': serializer.toJson<bool>(hasForo),
+      'hasChat': serializer.toJson<bool>(hasChat),
+      'hasEncuestas': serializer.toJson<bool>(hasEncuestas),
       'hasEvaluacion': serializer.toJson<bool>(hasEvaluacion),
       'lastContenidosBadge': serializer.toJson<int>(lastContenidosBadge),
       'lastMensajesBadge': serializer.toJson<int>(lastMensajesBadge),
@@ -605,7 +870,9 @@ class Subject extends DataClass implements Insertable<Subject> {
   Subject copyWith({
     String? idComision,
     String? name,
+    String? subjectCode,
     String? commissionCode,
+    String? roleLabel,
     bool? isHiddenInMiel,
     bool? muted,
     bool? notifyContenidos,
@@ -613,7 +880,13 @@ class Subject extends DataClass implements Insertable<Subject> {
     bool? notifyMensajeria,
     bool? notifyForos,
     bool? notifyEvaluacion,
+    bool? hasContenidos,
+    bool? hasAutoguia,
     bool? hasPortafolio,
+    bool? hasMensajeria,
+    bool? hasForo,
+    bool? hasChat,
+    bool? hasEncuestas,
     bool? hasEvaluacion,
     int? lastContenidosBadge,
     int? lastMensajesBadge,
@@ -622,7 +895,9 @@ class Subject extends DataClass implements Insertable<Subject> {
   }) => Subject(
     idComision: idComision ?? this.idComision,
     name: name ?? this.name,
+    subjectCode: subjectCode ?? this.subjectCode,
     commissionCode: commissionCode ?? this.commissionCode,
+    roleLabel: roleLabel ?? this.roleLabel,
     isHiddenInMiel: isHiddenInMiel ?? this.isHiddenInMiel,
     muted: muted ?? this.muted,
     notifyContenidos: notifyContenidos ?? this.notifyContenidos,
@@ -630,7 +905,13 @@ class Subject extends DataClass implements Insertable<Subject> {
     notifyMensajeria: notifyMensajeria ?? this.notifyMensajeria,
     notifyForos: notifyForos ?? this.notifyForos,
     notifyEvaluacion: notifyEvaluacion ?? this.notifyEvaluacion,
+    hasContenidos: hasContenidos ?? this.hasContenidos,
+    hasAutoguia: hasAutoguia ?? this.hasAutoguia,
     hasPortafolio: hasPortafolio ?? this.hasPortafolio,
+    hasMensajeria: hasMensajeria ?? this.hasMensajeria,
+    hasForo: hasForo ?? this.hasForo,
+    hasChat: hasChat ?? this.hasChat,
+    hasEncuestas: hasEncuestas ?? this.hasEncuestas,
     hasEvaluacion: hasEvaluacion ?? this.hasEvaluacion,
     lastContenidosBadge: lastContenidosBadge ?? this.lastContenidosBadge,
     lastMensajesBadge: lastMensajesBadge ?? this.lastMensajesBadge,
@@ -643,9 +924,13 @@ class Subject extends DataClass implements Insertable<Subject> {
           ? data.idComision.value
           : this.idComision,
       name: data.name.present ? data.name.value : this.name,
+      subjectCode: data.subjectCode.present
+          ? data.subjectCode.value
+          : this.subjectCode,
       commissionCode: data.commissionCode.present
           ? data.commissionCode.value
           : this.commissionCode,
+      roleLabel: data.roleLabel.present ? data.roleLabel.value : this.roleLabel,
       isHiddenInMiel: data.isHiddenInMiel.present
           ? data.isHiddenInMiel.value
           : this.isHiddenInMiel,
@@ -665,9 +950,23 @@ class Subject extends DataClass implements Insertable<Subject> {
       notifyEvaluacion: data.notifyEvaluacion.present
           ? data.notifyEvaluacion.value
           : this.notifyEvaluacion,
+      hasContenidos: data.hasContenidos.present
+          ? data.hasContenidos.value
+          : this.hasContenidos,
+      hasAutoguia: data.hasAutoguia.present
+          ? data.hasAutoguia.value
+          : this.hasAutoguia,
       hasPortafolio: data.hasPortafolio.present
           ? data.hasPortafolio.value
           : this.hasPortafolio,
+      hasMensajeria: data.hasMensajeria.present
+          ? data.hasMensajeria.value
+          : this.hasMensajeria,
+      hasForo: data.hasForo.present ? data.hasForo.value : this.hasForo,
+      hasChat: data.hasChat.present ? data.hasChat.value : this.hasChat,
+      hasEncuestas: data.hasEncuestas.present
+          ? data.hasEncuestas.value
+          : this.hasEncuestas,
       hasEvaluacion: data.hasEvaluacion.present
           ? data.hasEvaluacion.value
           : this.hasEvaluacion,
@@ -691,7 +990,9 @@ class Subject extends DataClass implements Insertable<Subject> {
     return (StringBuffer('Subject(')
           ..write('idComision: $idComision, ')
           ..write('name: $name, ')
+          ..write('subjectCode: $subjectCode, ')
           ..write('commissionCode: $commissionCode, ')
+          ..write('roleLabel: $roleLabel, ')
           ..write('isHiddenInMiel: $isHiddenInMiel, ')
           ..write('muted: $muted, ')
           ..write('notifyContenidos: $notifyContenidos, ')
@@ -699,7 +1000,13 @@ class Subject extends DataClass implements Insertable<Subject> {
           ..write('notifyMensajeria: $notifyMensajeria, ')
           ..write('notifyForos: $notifyForos, ')
           ..write('notifyEvaluacion: $notifyEvaluacion, ')
+          ..write('hasContenidos: $hasContenidos, ')
+          ..write('hasAutoguia: $hasAutoguia, ')
           ..write('hasPortafolio: $hasPortafolio, ')
+          ..write('hasMensajeria: $hasMensajeria, ')
+          ..write('hasForo: $hasForo, ')
+          ..write('hasChat: $hasChat, ')
+          ..write('hasEncuestas: $hasEncuestas, ')
           ..write('hasEvaluacion: $hasEvaluacion, ')
           ..write('lastContenidosBadge: $lastContenidosBadge, ')
           ..write('lastMensajesBadge: $lastMensajesBadge, ')
@@ -710,10 +1017,12 @@ class Subject extends DataClass implements Insertable<Subject> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     idComision,
     name,
+    subjectCode,
     commissionCode,
+    roleLabel,
     isHiddenInMiel,
     muted,
     notifyContenidos,
@@ -721,20 +1030,28 @@ class Subject extends DataClass implements Insertable<Subject> {
     notifyMensajeria,
     notifyForos,
     notifyEvaluacion,
+    hasContenidos,
+    hasAutoguia,
     hasPortafolio,
+    hasMensajeria,
+    hasForo,
+    hasChat,
+    hasEncuestas,
     hasEvaluacion,
     lastContenidosBadge,
     lastMensajesBadge,
     lastForoBadge,
     lastSyncedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Subject &&
           other.idComision == this.idComision &&
           other.name == this.name &&
+          other.subjectCode == this.subjectCode &&
           other.commissionCode == this.commissionCode &&
+          other.roleLabel == this.roleLabel &&
           other.isHiddenInMiel == this.isHiddenInMiel &&
           other.muted == this.muted &&
           other.notifyContenidos == this.notifyContenidos &&
@@ -742,7 +1059,13 @@ class Subject extends DataClass implements Insertable<Subject> {
           other.notifyMensajeria == this.notifyMensajeria &&
           other.notifyForos == this.notifyForos &&
           other.notifyEvaluacion == this.notifyEvaluacion &&
+          other.hasContenidos == this.hasContenidos &&
+          other.hasAutoguia == this.hasAutoguia &&
           other.hasPortafolio == this.hasPortafolio &&
+          other.hasMensajeria == this.hasMensajeria &&
+          other.hasForo == this.hasForo &&
+          other.hasChat == this.hasChat &&
+          other.hasEncuestas == this.hasEncuestas &&
           other.hasEvaluacion == this.hasEvaluacion &&
           other.lastContenidosBadge == this.lastContenidosBadge &&
           other.lastMensajesBadge == this.lastMensajesBadge &&
@@ -753,7 +1076,9 @@ class Subject extends DataClass implements Insertable<Subject> {
 class SubjectsCompanion extends UpdateCompanion<Subject> {
   final Value<String> idComision;
   final Value<String> name;
+  final Value<String> subjectCode;
   final Value<String> commissionCode;
+  final Value<String> roleLabel;
   final Value<bool> isHiddenInMiel;
   final Value<bool> muted;
   final Value<bool> notifyContenidos;
@@ -761,7 +1086,13 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
   final Value<bool> notifyMensajeria;
   final Value<bool> notifyForos;
   final Value<bool> notifyEvaluacion;
+  final Value<bool> hasContenidos;
+  final Value<bool> hasAutoguia;
   final Value<bool> hasPortafolio;
+  final Value<bool> hasMensajeria;
+  final Value<bool> hasForo;
+  final Value<bool> hasChat;
+  final Value<bool> hasEncuestas;
   final Value<bool> hasEvaluacion;
   final Value<int> lastContenidosBadge;
   final Value<int> lastMensajesBadge;
@@ -771,7 +1102,9 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
   const SubjectsCompanion({
     this.idComision = const Value.absent(),
     this.name = const Value.absent(),
+    this.subjectCode = const Value.absent(),
     this.commissionCode = const Value.absent(),
+    this.roleLabel = const Value.absent(),
     this.isHiddenInMiel = const Value.absent(),
     this.muted = const Value.absent(),
     this.notifyContenidos = const Value.absent(),
@@ -779,7 +1112,13 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     this.notifyMensajeria = const Value.absent(),
     this.notifyForos = const Value.absent(),
     this.notifyEvaluacion = const Value.absent(),
+    this.hasContenidos = const Value.absent(),
+    this.hasAutoguia = const Value.absent(),
     this.hasPortafolio = const Value.absent(),
+    this.hasMensajeria = const Value.absent(),
+    this.hasForo = const Value.absent(),
+    this.hasChat = const Value.absent(),
+    this.hasEncuestas = const Value.absent(),
     this.hasEvaluacion = const Value.absent(),
     this.lastContenidosBadge = const Value.absent(),
     this.lastMensajesBadge = const Value.absent(),
@@ -790,7 +1129,9 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
   SubjectsCompanion.insert({
     required String idComision,
     required String name,
+    this.subjectCode = const Value.absent(),
     this.commissionCode = const Value.absent(),
+    this.roleLabel = const Value.absent(),
     this.isHiddenInMiel = const Value.absent(),
     this.muted = const Value.absent(),
     this.notifyContenidos = const Value.absent(),
@@ -798,7 +1139,13 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     this.notifyMensajeria = const Value.absent(),
     this.notifyForos = const Value.absent(),
     this.notifyEvaluacion = const Value.absent(),
+    this.hasContenidos = const Value.absent(),
+    this.hasAutoguia = const Value.absent(),
     this.hasPortafolio = const Value.absent(),
+    this.hasMensajeria = const Value.absent(),
+    this.hasForo = const Value.absent(),
+    this.hasChat = const Value.absent(),
+    this.hasEncuestas = const Value.absent(),
     this.hasEvaluacion = const Value.absent(),
     this.lastContenidosBadge = const Value.absent(),
     this.lastMensajesBadge = const Value.absent(),
@@ -810,7 +1157,9 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
   static Insertable<Subject> custom({
     Expression<String>? idComision,
     Expression<String>? name,
+    Expression<String>? subjectCode,
     Expression<String>? commissionCode,
+    Expression<String>? roleLabel,
     Expression<bool>? isHiddenInMiel,
     Expression<bool>? muted,
     Expression<bool>? notifyContenidos,
@@ -818,7 +1167,13 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     Expression<bool>? notifyMensajeria,
     Expression<bool>? notifyForos,
     Expression<bool>? notifyEvaluacion,
+    Expression<bool>? hasContenidos,
+    Expression<bool>? hasAutoguia,
     Expression<bool>? hasPortafolio,
+    Expression<bool>? hasMensajeria,
+    Expression<bool>? hasForo,
+    Expression<bool>? hasChat,
+    Expression<bool>? hasEncuestas,
     Expression<bool>? hasEvaluacion,
     Expression<int>? lastContenidosBadge,
     Expression<int>? lastMensajesBadge,
@@ -829,7 +1184,9 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     return RawValuesInsertable({
       if (idComision != null) 'id_comision': idComision,
       if (name != null) 'name': name,
+      if (subjectCode != null) 'subject_code': subjectCode,
       if (commissionCode != null) 'commission_code': commissionCode,
+      if (roleLabel != null) 'role_label': roleLabel,
       if (isHiddenInMiel != null) 'is_hidden_in_miel': isHiddenInMiel,
       if (muted != null) 'muted': muted,
       if (notifyContenidos != null) 'notify_contenidos': notifyContenidos,
@@ -837,7 +1194,13 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
       if (notifyMensajeria != null) 'notify_mensajeria': notifyMensajeria,
       if (notifyForos != null) 'notify_foros': notifyForos,
       if (notifyEvaluacion != null) 'notify_evaluacion': notifyEvaluacion,
+      if (hasContenidos != null) 'has_contenidos': hasContenidos,
+      if (hasAutoguia != null) 'has_autoguia': hasAutoguia,
       if (hasPortafolio != null) 'has_portafolio': hasPortafolio,
+      if (hasMensajeria != null) 'has_mensajeria': hasMensajeria,
+      if (hasForo != null) 'has_foro': hasForo,
+      if (hasChat != null) 'has_chat': hasChat,
+      if (hasEncuestas != null) 'has_encuestas': hasEncuestas,
       if (hasEvaluacion != null) 'has_evaluacion': hasEvaluacion,
       if (lastContenidosBadge != null)
         'last_contenidos_badge': lastContenidosBadge,
@@ -851,7 +1214,9 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
   SubjectsCompanion copyWith({
     Value<String>? idComision,
     Value<String>? name,
+    Value<String>? subjectCode,
     Value<String>? commissionCode,
+    Value<String>? roleLabel,
     Value<bool>? isHiddenInMiel,
     Value<bool>? muted,
     Value<bool>? notifyContenidos,
@@ -859,7 +1224,13 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     Value<bool>? notifyMensajeria,
     Value<bool>? notifyForos,
     Value<bool>? notifyEvaluacion,
+    Value<bool>? hasContenidos,
+    Value<bool>? hasAutoguia,
     Value<bool>? hasPortafolio,
+    Value<bool>? hasMensajeria,
+    Value<bool>? hasForo,
+    Value<bool>? hasChat,
+    Value<bool>? hasEncuestas,
     Value<bool>? hasEvaluacion,
     Value<int>? lastContenidosBadge,
     Value<int>? lastMensajesBadge,
@@ -870,7 +1241,9 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     return SubjectsCompanion(
       idComision: idComision ?? this.idComision,
       name: name ?? this.name,
+      subjectCode: subjectCode ?? this.subjectCode,
       commissionCode: commissionCode ?? this.commissionCode,
+      roleLabel: roleLabel ?? this.roleLabel,
       isHiddenInMiel: isHiddenInMiel ?? this.isHiddenInMiel,
       muted: muted ?? this.muted,
       notifyContenidos: notifyContenidos ?? this.notifyContenidos,
@@ -878,7 +1251,13 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
       notifyMensajeria: notifyMensajeria ?? this.notifyMensajeria,
       notifyForos: notifyForos ?? this.notifyForos,
       notifyEvaluacion: notifyEvaluacion ?? this.notifyEvaluacion,
+      hasContenidos: hasContenidos ?? this.hasContenidos,
+      hasAutoguia: hasAutoguia ?? this.hasAutoguia,
       hasPortafolio: hasPortafolio ?? this.hasPortafolio,
+      hasMensajeria: hasMensajeria ?? this.hasMensajeria,
+      hasForo: hasForo ?? this.hasForo,
+      hasChat: hasChat ?? this.hasChat,
+      hasEncuestas: hasEncuestas ?? this.hasEncuestas,
       hasEvaluacion: hasEvaluacion ?? this.hasEvaluacion,
       lastContenidosBadge: lastContenidosBadge ?? this.lastContenidosBadge,
       lastMensajesBadge: lastMensajesBadge ?? this.lastMensajesBadge,
@@ -897,8 +1276,14 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (subjectCode.present) {
+      map['subject_code'] = Variable<String>(subjectCode.value);
+    }
     if (commissionCode.present) {
       map['commission_code'] = Variable<String>(commissionCode.value);
+    }
+    if (roleLabel.present) {
+      map['role_label'] = Variable<String>(roleLabel.value);
     }
     if (isHiddenInMiel.present) {
       map['is_hidden_in_miel'] = Variable<bool>(isHiddenInMiel.value);
@@ -921,8 +1306,26 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     if (notifyEvaluacion.present) {
       map['notify_evaluacion'] = Variable<bool>(notifyEvaluacion.value);
     }
+    if (hasContenidos.present) {
+      map['has_contenidos'] = Variable<bool>(hasContenidos.value);
+    }
+    if (hasAutoguia.present) {
+      map['has_autoguia'] = Variable<bool>(hasAutoguia.value);
+    }
     if (hasPortafolio.present) {
       map['has_portafolio'] = Variable<bool>(hasPortafolio.value);
+    }
+    if (hasMensajeria.present) {
+      map['has_mensajeria'] = Variable<bool>(hasMensajeria.value);
+    }
+    if (hasForo.present) {
+      map['has_foro'] = Variable<bool>(hasForo.value);
+    }
+    if (hasChat.present) {
+      map['has_chat'] = Variable<bool>(hasChat.value);
+    }
+    if (hasEncuestas.present) {
+      map['has_encuestas'] = Variable<bool>(hasEncuestas.value);
     }
     if (hasEvaluacion.present) {
       map['has_evaluacion'] = Variable<bool>(hasEvaluacion.value);
@@ -950,7 +1353,9 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     return (StringBuffer('SubjectsCompanion(')
           ..write('idComision: $idComision, ')
           ..write('name: $name, ')
+          ..write('subjectCode: $subjectCode, ')
           ..write('commissionCode: $commissionCode, ')
+          ..write('roleLabel: $roleLabel, ')
           ..write('isHiddenInMiel: $isHiddenInMiel, ')
           ..write('muted: $muted, ')
           ..write('notifyContenidos: $notifyContenidos, ')
@@ -958,7 +1363,13 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
           ..write('notifyMensajeria: $notifyMensajeria, ')
           ..write('notifyForos: $notifyForos, ')
           ..write('notifyEvaluacion: $notifyEvaluacion, ')
+          ..write('hasContenidos: $hasContenidos, ')
+          ..write('hasAutoguia: $hasAutoguia, ')
           ..write('hasPortafolio: $hasPortafolio, ')
+          ..write('hasMensajeria: $hasMensajeria, ')
+          ..write('hasForo: $hasForo, ')
+          ..write('hasChat: $hasChat, ')
+          ..write('hasEncuestas: $hasEncuestas, ')
           ..write('hasEvaluacion: $hasEvaluacion, ')
           ..write('lastContenidosBadge: $lastContenidosBadge, ')
           ..write('lastMensajesBadge: $lastMensajesBadge, ')
@@ -2595,7 +3006,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$SubjectsTableCreateCompanionBuilder = SubjectsCompanion Function({
   required String idComision,
   required String name,
+  Value<String> subjectCode,
   Value<String> commissionCode,
+  Value<String> roleLabel,
   Value<bool> isHiddenInMiel,
   Value<bool> muted,
   Value<bool> notifyContenidos,
@@ -2603,7 +3016,13 @@ typedef $$SubjectsTableCreateCompanionBuilder = SubjectsCompanion Function({
   Value<bool> notifyMensajeria,
   Value<bool> notifyForos,
   Value<bool> notifyEvaluacion,
+  Value<bool> hasContenidos,
+  Value<bool> hasAutoguia,
   Value<bool> hasPortafolio,
+  Value<bool> hasMensajeria,
+  Value<bool> hasForo,
+  Value<bool> hasChat,
+  Value<bool> hasEncuestas,
   Value<bool> hasEvaluacion,
   Value<int> lastContenidosBadge,
   Value<int> lastMensajesBadge,
@@ -2614,7 +3033,9 @@ typedef $$SubjectsTableCreateCompanionBuilder = SubjectsCompanion Function({
 typedef $$SubjectsTableUpdateCompanionBuilder = SubjectsCompanion Function({
   Value<String> idComision,
   Value<String> name,
+  Value<String> subjectCode,
   Value<String> commissionCode,
+  Value<String> roleLabel,
   Value<bool> isHiddenInMiel,
   Value<bool> muted,
   Value<bool> notifyContenidos,
@@ -2622,7 +3043,13 @@ typedef $$SubjectsTableUpdateCompanionBuilder = SubjectsCompanion Function({
   Value<bool> notifyMensajeria,
   Value<bool> notifyForos,
   Value<bool> notifyEvaluacion,
+  Value<bool> hasContenidos,
+  Value<bool> hasAutoguia,
   Value<bool> hasPortafolio,
+  Value<bool> hasMensajeria,
+  Value<bool> hasForo,
+  Value<bool> hasChat,
+  Value<bool> hasEncuestas,
   Value<bool> hasEvaluacion,
   Value<int> lastContenidosBadge,
   Value<int> lastMensajesBadge,
@@ -2650,8 +3077,18 @@ class $$SubjectsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get subjectCode => $composableBuilder(
+    column: $table.subjectCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get commissionCode => $composableBuilder(
     column: $table.commissionCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get roleLabel => $composableBuilder(
+    column: $table.roleLabel,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2690,8 +3127,38 @@ class $$SubjectsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get hasContenidos => $composableBuilder(
+    column: $table.hasContenidos,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasAutoguia => $composableBuilder(
+    column: $table.hasAutoguia,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<bool> get hasPortafolio => $composableBuilder(
     column: $table.hasPortafolio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasMensajeria => $composableBuilder(
+    column: $table.hasMensajeria,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasForo => $composableBuilder(
+    column: $table.hasForo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasChat => $composableBuilder(
+    column: $table.hasChat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasEncuestas => $composableBuilder(
+    column: $table.hasEncuestas,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2740,8 +3207,18 @@ class $$SubjectsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get subjectCode => $composableBuilder(
+    column: $table.subjectCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get commissionCode => $composableBuilder(
     column: $table.commissionCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get roleLabel => $composableBuilder(
+    column: $table.roleLabel,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2780,8 +3257,38 @@ class $$SubjectsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get hasContenidos => $composableBuilder(
+    column: $table.hasContenidos,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasAutoguia => $composableBuilder(
+    column: $table.hasAutoguia,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get hasPortafolio => $composableBuilder(
     column: $table.hasPortafolio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasMensajeria => $composableBuilder(
+    column: $table.hasMensajeria,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasForo => $composableBuilder(
+    column: $table.hasForo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasChat => $composableBuilder(
+    column: $table.hasChat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasEncuestas => $composableBuilder(
+    column: $table.hasEncuestas,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2828,10 +3335,18 @@ class $$SubjectsTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
+  GeneratedColumn<String> get subjectCode => $composableBuilder(
+    column: $table.subjectCode,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get commissionCode => $composableBuilder(
     column: $table.commissionCode,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get roleLabel =>
+      $composableBuilder(column: $table.roleLabel, builder: (column) => column);
 
   GeneratedColumn<bool> get isHiddenInMiel => $composableBuilder(
     column: $table.isHiddenInMiel,
@@ -2866,8 +3381,34 @@ class $$SubjectsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get hasContenidos => $composableBuilder(
+    column: $table.hasContenidos,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hasAutoguia => $composableBuilder(
+    column: $table.hasAutoguia,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get hasPortafolio => $composableBuilder(
     column: $table.hasPortafolio,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hasMensajeria => $composableBuilder(
+    column: $table.hasMensajeria,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hasForo =>
+      $composableBuilder(column: $table.hasForo, builder: (column) => column);
+
+  GeneratedColumn<bool> get hasChat =>
+      $composableBuilder(column: $table.hasChat, builder: (column) => column);
+
+  GeneratedColumn<bool> get hasEncuestas => $composableBuilder(
+    column: $table.hasEncuestas,
     builder: (column) => column,
   );
 
@@ -2927,7 +3468,9 @@ class $$SubjectsTableTableManager
               ({
                 Value<String> idComision = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String> subjectCode = const Value.absent(),
                 Value<String> commissionCode = const Value.absent(),
+                Value<String> roleLabel = const Value.absent(),
                 Value<bool> isHiddenInMiel = const Value.absent(),
                 Value<bool> muted = const Value.absent(),
                 Value<bool> notifyContenidos = const Value.absent(),
@@ -2935,7 +3478,13 @@ class $$SubjectsTableTableManager
                 Value<bool> notifyMensajeria = const Value.absent(),
                 Value<bool> notifyForos = const Value.absent(),
                 Value<bool> notifyEvaluacion = const Value.absent(),
+                Value<bool> hasContenidos = const Value.absent(),
+                Value<bool> hasAutoguia = const Value.absent(),
                 Value<bool> hasPortafolio = const Value.absent(),
+                Value<bool> hasMensajeria = const Value.absent(),
+                Value<bool> hasForo = const Value.absent(),
+                Value<bool> hasChat = const Value.absent(),
+                Value<bool> hasEncuestas = const Value.absent(),
                 Value<bool> hasEvaluacion = const Value.absent(),
                 Value<int> lastContenidosBadge = const Value.absent(),
                 Value<int> lastMensajesBadge = const Value.absent(),
@@ -2945,7 +3494,9 @@ class $$SubjectsTableTableManager
               }) => SubjectsCompanion(
                 idComision: idComision,
                 name: name,
+                subjectCode: subjectCode,
                 commissionCode: commissionCode,
+                roleLabel: roleLabel,
                 isHiddenInMiel: isHiddenInMiel,
                 muted: muted,
                 notifyContenidos: notifyContenidos,
@@ -2953,7 +3504,13 @@ class $$SubjectsTableTableManager
                 notifyMensajeria: notifyMensajeria,
                 notifyForos: notifyForos,
                 notifyEvaluacion: notifyEvaluacion,
+                hasContenidos: hasContenidos,
+                hasAutoguia: hasAutoguia,
                 hasPortafolio: hasPortafolio,
+                hasMensajeria: hasMensajeria,
+                hasForo: hasForo,
+                hasChat: hasChat,
+                hasEncuestas: hasEncuestas,
                 hasEvaluacion: hasEvaluacion,
                 lastContenidosBadge: lastContenidosBadge,
                 lastMensajesBadge: lastMensajesBadge,
@@ -2965,7 +3522,9 @@ class $$SubjectsTableTableManager
               ({
                 required String idComision,
                 required String name,
+                Value<String> subjectCode = const Value.absent(),
                 Value<String> commissionCode = const Value.absent(),
+                Value<String> roleLabel = const Value.absent(),
                 Value<bool> isHiddenInMiel = const Value.absent(),
                 Value<bool> muted = const Value.absent(),
                 Value<bool> notifyContenidos = const Value.absent(),
@@ -2973,7 +3532,13 @@ class $$SubjectsTableTableManager
                 Value<bool> notifyMensajeria = const Value.absent(),
                 Value<bool> notifyForos = const Value.absent(),
                 Value<bool> notifyEvaluacion = const Value.absent(),
+                Value<bool> hasContenidos = const Value.absent(),
+                Value<bool> hasAutoguia = const Value.absent(),
                 Value<bool> hasPortafolio = const Value.absent(),
+                Value<bool> hasMensajeria = const Value.absent(),
+                Value<bool> hasForo = const Value.absent(),
+                Value<bool> hasChat = const Value.absent(),
+                Value<bool> hasEncuestas = const Value.absent(),
                 Value<bool> hasEvaluacion = const Value.absent(),
                 Value<int> lastContenidosBadge = const Value.absent(),
                 Value<int> lastMensajesBadge = const Value.absent(),
@@ -2983,7 +3548,9 @@ class $$SubjectsTableTableManager
               }) => SubjectsCompanion.insert(
                 idComision: idComision,
                 name: name,
+                subjectCode: subjectCode,
                 commissionCode: commissionCode,
+                roleLabel: roleLabel,
                 isHiddenInMiel: isHiddenInMiel,
                 muted: muted,
                 notifyContenidos: notifyContenidos,
@@ -2991,7 +3558,13 @@ class $$SubjectsTableTableManager
                 notifyMensajeria: notifyMensajeria,
                 notifyForos: notifyForos,
                 notifyEvaluacion: notifyEvaluacion,
+                hasContenidos: hasContenidos,
+                hasAutoguia: hasAutoguia,
                 hasPortafolio: hasPortafolio,
+                hasMensajeria: hasMensajeria,
+                hasForo: hasForo,
+                hasChat: hasChat,
+                hasEncuestas: hasEncuestas,
                 hasEvaluacion: hasEvaluacion,
                 lastContenidosBadge: lastContenidosBadge,
                 lastMensajesBadge: lastMensajesBadge,

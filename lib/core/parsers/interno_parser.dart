@@ -72,12 +72,23 @@ InternoOverview parseInternoHtml(String rawHtml) {
 
     final isHidden = block.classes.contains('materia-bloque-oculta');
 
-    // Código de comisión (ej. "Com: 01-2900")
+    // Línea descriptiva (ej. "3622 - Com: 12-6300 - Alumno/a" o "Com: 01-2900")
+    var subjectCode = '';
     var commissionCode = '';
+    var roleLabel = '';
     for (final small in block.querySelectorAll('.w3-small')) {
-      final comMatch = RegExp(r'Com:\s*([^\s<]+)').firstMatch(small.text);
+      final rawMeta = cleanWhitespace(small.text);
+      final comMatch = RegExp(r'Com:\s*(\S+)').firstMatch(rawMeta);
       if (comMatch != null) {
         commissionCode = comMatch.group(1)!.trim();
+        final fullMeta = RegExp(
+          r'^(?:(.+?)\s+-\s+)?Com:\s*(\S+)(?:\s+-\s+(.+))?$',
+        ).firstMatch(rawMeta);
+        if (fullMeta != null) {
+          subjectCode = cleanWhitespace(fullMeta.group(1) ?? '');
+          commissionCode = cleanWhitespace(fullMeta.group(2) ?? commissionCode);
+          roleLabel = cleanWhitespace(fullMeta.group(3) ?? '');
+        }
         break;
       }
     }
@@ -126,7 +137,9 @@ InternoOverview parseInternoHtml(String rawHtml) {
       MielSubjectBadgeSummary(
         idComision: idComision,
         name: name,
+        subjectCode: subjectCode,
         commissionCode: commissionCode,
+        roleLabel: roleLabel,
         isHidden: isHidden,
         contenidosBadge: contenidosBadge,
         mensajesBadge: mensajesBadge,

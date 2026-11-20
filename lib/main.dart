@@ -1,7 +1,8 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'app/app_providers.dart';
+import 'core/theme/miel_theme.dart';
 import 'features/auth/login_screen.dart';
 import 'features/home/home_shell.dart';
 
@@ -20,21 +21,9 @@ class LibreMielApp extends ConsumerWidget {
     return MaterialApp(
       title: 'LibreMIEL',
       debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.system,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFD98A00),
-          brightness: Brightness.light,
-        ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFD98A00),
-          brightness: Brightness.dark,
-        ),
-      ),
+      themeMode: session.themeMode,
+      theme: buildMielLightTheme(),
+      darkTheme: buildMielDarkTheme(),
       home: session.isChecking
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : session.isAuthenticated
