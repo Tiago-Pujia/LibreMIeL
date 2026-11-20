@@ -1,0 +1,36 @@
+name: CI — Análisis y Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze-and-test:
+    name: Formato, Analyze y Pruebas Unitarias
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Instalar dependencias Dart/Flutter
+        run: flutter pub get
+
+      - name: Verificar formato Dart
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Ejecutar análisis estático
+        run: flutter analyze
+
+      - name: Ejecutar pruebas unitarias Flutter/Dart
+        run: flutter test
+
+      - name: Probar script anonimizador de HTML (Python 3)
+        run: python3 -m unittest discover -s scripts -v

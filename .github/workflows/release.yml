@@ -1,0 +1,282 @@
+name: Release Multiplataforma (Windows, macOS, Linux y Android)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión para compilar manualmente (ej. 0.1.0)'
+        required: false
+        default: '0.1.0-dev'
+
+permissions:
+  contents: write
+
+jobs:
+  # ============================================================================
+  # 0. VERIFICACIÓN PREVIA Y RESOLUCIÓN DE VERSIÓN
+  # ============================================================================
+  prepare:
+    name: Validar código y resolver versión
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolver número de versión
+        id: ver
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ github.event.inputs.version || '0.1.0-dev' }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: python3 -m unittest discover -s scripts -v
+
+  # ============================================================================
+  # 1. ANDROID (APK Universal + Split por ABI)
+  # ============================================================================
+  build-android:
+    name: Build Android (APK)
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Configurar firma de release si existen GitHub Secrets
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          cat > android/key.properties << EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=release.keystore
+          EOF
+
+      - run: flutter pub get
+
+      - name: Compilar APKs (Universal y Split por ABI)
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          mkdir -p dist/android
+          flutter build apk --release --build-name="$VERSION"
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "dist/android/LibreMIEL-${VERSION}-android-universal.apk"
+
+          flutter build apk --release --split-per-abi --build-name="$VERSION"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            src="build/app/outputs/flutter-apk/app-${abi}-release.apk"
+            if [ -f "$src" ]; then
+              cp "$src" "dist/android/LibreMIEL-${VERSION}-android-${abi}.apk"
+            fi
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-android
+          path: dist/android/*
+
+  # ============================================================================
+  # 2. LINUX (Portable .tar.gz, AppImage, Debian .deb, Red Hat .rpm, Arch .pkg.tar.zst)
+  # ============================================================================
+  build-linux:
+    name: Build Linux (AppImage, DEB, RPM, Arch, Portable)
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar dependencias de compilación Linux
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libsecret-1-dev libjsoncpp-dev \
+            libayatana-appindicator3-dev libsqlite3-dev
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build linux --release --build-name="${{ needs.prepare.outputs.version }}"
+
+      - name: Empaquetar Linux Portable (.tar.gz)
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          mkdir -p dist/linux
+          tar -czf "dist/linux/LibreMIEL-${VERSION}-linux-x64-portable.tar.gz" \
+            -C build/linux/x64/release/bundle .
+
+      - name: Instalar appimagetool y compilar AppImage
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          curl -fSL https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage \
+            -o /tmp/appimagetool
+          chmod +x /tmp/appimagetool
+          sudo mv /tmp/appimagetool /usr/local/bin/appimagetool
+          chmod +x packaging/linux/build_appimage.sh
+          ./packaging/linux/build_appimage.sh "$VERSION"
+
+      - name: Instalar nFPM y generar paquetes Debian (.deb), Red Hat (.rpm) y Arch (.pkg.tar.zst)
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          export LIBREMIEL_VERSION="$VERSION"
+
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update
+          sudo apt-get install -y nfpm
+
+          nfpm package -f packaging/linux/nfpm.yaml -p deb \
+            -t "dist/linux/LibreMIEL-${VERSION}-linux-amd64.deb"
+          nfpm package -f packaging/linux/nfpm.yaml -p rpm \
+            -t "dist/linux/LibreMIEL-${VERSION}-linux-x86_64.rpm"
+          nfpm package -f packaging/linux/nfpm.yaml -p archlinux \
+            -t "dist/linux/LibreMIEL-${VERSION}-linux-x86_64.pkg.tar.zst"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux
+          path: dist/linux/*
+
+  # ============================================================================
+  # 3. WINDOWS (Instalador .exe Inno Setup + Portable .zip)
+  # ============================================================================
+  build-windows:
+    name: Build Windows (Instalador EXE y Portable ZIP)
+    needs: prepare
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build windows --release --build-name="${{ needs.prepare.outputs.version }}"
+
+      - name: Empaquetar Windows Portable (.zip)
+        shell: pwsh
+        run: |
+          $ver = "${{ needs.prepare.outputs.version }}"
+          New-Item -ItemType Directory -Force -Path dist/windows | Out-Null
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" `
+            -DestinationPath "dist\windows\LibreMIEL-${ver}-windows-x64-portable.zip" -Force
+
+      - name: Compilar Instalador Windows (.exe con Inno Setup)
+        shell: pwsh
+        run: |
+          $ver = "${{ needs.prepare.outputs.version }}"
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y
+          }
+          & $iscc "/DAppVersion=$ver" "packaging\windows\installer.iss"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-windows
+          path: dist/windows/*
+
+  # ============================================================================
+  # 4. macOS (Instalador .dmg + Portable .zip)
+  # ============================================================================
+  build-macos:
+    name: Build macOS (DMG y Portable ZIP)
+    needs: prepare
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build macos --release --build-name="${{ needs.prepare.outputs.version }}"
+
+      - name: Empaquetar macOS Portable (.zip) e Instalador (.dmg)
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          APP_PATH="build/macos/Build/Products/Release/LibreMIEL.app"
+          mkdir -p dist/macos dist/macos/dmg_root
+
+          # Portable .zip
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" \
+            "dist/macos/LibreMIEL-${VERSION}-macos-portable.zip"
+
+          # Instalador .dmg
+          cp -R "$APP_PATH" dist/macos/dmg_root/
+          ln -s /Applications dist/macos/dmg_root/Applications
+          hdiutil create -volname "LibreMIEL" -srcfolder dist/macos/dmg_root \
+            -ov -format UDZO "dist/macos/LibreMIEL-${VERSION}-macos.dmg"
+          rm -rf dist/macos/dmg_root
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-macos
+          path: dist/macos/*
+
+  # ============================================================================
+  # 5. PUBLICAR GITHUB RELEASE CON CHECKSUMS SHA-256
+  # ============================================================================
+  publish-release:
+    name: Publicar GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [prepare, build-android, build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar todos los artefactos
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generar SHA256SUMS.txt
+        working-directory: release-assets
+        run: |
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Crear GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

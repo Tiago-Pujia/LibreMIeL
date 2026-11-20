@@ -1,0 +1,49 @@
+name: "libremiel"
+arch: "amd64"
+platform: "linux"
+version: "${LIBREMIEL_VERSION}"
+section: "education"
+priority: "optional"
+maintainer: "Tiago Pujia <tiagonahuelpujia@gmail.com>"
+description: |
+  LibreMIEL — Cliente alternativo open source y multiplataforma para MIEL (UNLaM).
+  Notifica novedades en Contenidos, Portafolio, Mensajería y Foros.
+vendor: "LibreMIEL Contributors"
+homepage: "https://github.com/Tiago-Pujia/LibreMIEL"
+license: "MIT"
+
+overrides:
+  deb:
+    depends:
+      - libgtk-3-0
+      - libsecret-1-0
+      - libjsoncpp25 | libjsoncpp26 | libjsoncpp24
+      - libayatana-appindicator3-1 | libappindicator3-1
+      - libsqlite3-0
+  rpm:
+    depends:
+      - gtk3
+      - libsecret
+      - jsoncpp
+      - libayatana-appindicator-gtk3
+      - sqlite-libs
+  archlinux:
+    depends:
+      - gtk3
+      - libsecret
+      - jsoncpp
+      - libayatana-appindicator
+      - sqlite
+
+contents:
+  - src: "build/linux/x64/release/bundle/**"
+    dst: "/opt/libremiel"
+  - src: "/opt/libremiel/libremiel"
+    dst: "/usr/bin/libremiel"
+    type: symlink
+  - src: "packaging/linux/libremiel.desktop"
+    dst: "/usr/share/applications/io.github.tiago_pujia.libremiel.desktop"
+  - src: "packaging/linux/libremiel.svg"
+    dst: "/usr/share/icons/hicolor/scalable/apps/io.github.tiago_pujia.libremiel.svg"
+  - src: "LICENSE"
+    dst: "/usr/share/licenses/libremiel/LICENSE"
