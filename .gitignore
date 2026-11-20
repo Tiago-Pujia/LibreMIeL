@@ -1,0 +1,23 @@
+# Credenciales y entorno local
+.env
+.env.*
+!.env.example
+
+# Archivos temporales y del sistema operativo
+.DS_Store
+Thumbs.db
+.directory
+*.log
+*.tmp
+
+# Dependencias y builds comunes
+node_modules/
+dist/
+build/
+.dart_tool/
+.gradle/
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
