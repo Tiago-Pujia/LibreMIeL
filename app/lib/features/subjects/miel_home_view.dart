@@ -805,39 +805,35 @@ class _MielToolTileState extends State<_MielToolTile> {
           child: SizedBox(
             width: widget.width,
             height: widget.height,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
                     children: [
                       Icon(widget.tool.icon, size: 34, color: fgColor),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.tool.shortLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: fgColor,
-                          height: 1.2,
+                      if (widget.badgeCount > 0)
+                        Positioned(
+                          top: -2,
+                          left: -8,
+                          child: MielRedBadge(
+                            count: widget.badgeCount,
+                            backgroundColor: palette.badgeRed,
+                            compact: true,
+                          ),
                         ),
-                      ),
                     ],
                   ),
-                ),
-                if (widget.badgeCount > 0)
-                  Positioned(
-                    top: 6,
-                    left: 10,
-                    child: MielRedBadge(
-                      count: widget.badgeCount,
-                      backgroundColor: palette.badgeRed,
-                      compact: true,
-                    ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.tool.shortLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: fgColor, height: 1.2),
                   ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
