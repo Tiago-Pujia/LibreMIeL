@@ -1,7 +1,13 @@
-# Credenciales y entorno local
+# Credenciales, firmas y entorno local
 .env
 .env.*
 !.env.example
+android/key.properties
+*.jks
+*.keystore
+
+# Plan de implementación local (no versionado)
+docs/IMPLEMENTATION_PLAN.md
 
 # Archivos temporales y del sistema operativo
 .DS_Store
@@ -10,14 +16,30 @@ Thumbs.db
 *.log
 *.tmp
 
-# Dependencias y builds comunes
-node_modules/
-dist/
-build/
+# Flutter / Dart
 .dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+*.iml
+*.ipr
+*.iws
+
+# Android / Gradle
 .gradle/
+android/local.properties
 
 # Editores / IDEs
 .vscode/
 .idea/
 *.swp
+
+# Otros builds / scripts
+node_modules/
+dist/
+__pycache__/
+*.pyc

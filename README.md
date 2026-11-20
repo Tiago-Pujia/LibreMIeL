@@ -26,11 +26,18 @@ A futuro, el proyecto buscará ir sumando más herramientas y comodidades para e
 
 ## 🌱 Principios
 
-- **Gratis y Open Source:** Cualquiera puede revisar el proyecto, adaptarlo y colaborar.
+- **Gratis y Open Source:** Cualquiera puede revisar el proyecto, adaptarlo y colaborar (Licencia [MIT](LICENSE)).
 - **Privacidad:** Pensado para funcionar directamente en tus dispositivos, sin terceros que almacenen tus datos.
 
 ---
 
-## 📌 Estado
+## 📖 Guía de Documentación
 
-En etapa inicial de investigación y diseño. Este documento se irá actualizando a medida que avance el desarrollo.
+Toda la documentación del proyecto se encuentra organizada dentro de la carpeta [`docs/`](docs/):
+
+- **[Índice General](docs/README.md):** Punto de entrada a toda la documentación del proyecto.
+- **[Estado del Proyecto](docs/STATUS.md):** Tabla actualizada con lo que ya está listo, lo que está en progreso y los próximos pasos.
+- **[Historial de Cambios](docs/CHANGELOG.md):** Registro de novedades y versiones del proyecto.
+- **[Cómo Colaborar](docs/CONTRIBUTING.md):** Guía para sumar ideas, reportar problemas o participar en el desarrollo.
+- **[Uso de Ramas y Versiones](docs/GIT_WORKFLOW.md):** Explicación práctica para organizar cambios y futuras versiones.
+- **[Guía para Asistentes de IA](docs/AGENTS.md):** Reglas y referencias orientativas para asistentes automatizados que ayuden en el proyecto.
