@@ -347,6 +347,8 @@ class AppSessionController extends Notifier<AppSessionState> {
     _desktopCycle1Timer?.cancel();
     _desktopCycle2Timer?.cancel();
     _memoryCredentials = null;
+    await _trayService?.dispose();
+    _trayService = null;
 
     final preservedTheme = state.themeMode;
     final preservedAutostart = state.launchAtStartup;
