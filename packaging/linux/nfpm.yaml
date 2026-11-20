@@ -36,7 +36,7 @@ overrides:
       - sqlite
 
 contents:
-  - src: "build/linux/${FLUTTER_ARCH}/release/bundle/**"
+  - src: "app/build/linux/${FLUTTER_ARCH}/release/bundle/**"
     dst: "/opt/libremiel"
   - src: "/opt/libremiel/libremiel"
     dst: "/usr/bin/libremiel"

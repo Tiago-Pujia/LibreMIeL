@@ -47,25 +47,23 @@ Antes de editar código, revisá únicamente el documento que corresponde a tu t
 5. **Sin CORS / Sin WebSockets / Sin servidor central:**
    - Todas las peticiones deben salir del cliente HTTP nativo del dispositivo (`MielClient`), nunca desde un navegador externo ni a través de un backend intermedio.
 6. **Parsers 100% puros y desacoplados:**
-   - Todo código en `lib/core/parsers/` debe ser puro (`String html -> Modelo`), sin dependencia de `Dio`, Flutter UI ni SQLite, y acompañado de tests en `test/parsers/` usando HTML anonimizado en `test/fixtures/`.
+   - Todo código en `app/lib/core/parsers/` debe ser puro (`String html -> Modelo`), sin dependencia de `Dio`, Flutter UI ni SQLite, y acompañado de tests en `app/test/parsers/` usando HTML anonimizado en `app/test/fixtures/`.
 7. **Seguridad y privacidad:**
    - Nunca commitear `.env`, DNIs, contraseñas, `PHPSESSID`, datos personales reales ni archivos de firma (`.jks`, `.keystore`, `key.properties`).
    - No copiar CSS, JS, imágenes ni logotipos de MIEL/UNLaM.
-   - Mantener la raíz del repositorio limpia: los archivos de documentación y gestión van en `docs/`, dejando únicamente `README.md` como documento principal en la raíz.
+   - Mantener la raíz del repositorio limpia: el proyecto Flutter completo vive en `app/` y toda la documentación/gestión en `docs/`, dejando únicamente `README.md` y `LICENSE` en la raíz.
 
 ---
 
 ## 4. Comandos de Verificación antes de Cerrar una Tarea
 
 ```bash
-# Formato y análisis estático
+# Desde app/: formato, análisis estático y pruebas unitarias Flutter/Dart
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze
-
-# Pruebas unitarias Flutter/Dart
 flutter test
 
-# Pruebas del anonimizador de HTML
+# Desde la raíz del repo: pruebas del anonimizador de HTML
 python3 -m unittest discover -s scripts -v
 ```
 

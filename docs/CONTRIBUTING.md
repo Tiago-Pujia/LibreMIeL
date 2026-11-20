@@ -78,12 +78,17 @@ Si encontrás un error de lectura en alguna materia, **podés ayudarnos enviando
 
 ### Comandos básicos del proyecto
 
+El proyecto Flutter completo (código fuente, tests y plataformas `android/`, `linux/`, `windows/`, `macos/`) vive dentro de la subcarpeta [`app/`](../app).
+
 ```bash
+# Entrar al directorio de la app Flutter
+cd app
+
 # 1. Instalar dependencias Dart/Flutter
 flutter pub get
 
 # 2. Generar código de base de datos local (Drift) si modificaste tablas
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 
 # 3. Verificar formato y análisis estático
 dart format --output=none --set-exit-if-changed lib test
@@ -92,11 +97,11 @@ flutter analyze
 # 4. Ejecutar pruebas unitarias
 flutter test
 
-# 5. Probar el script anonimizador
-python3 -m unittest scripts/test_anonymize_html.py
-
-# 6. Ejecutar en escritorio Linux limitando trabajos paralelos de C++ (recomendado en equipos <= 16 GB RAM)
+# 5. Ejecutar en escritorio Linux limitando trabajos paralelos de C++ (recomendado en equipos <= 16 GB RAM)
 CMAKE_BUILD_PARALLEL_LEVEL=4 flutter run -d linux
+
+# 6. Desde la raíz del repo: probar el script anonimizador
+python3 -m unittest discover -s scripts -v
 ```
 
 ---
@@ -105,13 +110,14 @@ CMAKE_BUILD_PARALLEL_LEVEL=4 flutter run -d linux
 
 El proyecto está organizado en capas independientes para facilitar contribuciones:
 
-- `lib/core/network/`: Cliente HTTP (`MielClient`), manejo de cookies (`PHPSESSID` + `SESSID`), sesión y reintentos.
-- `lib/core/parsers/`: Funciones **puras** (`String html -> Modelo`) separadas por módulo de MIEL. Siempre deben incluir tests en `test/parsers/` con fixtures anonimizados en `test/fixtures/`.
-- `lib/core/storage/`: Base de datos SQLite local (`Drift`) para snapshots, historial de notificaciones y preferencias.
-- `lib/core/sync/`: Motor de sincronización en dos ciclos (`SyncEngine`).
-- `lib/platform/`: Integraciones nativas (almacén seguro de credenciales, notificaciones locales, bandeja de escritorio, worker de Android).
-- `lib/features/`: Pantallas de la interfaz (Login, Feed de novedades, Materias, Ajustes y futuras vistas).
-- `packaging/` y `.github/workflows/`: Empaquetado para Windows, macOS, Linux (AppImage, `.deb`, `.rpm`, Arch `.pkg.tar.zst` + `PKGBUILD`, portable `.tar.gz`) y Android (`.apk`).
+- `app/lib/core/network/`: Cliente HTTP (`MielClient`), manejo de cookies (`PHPSESSID` + `SESSID`), sesión y reintentos.
+- `app/lib/core/parsers/`: Funciones **puras** (`String html -> Modelo`) separadas por módulo de MIEL. Siempre deben incluir tests en `app/test/parsers/` con fixtures anonimizados en `app/test/fixtures/`.
+- `app/lib/core/storage/`: Base de datos SQLite local (`Drift`) para snapshots, historial de notificaciones y preferencias.
+- `app/lib/core/sync/`: Motor de sincronización en dos ciclos (`SyncEngine`).
+- `app/lib/core/theme/`: Sistema visual fiel a MIeL (claro/oscuro) e identidad LibreMIEL.
+- `app/lib/platform/`: Integraciones nativas (almacén seguro de credenciales, notificaciones locales, bandeja de escritorio, inicio automático del sistema, worker de Android).
+- `app/lib/features/`: Pantallas de la interfaz (Login, Materias activas, Novedades, Ajustes y borradores de Fase 2).
+- `packaging/` y `.github/workflows/`: Empaquetado para Windows, macOS, Linux (AppImage, `.deb`, `.rpm`, Arch `.pkg.tar.zst`, portable `.tar.gz`) y Android (`.apk`).
 
 ---
 

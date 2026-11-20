@@ -2,7 +2,7 @@
 .env
 .env.*
 !.env.example
-android/key.properties
+app/android/key.properties
 *.jks
 *.keystore
 
@@ -31,7 +31,7 @@ coverage/
 
 # Android / Gradle
 .gradle/
-android/local.properties
+app/android/local.properties
 
 # Editores / IDEs
 .vscode/

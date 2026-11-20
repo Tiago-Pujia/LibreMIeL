@@ -17,7 +17,7 @@ case "$FLUTTER_ARCH" in
     ;;
 esac
 
-BUNDLE_DIR="build/linux/${FLUTTER_ARCH}/release/bundle"
+BUNDLE_DIR="app/build/linux/${FLUTTER_ARCH}/release/bundle"
 APPDIR="build/appimage/LibreMIEL-${FLUTTER_ARCH}.AppDir"
 OUT_DIR="dist/linux-${FLUTTER_ARCH}"
 

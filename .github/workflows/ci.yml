@@ -21,15 +21,19 @@ jobs:
           cache: true
 
       - name: Instalar dependencias Dart/Flutter
+        working-directory: app
         run: flutter pub get
 
       - name: Verificar formato Dart
+        working-directory: app
         run: dart format --output=none --set-exit-if-changed lib test
 
       - name: Ejecutar análisis estático
+        working-directory: app
         run: flutter analyze
 
       - name: Ejecutar pruebas unitarias Flutter/Dart
+        working-directory: app
         run: flutter test
 
       - name: Probar script anonimizador de HTML (Python 3)

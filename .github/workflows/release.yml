@@ -42,9 +42,12 @@ jobs:
           channel: stable
           cache: true
 
-      - run: flutter pub get
-      - run: flutter analyze
-      - run: flutter test
+      - working-directory: app
+        run: flutter pub get
+      - working-directory: app
+        run: flutter analyze
+      - working-directory: app
+        run: flutter test
       - run: python3 -m unittest discover -s scripts -v
 
   # ============================================================================
@@ -76,15 +79,16 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
-          cat > android/key.properties << EOF
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/android/app/release.keystore
+          cat > app/android/key.properties << EOF
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           storeFile=release.keystore
           EOF
 
-      - run: flutter pub get
+      - working-directory: app
+        run: flutter pub get
 
       - name: Aceptar licencias de Android SDK (API 37+)
         shell: bash
@@ -96,18 +100,19 @@ jobs:
           fi
 
       - name: Compilar APKs (Universal + arm64-v8a + armeabi-v7a + x86_64)
+        working-directory: app
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          mkdir -p dist/android
+          mkdir -p ../dist/android
           flutter build apk --release --build-name="$VERSION"
           cp build/app/outputs/flutter-apk/app-release.apk \
-            "dist/android/LibreMIEL-${VERSION}-android-universal.apk"
+            "../dist/android/LibreMIEL-${VERSION}-android-universal.apk"
 
           flutter build apk --release --split-per-abi --build-name="$VERSION"
           for abi in arm64-v8a armeabi-v7a x86_64; do
             src="build/app/outputs/flutter-apk/app-${abi}-release.apk"
             if [ -f "$src" ]; then
-              cp "$src" "dist/android/LibreMIEL-${VERSION}-android-${abi}.apk"
+              cp "$src" "../dist/android/LibreMIEL-${VERSION}-android-${abi}.apk"
             fi
           done
 
@@ -155,8 +160,10 @@ jobs:
           architecture: ${{ matrix.flutter_arch }}
           cache: true
 
-      - run: flutter pub get
-      - run: flutter build linux --release --build-name="${{ needs.prepare.outputs.version }}"
+      - working-directory: app
+        run: flutter pub get
+      - working-directory: app
+        run: flutter build linux --release --build-name="${{ needs.prepare.outputs.version }}"
 
       - name: Empaquetar Linux Portable (.tar.gz)
         run: |
@@ -164,7 +171,7 @@ jobs:
           FARCH="${{ matrix.flutter_arch }}"
           mkdir -p "dist/linux-${FARCH}"
           tar -czf "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${FARCH}-portable.tar.gz" \
-            -C "build/linux/${FARCH}/release/bundle" .
+            -C "app/build/linux/${FARCH}/release/bundle" .
 
       - name: Instalar appimagetool (${{ matrix.linux_arch }}) y compilar AppImage
         run: |
@@ -234,15 +241,17 @@ jobs:
           architecture: ${{ matrix.flutter_arch }}
           cache: true
 
-      - run: flutter pub get
-      - run: flutter build windows --release --build-name="${{ needs.prepare.outputs.version }}"
+      - working-directory: app
+        run: flutter pub get
+      - working-directory: app
+        run: flutter build windows --release --build-name="${{ needs.prepare.outputs.version }}"
 
       - name: Empaquetar Windows Portable (.zip)
         shell: pwsh
         run: |
           $ver = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.flutter_arch }}"
-          $releaseDir = "build\windows\${arch}\runner\Release"
+          $releaseDir = "app\build\windows\${arch}\runner\Release"
           if (-not (Test-Path $releaseDir)) {
             throw "No se encontró el directorio de build esperado: $releaseDir"
           }
@@ -281,13 +290,15 @@ jobs:
           channel: stable
           cache: true
 
-      - run: flutter pub get
-      - run: flutter build macos --release --build-name="${{ needs.prepare.outputs.version }}"
+      - working-directory: app
+        run: flutter pub get
+      - working-directory: app
+        run: flutter build macos --release --build-name="${{ needs.prepare.outputs.version }}"
 
       - name: Verificar Universal Binary (x86_64 + arm64) y empaquetar (.zip y .dmg)
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          APP_PATH="build/macos/Build/Products/Release/LibreMIEL.app"
+          APP_PATH="app/build/macos/Build/Products/Release/LibreMIEL.app"
           lipo -info "$APP_PATH/Contents/MacOS/LibreMIEL"
           mkdir -p dist/macos dist/macos/dmg_root
 
