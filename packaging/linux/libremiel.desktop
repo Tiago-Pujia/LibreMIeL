@@ -5,6 +5,6 @@ Exec=libremiel
 Icon=io.github.tiago_pujia.libremiel
 Terminal=false
 Type=Application
-Categories=Education;Network;Utility;
+Categories=Education;
 StartupWMClass=io.github.tiago_pujia.libremiel
 Keywords=UNLaM;MIEL;Universidad;Notificaciones;

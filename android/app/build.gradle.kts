@@ -15,7 +15,7 @@ if (hasReleaseKeystore) {
 
 android {
     namespace = "io.github.tiago_pujia.libremiel"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = maxOf(flutter.compileSdkVersion, 37)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

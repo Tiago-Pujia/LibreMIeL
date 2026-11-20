@@ -43,6 +43,8 @@ contents:
     type: symlink
   - src: "packaging/linux/libremiel.desktop"
     dst: "/usr/share/applications/io.github.tiago_pujia.libremiel.desktop"
+  - src: "packaging/linux/libremiel.png"
+    dst: "/usr/share/icons/hicolor/256x256/apps/io.github.tiago_pujia.libremiel.png"
   - src: "packaging/linux/libremiel.svg"
     dst: "/usr/share/icons/hicolor/scalable/apps/io.github.tiago_pujia.libremiel.svg"
   - src: "LICENSE"

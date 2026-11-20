@@ -86,6 +86,15 @@ jobs:
 
       - run: flutter pub get
 
+      - name: Aceptar licencias de Android SDK (API 37+)
+        shell: bash
+        run: |
+          if command -v sdkmanager >/dev/null 2>&1; then
+            yes | sdkmanager --licenses >/dev/null || true
+          elif [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          fi
+
       - name: Compilar APKs (Universal + arm64-v8a + armeabi-v7a + x86_64)
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
@@ -181,13 +190,15 @@ jobs:
 
           echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
           sudo apt-get update
-          sudo apt-get install -y nfpm
+          sudo apt-get install -y nfpm gettext-base
 
-          nfpm package -f packaging/linux/nfpm.yaml -p deb \
+          envsubst < packaging/linux/nfpm.yaml > /tmp/nfpm-resolved.yaml
+
+          nfpm package -f /tmp/nfpm-resolved.yaml -p deb \
             -t "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${DARCH}.deb"
-          nfpm package -f packaging/linux/nfpm.yaml -p rpm \
+          nfpm package -f /tmp/nfpm-resolved.yaml -p rpm \
             -t "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${LARCH}.rpm"
-          nfpm package -f packaging/linux/nfpm.yaml -p archlinux \
+          nfpm package -f /tmp/nfpm-resolved.yaml -p archlinux \
             -t "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${LARCH}.pkg.tar.zst"
 
       - uses: actions/upload-artifact@v4
