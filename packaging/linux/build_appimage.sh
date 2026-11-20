@@ -2,9 +2,24 @@
 set -euo pipefail
 
 VERSION="${1:-0.1.0}"
-BUNDLE_DIR="build/linux/x64/release/bundle"
-APPDIR="build/appimage/LibreMIEL.AppDir"
-OUT_DIR="dist/linux"
+FLUTTER_ARCH="${2:-x64}"
+
+case "$FLUTTER_ARCH" in
+  x64)
+    APPIMAGE_ARCH="x86_64"
+    ;;
+  arm64)
+    APPIMAGE_ARCH="aarch64"
+    ;;
+  *)
+    echo "Error: arquitectura no soportada '$FLUTTER_ARCH' (usar 'x64' o 'arm64')." >&2
+    exit 1
+    ;;
+esac
+
+BUNDLE_DIR="build/linux/${FLUTTER_ARCH}/release/bundle"
+APPDIR="build/appimage/LibreMIEL-${FLUTTER_ARCH}.AppDir"
+OUT_DIR="dist/linux-${FLUTTER_ARCH}"
 
 if [ ! -d "$BUNDLE_DIR" ]; then
   echo "Error: no existe $BUNDLE_DIR. Ejecutá primero 'flutter build linux --release'." >&2
@@ -31,5 +46,5 @@ exec "$HERE/usr/bin/libremiel" "$@"
 EOF
 chmod +x "$APPDIR/AppRun"
 
-ARCH=x86_64 appimagetool --appimage-extract-and-run "$APPDIR" \
-  "$OUT_DIR/LibreMIEL-${VERSION}-linux-x64.AppImage"
+ARCH="$APPIMAGE_ARCH" appimagetool --appimage-extract-and-run "$APPDIR" \
+  "$OUT_DIR/LibreMIEL-${VERSION}-linux-${FLUTTER_ARCH}.AppImage"

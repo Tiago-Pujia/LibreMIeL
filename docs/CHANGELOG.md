@@ -19,4 +19,4 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
   - Motor de sincronización en dos ciclos (`SyncEngine`) con *baseline* silencioso inicial y respeto por efectos colaterales de lectura en MIEL.
 - Interfaz MVP Material 3: Login seguro, Bandeja unificada de novedades, Materias con filtros por módulo y Ajustes (incluyendo modo de foros no invasivo vs. respuestas de docentes).
 - Integraciones de plataforma: almacenamiento seguro de credenciales, notificaciones nativas, bandeja del sistema en escritorio y worker periódico en Android (`WorkManager`).
-- Workflows de GitHub Actions (`ci.yml` y `release.yml`) y configuraciones de empaquetado para Windows (`.exe` + `.zip`), macOS (`.dmg` + `.zip`), Linux (`AppImage`, `.deb`, `.rpm`, Arch `.pkg.tar.zst`, portable `.tar.gz`) y Android (`.apk`).
+- Workflows de GitHub Actions (`ci.yml` y `release.yml`) y configuraciones de empaquetado multi-arquitectura: Windows x64/ARM64 (`.exe` + `.zip`), macOS Universal x86_64+ARM64 (`.dmg` + `.zip`), Linux x64/ARM64 (`AppImage`, `.deb`, `.rpm`, Arch `.pkg.tar.zst`, portable `.tar.gz`) y Android (`.apk` universal + `arm64-v8a`, `armeabi-v7a`, `x86_64`).

@@ -1,8 +1,22 @@
-; Script de Inno Setup para generar el instalador de Windows (.exe) de LibreMIEL
-; Compilación: iscc /DAppVersion=0.1.0 packaging\windows\installer.iss
+; Script de Inno Setup para generar el instalador de Windows (.exe) de LibreMIEL (x64 y arm64)
+; Compilación:
+;   iscc /DAppVersion=0.1.0 /DAppArch=x64   packaging\windows\installer.iss
+;   iscc /DAppVersion=0.1.0 /DAppArch=arm64 packaging\windows\installer.iss
 
 #ifndef AppVersion
   #define AppVersion "0.1.0"
+#endif
+
+#ifndef AppArch
+  #define AppArch "x64"
+#endif
+
+#if AppArch == "arm64"
+  #define SetupArchAllowed "arm64"
+  #define SetupArch64Bit "arm64"
+#else
+  #define SetupArchAllowed "x64compatible"
+  #define SetupArch64Bit "x64compatible"
 #endif
 
 #define AppName "LibreMIEL"
@@ -21,13 +35,13 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 AllowNoIcons=yes
 LicenseFile=..\..\LICENSE
-OutputDir=..\..\dist\windows
-OutputBaseFilename=LibreMIEL-{#AppVersion}-windows-x64-setup
+OutputDir=..\..\dist\windows-{#AppArch}
+OutputBaseFilename=LibreMIEL-{#AppVersion}-windows-{#AppArch}-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesAllowed={#SetupArchAllowed}
+ArchitecturesInstallIn64BitMode={#SetupArch64Bit}
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 
@@ -40,7 +54,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startup"; Description: "Iniciar LibreMIEL automáticamente con Windows"; GroupDescription: "Opciones adicionales:"; Flags: unchecked
 
 [Files]
-Source: "..\..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\build\windows\{#AppArch}\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"

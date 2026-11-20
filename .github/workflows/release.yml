@@ -1,4 +1,4 @@
-name: Release Multiplataforma (Windows, macOS, Linux y Android)
+name: Release Multiplataforma (Windows, macOS, Linux y Android — x64 y ARM64)
 
 on:
   push:
@@ -48,10 +48,10 @@ jobs:
       - run: python3 -m unittest discover -s scripts -v
 
   # ============================================================================
-  # 1. ANDROID (APK Universal + Split por ABI)
+  # 1. ANDROID (APK Universal + Split ARM64 / ARMv7 / x86_64)
   # ============================================================================
   build-android:
-    name: Build Android (APK)
+    name: Build Android (APK Universal + ARM64/ARMv7/x86_64)
     needs: prepare
     runs-on: ubuntu-latest
     steps:
@@ -86,7 +86,7 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Compilar APKs (Universal y Split por ABI)
+      - name: Compilar APKs (Universal + arm64-v8a + armeabi-v7a + x86_64)
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
           mkdir -p dist/android
@@ -108,16 +108,31 @@ jobs:
           path: dist/android/*
 
   # ============================================================================
-  # 2. LINUX (Portable .tar.gz, AppImage, Debian .deb, Red Hat .rpm, Arch .pkg.tar.zst)
+  # 2. LINUX x64 y ARM64 (Portable .tar.gz, AppImage, .deb, .rpm, Arch .pkg.tar.zst)
+  # Nota: `ubuntu-24.04-arm` es gratuito en repositorios públicos de GitHub.
   # ============================================================================
   build-linux:
-    name: Build Linux (AppImage, DEB, RPM, Arch, Portable)
+    name: Build Linux ${{ matrix.flutter_arch }} (AppImage, DEB, RPM, Arch, Portable)
     needs: prepare
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            flutter_arch: x64
+            nfpm_arch: amd64
+            linux_arch: x86_64
+            deb_arch: amd64
+          - runner: ubuntu-24.04-arm
+            flutter_arch: arm64
+            nfpm_arch: arm64
+            linux_arch: aarch64
+            deb_arch: arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Instalar dependencias de compilación Linux
+      - name: Instalar dependencias de compilación Linux (${{ matrix.flutter_arch }})
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -128,6 +143,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          architecture: ${{ matrix.flutter_arch }}
           cache: true
 
       - run: flutter pub get
@@ -136,54 +152,75 @@ jobs:
       - name: Empaquetar Linux Portable (.tar.gz)
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          mkdir -p dist/linux
-          tar -czf "dist/linux/LibreMIEL-${VERSION}-linux-x64-portable.tar.gz" \
-            -C build/linux/x64/release/bundle .
+          FARCH="${{ matrix.flutter_arch }}"
+          mkdir -p "dist/linux-${FARCH}"
+          tar -czf "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${FARCH}-portable.tar.gz" \
+            -C "build/linux/${FARCH}/release/bundle" .
 
-      - name: Instalar appimagetool y compilar AppImage
+      - name: Instalar appimagetool (${{ matrix.linux_arch }}) y compilar AppImage
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          curl -fSL https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage \
+          LARCH="${{ matrix.linux_arch }}"
+          FARCH="${{ matrix.flutter_arch }}"
+          curl -fSL "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${LARCH}.AppImage" \
             -o /tmp/appimagetool
           chmod +x /tmp/appimagetool
           sudo mv /tmp/appimagetool /usr/local/bin/appimagetool
           chmod +x packaging/linux/build_appimage.sh
-          ./packaging/linux/build_appimage.sh "$VERSION"
+          ./packaging/linux/build_appimage.sh "$VERSION" "$FARCH"
 
-      - name: Instalar nFPM y generar paquetes Debian (.deb), Red Hat (.rpm) y Arch (.pkg.tar.zst)
+      - name: Instalar nFPM y generar paquetes .deb, .rpm y Arch .pkg.tar.zst (${{ matrix.flutter_arch }})
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
+          FARCH="${{ matrix.flutter_arch }}"
+          LARCH="${{ matrix.linux_arch }}"
+          DARCH="${{ matrix.deb_arch }}"
           export LIBREMIEL_VERSION="$VERSION"
+          export NFPM_ARCH="${{ matrix.nfpm_arch }}"
+          export FLUTTER_ARCH="$FARCH"
 
           echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
           sudo apt-get update
           sudo apt-get install -y nfpm
 
           nfpm package -f packaging/linux/nfpm.yaml -p deb \
-            -t "dist/linux/LibreMIEL-${VERSION}-linux-amd64.deb"
+            -t "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${DARCH}.deb"
           nfpm package -f packaging/linux/nfpm.yaml -p rpm \
-            -t "dist/linux/LibreMIEL-${VERSION}-linux-x86_64.rpm"
+            -t "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${LARCH}.rpm"
           nfpm package -f packaging/linux/nfpm.yaml -p archlinux \
-            -t "dist/linux/LibreMIEL-${VERSION}-linux-x86_64.pkg.tar.zst"
+            -t "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${LARCH}.pkg.tar.zst"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dist-linux
-          path: dist/linux/*
+          name: dist-linux-${{ matrix.flutter_arch }}
+          path: dist/linux-${{ matrix.flutter_arch }}/*
 
   # ============================================================================
-  # 3. WINDOWS (Instalador .exe Inno Setup + Portable .zip)
+  # 3. WINDOWS x64 y ARM64 (Instalador .exe Inno Setup + Portable .zip)
+  # Nota: `windows-11-arm` es gratuito en repositorios públicos de GitHub.
   # ============================================================================
   build-windows:
-    name: Build Windows (Instalador EXE y Portable ZIP)
+    name: Build Windows ${{ matrix.flutter_arch }} (Instalador EXE y Portable ZIP)
     needs: prepare
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            flutter_arch: x64
+            allow_failure: false
+          - runner: windows-11-arm
+            flutter_arch: arm64
+            allow_failure: true
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.allow_failure }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          architecture: ${{ matrix.flutter_arch }}
           cache: true
 
       - run: flutter pub get
@@ -193,30 +230,36 @@ jobs:
         shell: pwsh
         run: |
           $ver = "${{ needs.prepare.outputs.version }}"
-          New-Item -ItemType Directory -Force -Path dist/windows | Out-Null
-          Compress-Archive -Path "build\windows\x64\runner\Release\*" `
-            -DestinationPath "dist\windows\LibreMIEL-${ver}-windows-x64-portable.zip" -Force
+          $arch = "${{ matrix.flutter_arch }}"
+          $releaseDir = "build\windows\${arch}\runner\Release"
+          if (-not (Test-Path $releaseDir)) {
+            throw "No se encontró el directorio de build esperado: $releaseDir"
+          }
+          New-Item -ItemType Directory -Force -Path "dist\windows-${arch}" | Out-Null
+          Compress-Archive -Path "$releaseDir\*" `
+            -DestinationPath "dist\windows-${arch}\LibreMIEL-${ver}-windows-${arch}-portable.zip" -Force
 
       - name: Compilar Instalador Windows (.exe con Inno Setup)
         shell: pwsh
         run: |
           $ver = "${{ needs.prepare.outputs.version }}"
+          $arch = "${{ matrix.flutter_arch }}"
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) {
             choco install innosetup -y
           }
-          & $iscc "/DAppVersion=$ver" "packaging\windows\installer.iss"
+          & $iscc "/DAppVersion=$ver" "/DAppArch=$arch" "packaging\windows\installer.iss"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dist-windows
-          path: dist/windows/*
+          name: dist-windows-${{ matrix.flutter_arch }}
+          path: dist/windows-${{ matrix.flutter_arch }}/*
 
   # ============================================================================
-  # 4. macOS (Instalador .dmg + Portable .zip)
+  # 4. macOS Universal Binary — x86_64 Intel + arm64 Apple Silicon (.dmg + .zip)
   # ============================================================================
   build-macos:
-    name: Build macOS (DMG y Portable ZIP)
+    name: Build macOS Universal (x86_64 + arm64 — DMG y Portable ZIP)
     needs: prepare
     runs-on: macos-latest
     steps:
@@ -230,21 +273,22 @@ jobs:
       - run: flutter pub get
       - run: flutter build macos --release --build-name="${{ needs.prepare.outputs.version }}"
 
-      - name: Empaquetar macOS Portable (.zip) e Instalador (.dmg)
+      - name: Verificar Universal Binary (x86_64 + arm64) y empaquetar (.zip y .dmg)
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
           APP_PATH="build/macos/Build/Products/Release/LibreMIEL.app"
+          lipo -info "$APP_PATH/Contents/MacOS/LibreMIEL"
           mkdir -p dist/macos dist/macos/dmg_root
 
-          # Portable .zip
+          # Portable .zip (Universal x86_64 + arm64)
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" \
-            "dist/macos/LibreMIEL-${VERSION}-macos-portable.zip"
+            "dist/macos/LibreMIEL-${VERSION}-macos-universal-portable.zip"
 
-          # Instalador .dmg
+          # Instalador .dmg (Universal x86_64 + arm64)
           cp -R "$APP_PATH" dist/macos/dmg_root/
           ln -s /Applications dist/macos/dmg_root/Applications
           hdiutil create -volname "LibreMIEL" -srcfolder dist/macos/dmg_root \
-            -ov -format UDZO "dist/macos/LibreMIEL-${VERSION}-macos.dmg"
+            -ov -format UDZO "dist/macos/LibreMIEL-${VERSION}-macos-universal.dmg"
           rm -rf dist/macos/dmg_root
 
       - uses: actions/upload-artifact@v4

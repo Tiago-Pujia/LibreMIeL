@@ -1,5 +1,5 @@
 name: "libremiel"
-arch: "amd64"
+arch: "${NFPM_ARCH}"
 platform: "linux"
 version: "${LIBREMIEL_VERSION}"
 section: "education"
@@ -36,7 +36,7 @@ overrides:
       - sqlite
 
 contents:
-  - src: "build/linux/x64/release/bundle/**"
+  - src: "build/linux/${FLUTTER_ARCH}/release/bundle/**"
     dst: "/opt/libremiel"
   - src: "/opt/libremiel/libremiel"
     dst: "/usr/bin/libremiel"
