@@ -16,6 +16,7 @@ Enterarte a tiempo cuando un docente sube material en **Contenidos**, publica o 
 **Próximamente:**
 - Descargar **foros** completos por materia (basado en [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)).
 - Descargar **contenidos** y archivos por materia de forma masiva u organizada.
+- **Buscador global offline** para encontrar archivos, mensajes, foros y entregas en todas tus materias sin conexión.
 - **Integración con IA** para resumir apuntes, consultar dudas sobre el material de la cátedra y organizar el estudio.
 
 ---
