@@ -1,0 +1,8 @@
+export 'contenidos_parser.dart';
+export 'curso_detalles_parser.dart';
+export 'evaluacion_parser.dart';
+export 'forov2_parser.dart';
+export 'interno_parser.dart';
+export 'mensajeria_parser.dart';
+export 'portafolio_parser.dart';
+export 'text_normalizer.dart';
