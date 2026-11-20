@@ -20,22 +20,23 @@ class DesktopTrayService with TrayListener, WindowListener {
   Future<void> initialize() async {
     if (!isDesktop || _initialized) return;
 
-    await windowManager.ensureInitialized();
-    const windowOptions = WindowOptions(
-      size: Size(1040, 720),
-      minimumSize: Size(720, 520),
-      center: true,
-      title: 'LibreMIEL',
-    );
-    await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
-    await windowManager.setPreventClose(true);
-    windowManager.addListener(this);
+    try {
+      await windowManager.ensureInitialized();
+      await windowManager.setTitle('LibreMIEL');
+      await windowManager.setMinimumSize(const Size(720, 520));
+      await windowManager.setPreventClose(true);
+      windowManager.addListener(this);
+    } catch (_) {
+      // Si el entorno gráfico no soporta controles avanzados de ventana, continuar.
+    }
 
     try {
       trayManager.addListener(this);
+      await trayManager.setIcon(
+        Platform.isWindows
+            ? 'windows/runner/resources/app_icon.ico'
+            : 'assets/icons/libremiel.png',
+      );
       await trayManager.setToolTip('LibreMIEL — Monitor de novedades MIEL');
       await trayManager.setContextMenu(
         Menu(

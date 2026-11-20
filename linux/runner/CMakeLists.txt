@@ -20,6 +20,10 @@ apply_standard_settings(${BINARY_NAME})
 add_definitions(-DAPPLICATION_ID="${APPLICATION_ID}")
 
 # Add dependency libraries. Add any application-specific dependencies here.
+# Link libgcc_s before libflutter_linux_gtk.so so C++ exceptions thrown in Linux
+# plugins (e.g. flutter_secure_storage_linux) unwind via libgcc_s rather than
+# Flutter engine's internal _Unwind_RaiseException symbol.
+target_link_libraries(${BINARY_NAME} PRIVATE -Wl,--no-as-needed gcc_s -Wl,--as-needed)
 target_link_libraries(${BINARY_NAME} PRIVATE flutter)
 target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::GTK)
 

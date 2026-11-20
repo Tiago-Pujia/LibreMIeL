@@ -106,6 +106,14 @@ class SettingsScreen extends ConsumerWidget {
           child: Column(
             children: [
               ListTile(
+                leading: const Icon(Icons.key_outlined),
+                title: const Text('Almacenamiento de credenciales'),
+                subtitle: Text(
+                  ref.read(credentialsStoreProvider).storageBackendLabel,
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
                 leading: const Icon(Icons.sync),
                 title: const Text('Forzar sincronización completa ahora'),
                 subtitle: const Text(

@@ -94,6 +94,9 @@ flutter test
 
 # 5. Probar el script anonimizador
 python3 -m unittest scripts/test_anonymize_html.py
+
+# 6. Ejecutar en escritorio Linux limitando trabajos paralelos de C++ (recomendado en equipos <= 16 GB RAM)
+CMAKE_BUILD_PARALLEL_LEVEL=4 flutter run -d linux
 ```
 
 ---
