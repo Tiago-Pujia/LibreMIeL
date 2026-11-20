@@ -386,7 +386,6 @@ class AppSessionController extends Notifier<AppSessionState> {
 
     if (DesktopTrayService.isDesktop) {
       _trayService ??= DesktopTrayService(
-        onSyncNow: () => syncNow(includeCycle2: true),
         onQuit: () async {
           _desktopCycle1Timer?.cancel();
           _desktopCycle2Timer?.cancel();

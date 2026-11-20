@@ -231,9 +231,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Nuevo archivo en Contenidos'), findsOneWidget);
 
-      // Abrir Ajustes desde Funcionalidades en el sidebar y verificar autostart
+      // Abrir Ajustes desde Funcionalidades en el sidebar y verificar autostart (sin Apariencia)
       await tester.tap(find.text('Ajustes'));
       await tester.pumpAndSettle();
+      expect(find.text('Apariencia'), findsNothing);
       expect(
         find.text('Ejecutar LibreMIEL al iniciar el sistema'),
         findsOneWidget,

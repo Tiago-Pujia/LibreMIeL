@@ -27,62 +27,10 @@ class SettingsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Alertas y ajustes',
+                  'Ajustes',
                   style: Theme.of(context).textTheme.headlineLarge,
                 ),
                 const SizedBox(height: 16),
-
-                // Apariencia (Claro / Oscuro / Sistema)
-                _SectionHeader(title: 'Apariencia', palette: palette),
-                const SizedBox(height: 8),
-                _MielPanel(
-                  palette: palette,
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tema de la interfaz (también podés cambiarlo rápido con el ícono de contraste en la barra verde).',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: palette.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _ThemeChoiceButton(
-                              label: 'Automático',
-                              icon: Icons.brightness_auto,
-                              selected: session.themeMode == ThemeMode.system,
-                              onTap: () =>
-                                  controller.updateThemeMode(ThemeMode.system),
-                            ),
-                            _ThemeChoiceButton(
-                              label: 'Modo claro',
-                              icon: Icons.light_mode,
-                              selected: session.themeMode == ThemeMode.light,
-                              onTap: () =>
-                                  controller.updateThemeMode(ThemeMode.light),
-                            ),
-                            _ThemeChoiceButton(
-                              label: 'Modo oscuro',
-                              icon: Icons.dark_mode,
-                              selected: session.themeMode == ThemeMode.dark,
-                              onTap: () =>
-                                  controller.updateThemeMode(ThemeMode.dark),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
 
                 // Inicio con el sistema
                 _SectionHeader(title: 'Inicio del sistema', palette: palette),
@@ -352,61 +300,6 @@ class _MielPanel extends StatelessWidget {
         side: BorderSide(color: palette.cardBorder),
       ),
       child: child,
-    );
-  }
-}
-
-class _ThemeChoiceButton extends StatelessWidget {
-  const _ThemeChoiceButton({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MielPalette.of(context);
-    return Material(
-      color: selected ? palette.primary : palette.pageBackground,
-      borderRadius: BorderRadius.circular(3),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(3),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: selected ? palette.primary : palette.inputBorder,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: selected ? Colors.white : palette.textSecondary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
-                  color: selected ? Colors.white : palette.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

@@ -7,9 +7,8 @@ import 'package:window_manager/window_manager.dart';
 
 /// Gestión de bandeja del sistema (*system tray*) y ventana en Windows, macOS y Linux.
 class DesktopTrayService with TrayListener, WindowListener {
-  DesktopTrayService({required this.onSyncNow, required this.onQuit});
+  DesktopTrayService({required this.onQuit});
 
-  final Future<void> Function() onSyncNow;
   final Future<void> Function() onQuit;
 
   bool _initialized = false;
@@ -36,7 +35,6 @@ class DesktopTrayService with TrayListener, WindowListener {
         Menu(
           items: [
             MenuItem(key: 'show', label: 'Abrir LibreMIEL'),
-            MenuItem(key: 'sync', label: 'Revisar novedades ahora'),
             MenuItem.separator(),
             MenuItem(key: 'quit', label: 'Salir completamente'),
           ],
@@ -135,8 +133,6 @@ class DesktopTrayService with TrayListener, WindowListener {
       case 'show':
         await windowManager.show();
         await windowManager.focus();
-      case 'sync':
-        await onSyncNow();
       case 'quit':
         await _quitCompletely();
     }
