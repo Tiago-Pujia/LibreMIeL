@@ -13,6 +13,11 @@ Mejorar la experiencia diaria de cursada incorporando poco a poco funciones úti
 **Notificaciones:**  
 Enterarte a tiempo cuando un docente sube material en **Contenidos**, publica o corrige algo en **Portafolio**, envía un aviso por **Mensajería** o responde en los **Foros**, sin tener que entrar manualmente materia por materia.
 
+**Próximamente:**
+- Descargar **foros** completos por materia (basado en [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)).
+- Descargar **contenidos** y archivos por materia de forma masiva u organizada.
+- **Integración con IA** para resumir apuntes, consultar dudas sobre el material de la cátedra y organizar el estudio.
+
 ---
 
 ## 💻 Sistemas Compatibles
