@@ -57,7 +57,7 @@ void main() {
       expect(find.text('Usuario:'), findsOneWidget);
       expect(find.text('Contraseña:'), findsOneWidget);
       expect(find.text('Olvidé mi contraseña'), findsOneWidget);
-      expect(find.text('Mantener mi sesión activa.'), findsOneWidget);
+      expect(find.text('Sesión permanente activa.'), findsOneWidget);
       expect(find.text('Ingresar'), findsOneWidget);
       expect(find.textContaining('miel.unlam.edu.ar'), findsWidgets);
     },

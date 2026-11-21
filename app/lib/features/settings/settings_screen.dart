@@ -199,13 +199,13 @@ class SettingsScreen extends ConsumerWidget {
                           Icons.key_outlined,
                           color: palette.linkAccent,
                         ),
-                        title: const Text('Almacenamiento de credenciales'),
+                        title: const Text('Sesión permanente y credenciales'),
                         subtitle: Text(
-                          ref
-                              .read(credentialsStoreProvider)
-                              .storageBackendLabel,
+                          '${ref.read(credentialsStoreProvider).storageBackendLabel}\n'
+                          'Se reconecta automáticamente al abrir LibreMIeL; solo cierra sesión cuando vos lo pedís.',
                           style: TextStyle(color: palette.textMuted),
                         ),
+                        isThreeLine: true,
                       ),
                       Divider(height: 1, color: palette.divider),
                       ListTile(

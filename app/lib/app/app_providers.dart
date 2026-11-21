@@ -145,8 +145,10 @@ class AppSessionState {
 class AppSessionController extends Notifier<AppSessionState> {
   Timer? _desktopCycle1Timer;
   Timer? _desktopCycle2Timer;
+  Timer? _desktopKeepAliveTimer;
   DesktopTrayService? _trayService;
   MielCredentials? _memoryCredentials;
+  Future<bool>? _reloginInFlight;
   int _sessionGeneration = 0;
 
   @override
@@ -154,6 +156,7 @@ class AppSessionController extends Notifier<AppSessionState> {
     ref.onDispose(() {
       _desktopCycle1Timer?.cancel();
       _desktopCycle2Timer?.cancel();
+      _desktopKeepAliveTimer?.cancel();
       _trayService?.dispose();
     });
     Future.microtask(_bootstrap);
@@ -192,6 +195,7 @@ class AppSessionController extends Notifier<AppSessionState> {
 
     final authenticated = savedCreds != null;
     if (authenticated) {
+      _memoryCredentials = savedCreds;
       final currentUser = savedCreds.username.trim().toLowerCase();
       final storedUser = await db.getSetting(SettingKeys.accountUsername);
       if (storedUser == null || storedUser.isEmpty) {
@@ -239,26 +243,109 @@ class AppSessionController extends Notifier<AppSessionState> {
   Future<MielCredentials?> loadActiveCredentials() async {
     if (_memoryCredentials != null) return _memoryCredentials;
     try {
-      return await ref.read(credentialsStoreProvider).read();
+      final creds = await ref.read(credentialsStoreProvider).read();
+      _memoryCredentials = creds;
+      return creds;
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Garantiza una sesión HTTP activa con MIeL re-autenticando silenciosamente
+  /// con las credenciales locales persistidas (Fase 5 — Sesión Permanente).
+  ///
+  /// - Serializa llamadas concurrentes para evitar múltiples POST de login.
+  /// - Respeta la invariante anti-bloqueo (`estado: 1, 2 o 3`): si la clave cambió
+  ///   o la cuenta está bloqueada, pausa la reconexión automática sin borrar datos.
+  Future<bool> ensureActiveSession({bool forceRelogin = false}) async {
+    if (!state.isAuthenticated) return false;
+    final inFlight = _reloginInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+    final future = _doEnsureActiveSession(forceRelogin: forceRelogin);
+    _reloginInFlight = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_reloginInFlight, future)) {
+        _reloginInFlight = null;
+      }
+    }
+  }
+
+  Future<bool> _doEnsureActiveSession({required bool forceRelogin}) async {
+    final gen = _sessionGeneration;
+    final db = ref.read(databaseProvider);
+    final pausedReason = await db.getSetting(SettingKeys.accountPausedReason);
+    if (pausedReason != null && pausedReason.isNotEmpty) {
+      return false;
+    }
+
+    final client = await ref.read(mielClientProvider.future);
+    if (!forceRelogin) {
+      try {
+        if (await client.isLogged()) {
+          return true;
+        }
+      } catch (_) {}
+    }
+
+    final creds = await loadActiveCredentials();
+    if (creds == null || gen != _sessionGeneration) {
+      return false;
+    }
+
+    final loginRes = await client.login(
+      creds.username,
+      creds.password,
+      remember: true,
+    );
+    if (gen != _sessionGeneration) return false;
+
+    if (loginRes.isSuccess) {
+      await db.deleteSetting(SettingKeys.accountPausedReason);
+      if (state.authPausedReason != null) {
+        state = state.copyWith(clearAuthPausedReason: true);
+      }
+      return true;
+    }
+
+    if (loginRes.status == MielAuthStatus.invalidCredentials ||
+        loginRes.status == MielAuthStatus.accountBlocked) {
+      final msg =
+          loginRes.message ??
+          'Error de autenticación en MIeL (código ${loginRes.rawCode}).';
+      await db.setSetting(SettingKeys.accountPausedReason, msg);
+      state = state.copyWith(authPausedReason: msg);
+    }
+    return false;
+  }
+
+  Future<void> _keepSessionAlive() async {
+    if (!state.isAuthenticated || state.authPausedReason != null) return;
+    try {
+      final client = await ref.read(mielClientProvider.future);
+      if (await client.isLogged()) {
+        await client.refreshSession();
+      } else {
+        await ensureActiveSession(forceRelogin: true);
+      }
+    } catch (_) {
+      // Error de red transitorio: nunca desloguear; se reintentará en el próximo ciclo.
     }
   }
 
   Future<MielLoginResult> login({
     required String username,
     required String password,
-    required bool saveCredentials,
+    bool saveCredentials = true,
   }) async {
     final client = await ref.read(mielClientProvider.future);
     final db = ref.read(databaseProvider);
     final credsStore = ref.read(credentialsStoreProvider);
 
-    final result = await client.login(
-      username,
-      password,
-      remember: saveCredentials,
-    );
+    final result = await client.login(username, password, remember: true);
     if (!result.isSuccess) {
       return result;
     }
@@ -445,6 +532,7 @@ class AppSessionController extends Notifier<AppSessionState> {
     ref.read(sessionGenerationProvider.notifier).bump();
     _desktopCycle1Timer?.cancel();
     _desktopCycle2Timer?.cancel();
+    _desktopKeepAliveTimer?.cancel();
     final db = ref.read(databaseProvider);
     final credsStore = ref.read(credentialsStoreProvider);
 
@@ -502,12 +590,14 @@ class AppSessionController extends Notifier<AppSessionState> {
         onQuit: () async {
           _desktopCycle1Timer?.cancel();
           _desktopCycle2Timer?.cancel();
+          _desktopKeepAliveTimer?.cancel();
         },
       );
       await _trayService!.initialize();
 
       _desktopCycle1Timer?.cancel();
       _desktopCycle2Timer?.cancel();
+      _desktopKeepAliveTimer?.cancel();
 
       _desktopCycle1Timer = Timer.periodic(
         Duration(minutes: intervalMinutes),
@@ -516,6 +606,10 @@ class AppSessionController extends Notifier<AppSessionState> {
       _desktopCycle2Timer = Timer.periodic(
         Duration(minutes: intervalMinutes < 30 ? 45 : intervalMinutes * 2),
         (_) => syncNow(includeCycle2: true),
+      );
+      _desktopKeepAliveTimer = Timer.periodic(
+        const Duration(minutes: 20),
+        (_) => unawaited(_keepSessionAlive()),
       );
     }
   }

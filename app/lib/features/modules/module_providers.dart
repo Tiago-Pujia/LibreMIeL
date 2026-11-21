@@ -10,8 +10,8 @@ import '../../core/parsers/miel_parsers.dart';
 /// Tipo de bandeja de Mensajería en MIeL.
 enum MensajeriaBoxKind { entrada, salida, borradores, favoritos }
 
-/// Ejecuta una consulta HTML interactiva de Fase 2 con recuperación automática de sesión
-/// (un único re-login si la cookie `PHPSESSID` expiró).
+/// Ejecuta una consulta HTML interactiva con recuperación automática silenciosa
+/// de sesión (Fase 5 — Sesión Permanente) respetando `accountPausedReason`.
 Future<String> fetchInteractiveHtmlWithAuth(
   Ref ref,
   Future<String> Function(MielInteractiveReader reader) fetcher,
@@ -20,20 +20,45 @@ Future<String> fetchInteractiveHtmlWithAuth(
   var html = await fetcher(reader);
 
   if (isLikelyLoginRedirectHtml(html)) {
-    final logged = await reader.isLogged();
-    if (!logged) {
-      final creds = await ref
-          .read(appSessionProvider.notifier)
-          .loadActiveCredentials();
-      if (creds != null) {
-        final loginRes = await reader.login(creds.username, creds.password);
-        if (loginRes.isSuccess) {
-          html = await fetcher(reader);
-        }
-      }
+    final recovered = await _recoverInteractiveSession(ref, reader);
+    if (recovered) {
+      html = await fetcher(reader);
     }
   }
   return html;
+}
+
+/// Recupera la sesión silenciosamente priorizando `AppSessionController.ensureActiveSession`
+/// (y con fallback limpio si un test de widget aislado no inicializa el controlador).
+Future<bool> _recoverInteractiveSession(
+  Ref ref,
+  MielInteractiveReader reader,
+) async {
+  try {
+    if (await reader.isLogged()) return true;
+  } catch (_) {}
+
+  try {
+    final ok = await ref
+        .read(appSessionProvider.notifier)
+        .ensureActiveSession(forceRelogin: true);
+    if (ok) return true;
+  } catch (_) {}
+
+  try {
+    final creds = await ref
+        .read(appSessionProvider.notifier)
+        .loadActiveCredentials();
+    if (creds != null) {
+      final loginRes = await reader.login(
+        creds.username,
+        creds.password,
+        remember: true,
+      );
+      return loginRes.isSuccess;
+    }
+  } catch (_) {}
+  return false;
 }
 
 // --- Contenidos Providers ---

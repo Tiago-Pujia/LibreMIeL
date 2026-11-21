@@ -19,7 +19,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userController = TextEditingController();
   final _passController = TextEditingController();
-  bool _rememberCredentials = true;
   bool _obscurePassword = true;
   bool _submitting = false;
   String? _errorText;
@@ -57,7 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .login(
           username: _userController.text.trim(),
           password: _passController.text,
-          saveCredentials: _rememberCredentials,
+          saveCredentials: true,
         );
 
     if (!mounted) return;
@@ -367,63 +366,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             const SizedBox(height: 14),
 
-            // Checkbox "Mantener mi sesión activa." + tooltip de ayuda
+            // Indicador de Sesión Permanente (Fase 5)
             Row(
               children: [
-                SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: Checkbox(
-                    value: _rememberCredentials,
-                    onChanged: _submitting
-                        ? null
-                        : (v) =>
-                              setState(() => _rememberCredentials = v ?? true),
-                    fillColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return Colors.white;
-                      }
-                      return Colors.transparent;
-                    }),
-                    checkColor: const Color(0xFF009674),
-                    side: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      width: 1.5,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
+                Icon(
+                  Icons.verified_user_outlined,
+                  size: 18,
+                  color: Colors.white.withValues(alpha: 0.92),
                 ),
                 const SizedBox(width: 8),
-                Flexible(
-                  child: MouseRegion(
-                    cursor: _submitting
-                        ? SystemMouseCursors.basic
-                        : SystemMouseCursors.click,
-                    child: GestureDetector(
-                      onTap: _submitting
-                          ? null
-                          : () => setState(
-                              () =>
-                                  _rememberCredentials = !_rememberCredentials,
-                            ),
-                      child: const Text(
-                        'Mantener mi sesión activa.',
-                        style: TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                    ),
+                const Flexible(
+                  child: Text(
+                    'Sesión permanente activa.',
+                    style: TextStyle(color: Colors.white, fontSize: 13.5),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Tooltip(
                   message:
-                      'Guarda tus credenciales en el llavero seguro del dispositivo '
-                      'para revisar novedades de MIeL en segundo plano.',
+                      'Tus credenciales se guardan localmente en tu dispositivo '
+                      '(llavero seguro + .env privado 0600) para iniciar sesión '
+                      'automáticamente. Solo se cierra sesión cuando vos lo pedís.',
                   child: Icon(
                     Icons.help_outline,
-                    size: 18,
-                    color: Colors.white.withValues(alpha: 0.9),
+                    size: 17,
+                    color: Colors.white.withValues(alpha: 0.88),
                   ),
                 ),
               ],
