@@ -1,102 +1,136 @@
-# Flujo de Trabajo y Uso de Ramas Git — LibreMIeL
+# Flujo de Trabajo, Ramas (`DEV` / `main`) y Verificación Pre-Producción — LibreMIeL
 
-Esta guía explica de forma simple cómo organizar las ramas, los commits y los lanzamientos (*releases*) en **LibreMIeL** usando un modelo liviano basado en **GitHub Flow + tags semánticos**.
+Esta guía explica cómo organizar el trabajo diario entre la rama de desarrollo (**`DEV`**) y la rama de producción (**`main`**), y cómo comprobar con certeza absoluta que una versión compila sin errores en los 4 sistemas operativos (**Linux, Windows, Android y macOS**) **antes** de publicar un Release oficial.
 
 ---
 
-## 1. Ramas Principales y Temporales
+## 1. Estructura de Ramas
 
-| Rama / Prefijo | Propósito | ¿Se puede borrar después del merge? |
+| Rama / Prefijo | Propósito | ¿Se puede borrar? |
 | :--- | :--- | :---: |
-| `main` | Rama principal y **siempre estable**. Todo lo que entra acá debe compilar y pasar `flutter analyze` + `flutter test`. Desde `main` se crean los tags de Release (`v0.1.0`, `v0.2.0`, etc.). | No |
-| `feat/<nombre>` | Desarrollo de una nueva funcionalidad (ej. `feat/lector-contenidos`, `feat/notificaciones-portafolio`). | Sí |
-| `fix/<nombre>` | Corrección de un error o ajuste cuando MIeL cambia algún selector HTML (ej. `fix/parser-forov2-fechas`). | Sí |
-| `docs/<nombre>` | Cambios únicamente en documentación (ej. `docs/actualizar-status`). | Sí |
-| `refactor/<nombre>` | Mejoras internas de código sin cambiar el comportamiento externo. | Sí |
-| `chore/<nombre>` | Mantenimiento, dependencias, CI/CD o empaquetado (ej. `chore/actualizar-nfpm`). | Sí |
-
-> **¿Por qué no usamos una rama `develop` permanente?**  
-> Para un proyecto open source ágil, mantener `main` siempre estable y trabajar cada cambio en una rama corta (`feat/...`, `fix/...`) evita conflictos largos de integración y facilita recibir Pull Requests de la comunidad.
+| **`main`** | **Producción (siempre estable).** Solo recibe código ya probado y verificado desde `DEV`. Desde `main` se crean los tags oficiales de Release (`v0.1.0`, `v0.2.0`, etc.). | No |
+| **`DEV`** | **Desarrollo activo.** Rama principal de trabajo diario donde se desarrollan, integran y prueban nuevas funciones, mejoras de interfaz y correcciones sin afectar producción. | No |
+| `feat/<nombre>` | *(Opcional)* Rama temporal para desarrollar una función grande aislada antes de integrarla a `DEV`. | Sí |
+| `fix/<nombre>` | *(Opcional)* Rama temporal para corregir un bug puntual o cambio de HTML en MIeL. | Sí |
 
 ---
 
-## 2. Flujo Diario Paso a Paso
+## 2. Trabajo Diario en la Rama `DEV`
 
-### 1) Actualizar `main` antes de empezar algo nuevo
-```bash
-git checkout main
-# (Cuando tengas remoto en GitHub:)
-# git pull origin main
-```
+Todo cambio nuevo se realiza sobre **`DEV`** (nunca directamente sobre `main`):
 
-### 2) Crear una rama nueva para tu tarea
 ```bash
-git checkout -b feat/mi-nueva-funcion
-```
+# 1. Asegurate de estar parado en la rama DEV
+git checkout DEV
+git pull origin DEV
 
-### 3) Trabajar y hacer commits pequeños y claros (Conventional Commits)
-```bash
+# 2. Hacé tus cambios y confirmalos con Conventional Commits
 git status
 git add <archivos>
-git commit -m "feat(parsers): soportar nuevos estados de entrega en portafolio"
+git commit -m "feat(foros): agregar filtro por docente"
+
+# 3. Subí tus avances a DEV en GitHub (dispara automáticamente el CI de tests y formato)
+git push origin DEV
 ```
 
-Formato recomendado de commits: `<tipo>(<alcance opcional>): <descripción breve en imperativo>`
-- `feat:` nueva característica
-- `fix:` corrección de bug
-- `docs:` documentación
-- `test:` pruebas unitarias o fixtures anonimizados
-- `refactor:` reorganización de código
-- `chore:` dependencias, build, GitHub Actions, packaging
-
-### 4) Verificar que todo pase antes de integrar a `main`
-```bash
-# Desde app/
-cd app
-dart format --output=none --set-exit-if-changed lib test
-flutter analyze
-flutter test
-```
-
-### 5) Integrar la rama a `main`
-- **En local (trabajando solo):**
-  ```bash
-  git checkout main
-  git merge --no-ff feat/mi-nueva-funcion
-  git branch -d feat/mi-nueva-funcion
-  ```
-- **En GitHub (con Pull Request):**
-  1. Subí tu rama: `git push -u origin feat/mi-nueva-funcion`.
-  2. Abrí un Pull Request hacia `main`.
-  3. Esperá que el workflow `CI` (`.github/workflows/ci.yml`) pase en verde.
-  4. Hacé **Squash and merge** (o **Merge pull request**) y borrá la rama temporal.
+Prefijos recomendados para los mensajes de commit:
+- `feat:` nueva funcionalidad
+- `fix:` corrección de error
+- `style:` / `refactor:` ajustes visuales o de estructura interna
+- `docs:` cambios en documentación
+- `test:` pruebas automatizadas
+- `ci:` / `chore:` pipelines de GitHub Actions, dependencias o empaquetado
 
 ---
 
-## 3. Cómo Publicar una Nueva Versión (Releases Automáticos)
+## 3. Cómo Saber que Todo Está Correcto Antes de Compilar en Producción
 
-El workflow `.github/workflows/release.yml` se dispara automáticamente cuando subís un **tag semántico** (`vMAJOR.MINOR.PATCH`) a GitHub:
+Antes de pasar cambios de `DEV` a `main` y lanzar un tag de producción, ejecutá este protocolo de **2 pasos** para garantizar **cero errores**:
 
-1. Actualizá la versión en `app/pubspec.yaml` (ej. `version: 0.2.0+1`) y mové los cambios de `[Unreleased]` a `[0.2.0] - AAAA-MM-DD` en [`docs/CHANGELOG.md`](CHANGELOG.md).
-2. Hacé commit en `main`:
+### Paso 1: Verificación local rápida en tu Kubuntu (~15 segundos)
+
+Ejecutá exactamente los mismos comandos que exige el servidor de integración continua (CI):
+
+```bash
+cd /home/tiago/Proyectos/LibreMIEL/app
+export PATH="$HOME/development/flutter/bin:$PATH"
+
+# 1. Formatear el código Dart y verificar que cumpla el estándar del CI
+dart format lib test
+dart format --output=none --set-exit-if-changed lib test
+
+# 2. Análisis estático (0 warnings, 0 imports sin usar, 0 errores de tipos)
+flutter analyze
+
+# 3. Ejecutar la suite completa de tests automatizados de Flutter
+flutter test
+
+# 4. Ejecutar los tests de los scripts de Python (anonimizador HTML)
+cd /home/tiago/Proyectos/LibreMIEL
+python3 -m unittest discover -s scripts -v
+
+# 5. (Opcional) Probar compilación nativa de release en Linux
+cd /home/tiago/Proyectos/LibreMIEL/app
+flutter build linux --release
+```
+
+Si los puntos 1 al 4 terminan sin errores, el código Dart/Flutter y los tests están 100% válidos.
+
+---
+
+### Paso 2: Simulacro real en los 4 Sistemas Operativos SIN publicar Release (`workflow_dispatch`)
+
+Como desde Linux no se compilan localmente instaladores `.exe` de Windows ni `.dmg` de macOS, el workflow [`.github/workflows/release.yml`](../.github/workflows/release.yml) cuenta con una salvaguarda:
+- El último job (**`Publicar GitHub Release`**) solo se ejecuta cuando el evento es un tag `v*` (`if: startsWith(github.ref, 'refs/tags/v')`).
+- Si lo disparás manualmente sobre la rama **`DEV`**, GitHub Actions **compila los 18 paquetes reales en Linux (`x64`/`arm64`), Windows (`x64`), Android (`arm64-v8a`/`armeabi-v7a`/`x86_64`/`universal`) y macOS (`Universal`)**, pero **NO crea ni publica ningún Release público**.
+
+Corré el simulacro desde tu terminal con un solo comando:
+
+```bash
+# 1. Disparar el simulacro multiplataforma sobre la rama DEV
+gh workflow run release.yml --ref DEV -f version=0.2.0-test
+
+# 2. Monitorear en vivo en la terminal hasta que todos los sistemas den tilde verde (✓)
+gh run watch
+```
+
+- Si hubiera cualquier problema en Gradle (Android), Inno Setup (Windows), Xcode (macOS) o nFPM/AppImage (Linux), lo vas a ver ahí mismo en `DEV` sin haber tocado `main` ni publicado una versión rota.
+- Además, podés descargar los artefactos compilados de prueba desde la página del workflow en GitHub Actions para probarlos antes de liberar la versión.
+
+---
+
+## 4. Pase a Producción y Publicación de Release Oficial (`DEV` $\rightarrow$ `main`)
+
+Una vez que el **Paso 1** y el **Paso 2** terminaron en verde (`✓`):
+
+1. En `DEV`, actualizá el número de versión en [`app/pubspec.yaml`](../app/pubspec.yaml) (ej. `version: 0.2.0+2`) y documentá las novedades en [`docs/CHANGELOG.md`](CHANGELOG.md):
    ```bash
+   git checkout DEV
    git add app/pubspec.yaml docs/CHANGELOG.md
    git commit -m "chore(release): preparar v0.2.0"
+   git push origin DEV
    ```
-3. Creá el tag anotado:
+2. Pasá los cambios validados de `DEV` a `main`:
    ```bash
-   git tag -a v0.1.0 -m "Release v0.1.0 — MVP de notificaciones"
-   ```
-4. Cuando ya tengas el repositorio conectado a GitHub y quieras publicar:
-   ```bash
+   git checkout main
+   git pull origin main
+   git merge --no-ff DEV -m "Merge branch 'DEV' into main (Release v0.2.0)"
    git push origin main
-   git push origin v0.1.0
    ```
-   GitHub Actions compilará y adjuntará automáticamente todos los instaladores y portables para **Windows, macOS, Linux y Android** en la sección **Releases**.
+3. Creá y subí el tag de la versión para que GitHub Actions publique el Release oficial con todos los instaladores y `SHA256SUMS.txt`:
+   ```bash
+   git tag -a v0.2.0 -m "Release v0.2.0"
+   git push origin v0.2.0
+   ```
+4. Volvé a pararte en `DEV` para seguir trabajando tranquilo:
+   ```bash
+   git checkout DEV
+   ```
 
 ---
 
-## 4. Reglas de Seguridad en Git
+## 5. Reglas de Seguridad en Git
 
-- **Nunca hagas `git add .` a ciegas:** revisá siempre `git status` y `git diff --staged` para asegurarte de no subir `.env`, capturas HTML sin anonimizar, archivos de firma (`.jks`, `.keystore`) ni `docs/IMPLEMENTATION_PLAN.md` (que está ignorado en `.gitignore`).
-- Si te equivocaste en el último commit local (antes de hacer push), podés corregirlo con `git commit --amend`. Nunca reescribas historia que ya fue publicada en `main` en GitHub.
+- **Nunca hagas `git add .` a ciegas:** revisá siempre `git status` y `git diff` para asegurarte de no subir archivos `.env`, credenciales, capturas HTML sin anonimizar ni llaves de firma (`.jks`, `.keystore`, `key.properties`).
+- **Trabajá siempre en `DEV`:** verificá con `git branch` que estés en `DEV` antes de empezar a programar.
+

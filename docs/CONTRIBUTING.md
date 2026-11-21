@@ -121,11 +121,13 @@ El proyecto está organizado en capas independientes para facilitar contribucion
 
 ---
 
-## 5. Flujo de Pull Requests y Commits
+## 5. Flujo de Ramas (`DEV` / `main`), Pull Requests y Commits
 
-1. Creá una rama desde `main`:
+Para el flujo completo de desarrollo en la rama **`DEV`**, el protocolo de verificación pre-producción (local + simulacro multiplataforma con `gh workflow run release.yml --ref DEV`) y el pase a **`main`**, consultá **[`docs/GIT_WORKFLOW.md`](GIT_WORKFLOW.md)**.
+
+1. Trabajá sobre la rama `DEV` (o creá tu rama temporal desde `DEV`):
    ```bash
-   git checkout -b feat/mi-mejora
+   git checkout DEV
    ```
 2. Usá mensajes de commit claros siguiendo **Conventional Commits**:
    - `feat:` nueva funcionalidad
@@ -133,5 +135,5 @@ El proyecto está organizado en capas independientes para facilitar contribucion
    - `docs:` cambios en documentación
    - `test:` nuevos tests o fixtures anonimizados
    - `refactor:` reestructuración sin cambio de comportamiento
-   - `chore:` tareas de mantenimiento, CI o empaquetado
-3. Verificá que `dart format`, `flutter analyze` y `flutter test` pasen sin errores antes de abrir el Pull Request.
+   - `chore:` / `ci:` tareas de mantenimiento, CI o empaquetado
+3. Verificá que `dart format`, `flutter analyze` y `flutter test` pasen sin errores antes de subir cambios o integrar a `main`.
