@@ -45,5 +45,14 @@ contents:
     dst: "/usr/share/applications/io.github.tiago_pujia.libremiel.desktop"
   - src: "packaging/linux/libremiel.png"
     dst: "/usr/share/icons/hicolor/256x256/apps/io.github.tiago_pujia.libremiel.png"
+  - src: "packaging/linux/libremiel.png"
+    dst: "/usr/share/icons/hicolor/256x256/apps/libremiel.png"
+  - src: "packaging/linux/libremiel.png"
+    dst: "/usr/share/pixmaps/io.github.tiago_pujia.libremiel.png"
+  - src: "packaging/linux/libremiel.png"
+    dst: "/usr/share/pixmaps/libremiel.png"
   - src: "LICENSE"
     dst: "/usr/share/licenses/libremiel/LICENSE"
+
+scripts:
+  postinstall: "packaging/linux/postinstall.sh"

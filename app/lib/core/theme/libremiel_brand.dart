@@ -23,8 +23,7 @@ class LibreMielMark extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(size * 0.24),
+        ClipOval(
           child: Image.asset(
             'assets/icons/libremiel.png',
             width: size,
