@@ -323,6 +323,34 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Al abrir interactivamente Contenidos en Fase 2, MIeL limpia el badge del servidor.
+  Future<void> clearContenidosBadge(String idComision) async {
+    await (update(subjects)..where((t) => t.idComision.equals(idComision)))
+        .write(const SubjectsCompanion(lastContenidosBadge: Value(0)));
+  }
+
+  /// Al abrir interactivamente un mensaje no leído (`verEntrada`), descuenta 1 del badge local.
+  Future<void> decrementMensajesBadge(
+    String idComision, {
+    int delta = 1,
+  }) async {
+    final subject = await getSubject(idComision);
+    if (subject == null || subject.lastMensajesBadge <= 0) return;
+    final next = (subject.lastMensajesBadge - delta).clamp(0, 9999);
+    await (update(subjects)..where((t) => t.idComision.equals(idComision)))
+        .write(SubjectsCompanion(lastMensajesBadge: Value(next)));
+  }
+
+  /// Al abrir interactivamente un tema de foro con no leídos, descuenta su badge del total local.
+  Future<void> decrementForoBadge(String idComision, int delta) async {
+    if (delta <= 0) return;
+    final subject = await getSubject(idComision);
+    if (subject == null || subject.lastForoBadge <= 0) return;
+    final next = (subject.lastForoBadge - delta).clamp(0, 9999);
+    await (update(subjects)..where((t) => t.idComision.equals(idComision)))
+        .write(SubjectsCompanion(lastForoBadge: Value(next)));
+  }
+
   // --- Teachers cache ---
 
   Future<List<CachedTeacher>> getTeachersForSubject(String idComision) {

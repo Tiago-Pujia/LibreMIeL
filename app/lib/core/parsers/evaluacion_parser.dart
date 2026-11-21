@@ -4,6 +4,9 @@ import '../models/miel_models.dart';
 import 'text_normalizer.dart';
 
 /// Parser puro de `GET /evaluacion/evaluaciones/comision/{idComision}`.
+///
+/// Soporta tanto la tabla oficial de 6 columnas (`Tipo | Título | Habilitado | Candado | Estado | Opciones`)
+/// como variantes compactas de 5 columnas.
 List<EvaluationItem> parseEvaluacionesHtml(String rawHtml, String idComision) {
   final doc = html_parser.parse(rawHtml);
   final evaluations = <EvaluationItem>[];
@@ -22,17 +25,40 @@ List<EvaluationItem> parseEvaluacionesHtml(String rawHtml, String idComision) {
     final id = idFromBtn.isNotEmpty ? idFromBtn : normalizeText('$type-$title');
     if (!seenIds.add(id)) continue;
 
-    final enabledText = normalizeText(cells[2].text);
+    final enabledCell = cells[2];
+    final enabledText = normalizeText(enabledCell.text);
     final enabledTitle = normalizeText(
-      cells[2].querySelector('[title]')?.attributes['title'] ?? '',
+      enabledCell
+              .querySelector('[title], [data-tippy-content]')
+              ?.attributes['title'] ??
+          enabledCell
+              .querySelector('[data-tippy-content]')
+              ?.attributes['data-tippy-content'] ??
+          '',
     );
+    final hasGreenCircle = enabledCell.querySelector('.w3-green') != null;
     final isEnabled =
         !enabledTitle.contains('no habilitado') &&
         !enabledText.contains('no habilitado') &&
-        (enterBtn != null || enabledTitle.contains('habilitado'));
+        (hasGreenCircle ||
+            enterBtn != null ||
+            enabledTitle.contains('habilitado'));
 
-    final status = cleanWhitespace(cells[3].text);
     final requiresPassword = enterBtn?.attributes['data-tc'] == '1';
+    var isLockOpen = !requiresPassword;
+    for (final icon in row.querySelectorAll('i.material-icons')) {
+      final glyph = cleanWhitespace(icon.text);
+      if (glyph == 'lock') isLockOpen = false;
+      if (glyph == 'lock_open') isLockOpen = !requiresPassword;
+    }
+
+    final statusCellIndex = cells.length >= 6 ? 4 : 3;
+    var status = cleanWhitespace(cells[statusCellIndex].text);
+    if (status == 'lock' || status == 'lock_open') {
+      status = cells.length > statusCellIndex + 1
+          ? cleanWhitespace(cells[statusCellIndex + 1].text)
+          : '';
+    }
 
     evaluations.add(
       EvaluationItem(
@@ -43,6 +69,7 @@ List<EvaluationItem> parseEvaluacionesHtml(String rawHtml, String idComision) {
         isEnabled: isEnabled,
         status: status,
         requiresPassword: requiresPassword,
+        isLockOpen: isLockOpen,
       ),
     );
   }

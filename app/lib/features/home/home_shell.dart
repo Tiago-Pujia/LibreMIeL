@@ -9,7 +9,9 @@ import '../../core/storage/app_database.dart';
 import '../../core/theme/libremiel_brand.dart';
 import '../../core/theme/miel_theme.dart';
 import '../feed/feed_screen.dart';
-import '../modules/module_draft_view.dart';
+import '../modules/module_providers.dart';
+import '../modules/module_reader_host.dart';
+import '../modules/module_sections.dart';
 import '../settings/settings_screen.dart';
 import '../subjects/miel_home_view.dart';
 
@@ -33,10 +35,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   String? _activeSubjectId;
   MielToolKind _activeTool = MielToolKind.contenidos;
   int _activeModuleSectionIndex = 0;
+  String? _activeForoTopicId;
 
   void _goHome() {
     setState(() {
       _section = _ShellSection.home;
+      _activeForoTopicId = null;
     });
     _closeDrawerIfOpen();
   }
@@ -44,6 +48,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void _goNovedades() {
     setState(() {
       _section = _ShellSection.novedades;
+      _activeForoTopicId = null;
     });
     _closeDrawerIfOpen();
   }
@@ -51,6 +56,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void _goAjustes() {
     setState(() {
       _section = _ShellSection.ajustes;
+      _activeForoTopicId = null;
     });
     _closeDrawerIfOpen();
   }
@@ -83,6 +89,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       _activeSubjectId = subject.idComision;
       _activeTool = tool;
       _activeModuleSectionIndex = defaultSectionIndexForTool(tool);
+      _activeForoTopicId = null;
     });
     _closeDrawerIfOpen();
   }
@@ -139,12 +146,20 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       activeSubject: activeSubject,
       activeTool: _activeTool,
       activeModuleSectionIndex: _activeModuleSectionIndex,
+      activeForoTopicId: _activeForoTopicId,
       unreadAlertsCount: unreadCount,
       onSelectHome: _goHome,
       onSelectNovedades: _goNovedades,
       onSelectAjustes: _goAjustes,
       onSelectModuleSection: (idx) {
-        setState(() => _activeModuleSectionIndex = idx);
+        setState(() {
+          _activeModuleSectionIndex = idx;
+          _activeForoTopicId = null;
+        });
+        _closeDrawerIfOpen();
+      },
+      onSelectForoTopic: (topicId) {
+        setState(() => _activeForoTopicId = topicId);
         _closeDrawerIfOpen();
       },
       onOpenExternal: _openExternal,
@@ -160,11 +175,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             _openModuleById(subjects, idComision, tool),
       ),
       _ShellSection.ajustes => const SettingsScreen(),
-      _ShellSection.moduleDraft => ModuleDraftView(
+      _ShellSection.moduleDraft => ModuleReaderHost(
         subject: activeSubject!,
         tool: _activeTool,
         sectionIndex: _activeModuleSectionIndex,
-        onBackHome: _goHome,
+        selectedForoTopicId: _activeForoTopicId,
+        onSelectForoTopic: (topicId) {
+          setState(() => _activeForoTopicId = topicId);
+        },
       ),
     };
 
@@ -943,11 +961,13 @@ class _MielSidebar extends ConsumerWidget {
     required this.activeSubject,
     required this.activeTool,
     required this.activeModuleSectionIndex,
+    required this.activeForoTopicId,
     required this.unreadAlertsCount,
     required this.onSelectHome,
     required this.onSelectNovedades,
     required this.onSelectAjustes,
     required this.onSelectModuleSection,
+    required this.onSelectForoTopic,
     required this.onOpenExternal,
   });
 
@@ -955,21 +975,30 @@ class _MielSidebar extends ConsumerWidget {
   final Subject? activeSubject;
   final MielToolKind activeTool;
   final int activeModuleSectionIndex;
+  final String? activeForoTopicId;
   final int unreadAlertsCount;
   final VoidCallback onSelectHome;
   final VoidCallback onSelectNovedades;
   final VoidCallback onSelectAjustes;
   final ValueChanged<int> onSelectModuleSection;
+  final ValueChanged<String?> onSelectForoTopic;
   final ValueChanged<String> onOpenExternal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = MielPalette.of(context);
 
-    // Dentro de un módulo (Fase 2 borrador), el sidebar replica el sub-menú del módulo
+    // Dentro de un módulo (Fase 2), el sidebar replica el sub-menú del módulo en MIeL
     if (section == _ShellSection.moduleDraft && activeSubject != null) {
       final items = mielSectionsForTool(activeTool);
-      final cachedForoTopics = activeTool == MielToolKind.foro
+
+      // En Foros, listar los temas abiertos de la materia (en vivo o desde caché local)
+      final liveForoTopics = activeTool == MielToolKind.foro
+          ? (ref.watch(foroTemasProvider(activeSubject!.idComision)).value ??
+                const <ForumTopicSummary>[])
+          : const <ForumTopicSummary>[];
+      final cachedForoTopics =
+          (activeTool == MielToolKind.foro && liveForoTopics.isEmpty)
           ? (ref
                     .watch(
                       subjectSnapshotsProvider((
@@ -994,19 +1023,30 @@ class _MielSidebar extends ConsumerWidget {
                   _SidebarItem(
                     icon: items[i].icon,
                     label: items[i].label,
-                    selected: i == activeModuleSectionIndex,
+                    selected:
+                        i == activeModuleSectionIndex &&
+                        activeForoTopicId == null,
                     onTap: () => onSelectModuleSection(i),
                   ),
-                if (cachedForoTopics.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  for (final topic in cachedForoTopics.take(12))
+                if (liveForoTopics.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  for (final topic in liveForoTopics)
+                    _SidebarItem(
+                      icon: Icons.message,
+                      label: topic.title,
+                      selected: activeForoTopicId == topic.idTema,
+                      onTap: () => onSelectForoTopic(topic.idTema),
+                    ),
+                ] else if (cachedForoTopics.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  for (final topic in cachedForoTopics.take(15))
                     _SidebarItem(
                       icon: Icons.message,
                       label: topic.summary.isNotEmpty
                           ? topic.summary
                           : 'Tema #${topic.itemId}',
-                      selected: false,
-                      onTap: () => onSelectModuleSection(0),
+                      selected: activeForoTopicId == topic.itemId,
+                      onTap: () => onSelectForoTopic(topic.itemId),
                     ),
                 ],
                 const SizedBox(height: 18),

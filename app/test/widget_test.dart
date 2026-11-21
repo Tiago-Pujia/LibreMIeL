@@ -7,6 +7,7 @@ import 'package:libremiel/core/storage/app_database.dart';
 import 'package:libremiel/core/theme/miel_theme.dart';
 import 'package:libremiel/features/auth/login_screen.dart';
 import 'package:libremiel/features/home/home_shell.dart';
+import 'package:libremiel/features/modules/module_providers.dart';
 import 'package:material_ui/material_ui.dart';
 
 class _TestSessionController extends AppSessionController {
@@ -134,6 +135,13 @@ void main() {
                 ],
               ),
             ),
+            contenidosPageProvider('117967').overrideWith(
+              (ref) async => const ContentPageData(
+                idComision: '117967',
+                sections: [],
+                allItems: [],
+              ),
+            ),
             appSessionProvider.overrideWith(
               () => _TestSessionController(
                 const AppSessionState(
@@ -219,10 +227,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.more_vert), findsOneWidget);
 
-      // Abrir borrador Fase 2 (Contenidos)
+      // Abrir vista nativa Fase 2 (Contenidos)
       await tester.tap(find.text('Contenidos'));
       await tester.pumpAndSettle();
-      expect(find.text('BORRADOR · FASE 2'), findsOneWidget);
+      expect(find.text('Archivos'), findsWidgets);
+      expect(find.text('Tipo de archivo:'), findsOneWidget);
+      expect(find.text('Palabra clave:'), findsOneWidget);
 
       // Abrir Notificaciones desde Funcionalidades en el sidebar
       await tester.tap(find.byIcon(Icons.home).first);

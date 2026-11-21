@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
@@ -13,7 +14,28 @@ import '../parsers/text_normalizer.dart';
 
 export '../parsers/text_normalizer.dart' show kMielBaseUrl;
 
-/// Contrato abstracto de acceso HTTP de solo lectura a MIEL.
+/// Resultado de una descarga autenticada de archivo desde MIeL.
+class DownloadedFileResult {
+  const DownloadedFileResult({
+    required this.filePath,
+    required this.fileName,
+    required this.bytesWritten,
+  });
+
+  final String filePath;
+  final String fileName;
+  final int bytesWritten;
+}
+
+/// Detecta si el HTML devuelto por MIeL corresponde a un redirect de sesión vencida (`/principal/home/`).
+bool isLikelyLoginRedirectHtml(String html) {
+  if (html.isEmpty) return false;
+  return html.contains('id="formLogin"') ||
+      (html.contains('/principal/event/login') &&
+          html.contains('name="clave"'));
+}
+
+/// Contrato abstracto de acceso HTTP de solo lectura a MIEL para `SyncEngine`.
 ///
 /// Nota de diseño: intencionalmente NO expone `/mensajeria/verEntrada/...`
 /// para impedir que el motor de sincronización marque mensajes como leídos.
@@ -42,12 +64,58 @@ abstract class MielApiClient {
   Future<String> fetchEvaluacionesHtml(String idComision);
 }
 
+/// Contrato exclusivo para acciones de lectura interactiva iniciadas explícitamente
+/// por el usuario en la **Fase 2 — Lectura** (nunca usado por `SyncEngine`).
+abstract class MielInteractiveReader implements MielApiClient {
+  Future<String> fetchContenidosGlosarioHtml(
+    String idComision, {
+    String? letra,
+  });
+  Future<String> fetchContenidosFaqHtml(String idComision);
+  Future<void> markExternalContentDownloaded(
+    String idComision,
+    String idElemento,
+  );
+
+  Future<String> fetchPortafolioArchivosEnviadosHtml(String idComision);
+  Future<String> fetchPortafolioGruposHtml(String idComision);
+  Future<String> fetchPortafolioNotasHtml(String idComision);
+  Future<String> fetchPortafolioCompetenciasHtml(String idComision);
+
+  Future<String> fetchMensajeriaEntradaPageHtml(
+    String idComision, {
+    int page = 1,
+  });
+  Future<String> fetchMensajeriaSalidaHtml(String idComision, {int page = 1});
+  Future<String> fetchMensajeriaBorradoresHtml(
+    String idComision, {
+    int page = 1,
+  });
+  Future<String> fetchMensajeriaFavoritosHtml(
+    String idComision, {
+    int page = 1,
+  });
+  Future<String> fetchMensajeriaDetalleHtml(String urlOrPath);
+  Future<String> fetchMensajeriaDestinatariosHtml(String urlOrPath);
+
+  Future<String> fetchEncuestasHtml(String idComision);
+  Future<String> fetchAutoguiaHtml(String idComision);
+
+  Future<Uint8List> downloadAuthenticatedBytes(String urlOrPath);
+  Future<DownloadedFileResult> downloadAuthenticatedFile(
+    String urlOrPath,
+    String destinationDir, {
+    String? fallbackFileName,
+    void Function(int received, int total)? onProgress,
+  });
+}
+
 /// Cliente HTTP nativo de LibreMIEL basado en `Dio` + `CookieJar`.
 ///
 /// - Mantiene `PHPSESSID` y `SESSID` (afinidad de nodo).
 /// - Ejecuta peticiones de forma secuencial para no sobrecargar los servidores de UNLaM.
 /// - Aplica backoff exponencial únicamente en errores transitorios (`5xx` / timeout).
-class DioMielClient implements MielApiClient {
+class DioMielClient implements MielInteractiveReader {
   DioMielClient({
     required this._cookieJar,
     Dio? dio,
@@ -64,7 +132,7 @@ class DioMielClient implements MielApiClient {
                maxRedirects: 5,
                responseType: ResponseType.plain,
                headers: const {
-                 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LibreMIEL/0.1',
+                 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LibreMIEL/0.2',
                  'Accept-Language': 'es-AR,es;q=0.9',
                },
                validateStatus: (status) => status != null && status < 500,
@@ -108,8 +176,8 @@ class DioMielClient implements MielApiClient {
     return completer.future;
   }
 
-  Future<Response<String>> _requestWithBackoff(
-    Future<Response<String>> Function() send,
+  Future<Response<T>> _requestWithBackoff<T>(
+    Future<Response<T>> Function() send,
   ) async {
     var delay = initialBackoff;
     for (var attempt = 0; ; attempt++) {
@@ -137,6 +205,15 @@ class DioMielClient implements MielApiClient {
         rethrow;
       }
     }
+  }
+
+  String _normalizeMielPath(String urlOrPath) {
+    final trimmed = urlOrPath.trim();
+    if (trimmed.startsWith(kMielBaseUrl)) {
+      final rel = trimmed.substring(kMielBaseUrl.length);
+      return rel.isEmpty ? '/' : rel;
+    }
+    return trimmed;
   }
 
   @override
@@ -272,10 +349,15 @@ class DioMielClient implements MielApiClient {
 
   Future<String> _getHtml(String path) {
     return _enqueue(() async {
-      final response = await _requestWithBackoff(() => _dio.get<String>(path));
+      final normalized = _normalizeMielPath(path);
+      final response = await _requestWithBackoff(
+        () => _dio.get<String>(normalized),
+      );
       final status = response.statusCode ?? 0;
       if (status < 200 || status >= 400) {
-        throw HttpException('MIEL respondió HTTP $status al consultar $path');
+        throw HttpException(
+          'MIEL respondió HTTP $status al consultar $normalized',
+        );
       }
       return response.data ?? '';
     });
@@ -317,4 +399,276 @@ class DioMielClient implements MielApiClient {
   @override
   Future<String> fetchEvaluacionesHtml(String idComision) =>
       _getHtml('/evaluacion/evaluaciones/comision/$idComision');
+
+  // --- MielInteractiveReader (Fase 2 — Lectura interactiva iniciada por el usuario) ---
+
+  @override
+  Future<String> fetchContenidosGlosarioHtml(
+    String idComision, {
+    String? letra,
+  }) {
+    if (letra == null || letra.isEmpty) {
+      return _getHtml('/contenido/glosario/comision/$idComision');
+    }
+    if (letra == 'Todos') {
+      return _getHtml('/contenido/glosario/comision/$idComision/letra');
+    }
+    return _getHtml(
+      '/contenido/glosario/comision/$idComision/letra/${Uri.encodeComponent(letra)}',
+    );
+  }
+
+  @override
+  Future<String> fetchContenidosFaqHtml(String idComision) =>
+      _getHtml('/contenido/faq/comision/$idComision');
+
+  @override
+  Future<void> markExternalContentDownloaded(
+    String idComision,
+    String idElemento,
+  ) {
+    return _enqueue(() async {
+      try {
+        await _requestWithBackoff(
+          () => _dio.get<String>(
+            '/contenido/event/marcarElementoDescargadoAjax/comision/$idComision?id=$idElemento',
+            options: Options(
+              headers: const {'X-Requested-With': 'XMLHttpRequest'},
+            ),
+          ),
+        );
+      } catch (_) {
+        // Acción de conveniencia visual; no debe bloquear la apertura del enlace externo.
+      }
+    });
+  }
+
+  @override
+  Future<String> fetchPortafolioArchivosEnviadosHtml(String idComision) =>
+      _getHtml('/portafolio/archivosEnviados/comision/$idComision');
+
+  @override
+  Future<String> fetchPortafolioGruposHtml(String idComision) =>
+      _getHtml('/portafolio/grupos/comision/$idComision');
+
+  @override
+  Future<String> fetchPortafolioNotasHtml(String idComision) =>
+      _getHtml('/portafolio/notas/comision/$idComision');
+
+  @override
+  Future<String> fetchPortafolioCompetenciasHtml(String idComision) =>
+      _getHtml('/portafolio/competencias/comision/$idComision');
+
+  @override
+  Future<String> fetchMensajeriaEntradaPageHtml(
+    String idComision, {
+    int page = 1,
+  }) {
+    if (page <= 1) return fetchMensajeriaEntradaHtml(idComision);
+    return _getHtml('/mensajeria/entrada/comision/$idComision/pag/$page');
+  }
+
+  @override
+  Future<String> fetchMensajeriaSalidaHtml(String idComision, {int page = 1}) {
+    if (page <= 1) return _getHtml('/mensajeria/salida/comision/$idComision');
+    return _getHtml('/mensajeria/salida/comision/$idComision/pag/$page');
+  }
+
+  @override
+  Future<String> fetchMensajeriaBorradoresHtml(
+    String idComision, {
+    int page = 1,
+  }) {
+    if (page <= 1) {
+      return _getHtml('/mensajeria/borradores/comision/$idComision');
+    }
+    return _getHtml('/mensajeria/borradores/comision/$idComision/pag/$page');
+  }
+
+  @override
+  Future<String> fetchMensajeriaFavoritosHtml(
+    String idComision, {
+    int page = 1,
+  }) {
+    if (page <= 1) {
+      return _getHtml('/mensajeria/favoritos/comision/$idComision');
+    }
+    return _getHtml('/mensajeria/favoritos/comision/$idComision/pag/$page');
+  }
+
+  @override
+  Future<String> fetchMensajeriaDetalleHtml(String urlOrPath) =>
+      _getHtml(urlOrPath);
+
+  @override
+  Future<String> fetchMensajeriaDestinatariosHtml(String urlOrPath) =>
+      _getHtml(urlOrPath);
+
+  @override
+  Future<String> fetchEncuestasHtml(String idComision) =>
+      _getHtml('/encuesta/encuestas/comision/$idComision');
+
+  @override
+  Future<String> fetchAutoguiaHtml(String idComision) =>
+      _getHtml('/autoguia/modulos/comision/$idComision');
+
+  @override
+  Future<Uint8List> downloadAuthenticatedBytes(String urlOrPath) {
+    return _enqueue(() async {
+      final normalized = _normalizeMielPath(urlOrPath);
+      final response = await _requestWithBackoff(
+        () => _dio.get<List<int>>(
+          normalized,
+          options: Options(responseType: ResponseType.bytes),
+        ),
+      );
+      final status = response.statusCode ?? 0;
+      if (status < 200 || status >= 400 || response.data == null) {
+        throw HttpException(
+          'No se pudo descargar recurso ($status): $normalized',
+        );
+      }
+      return Uint8List.fromList(response.data!);
+    });
+  }
+
+  @override
+  Future<DownloadedFileResult> downloadAuthenticatedFile(
+    String urlOrPath,
+    String destinationDir, {
+    String? fallbackFileName,
+    void Function(int received, int total)? onProgress,
+  }) {
+    return _enqueue(() async {
+      final normalized = _normalizeMielPath(urlOrPath);
+      final dir = Directory(destinationDir);
+      if (!dir.existsSync()) {
+        dir.createSync(recursive: true);
+      }
+
+      final response = await _requestWithBackoff(
+        () => _dio.get<List<int>>(
+          normalized,
+          options: Options(
+            responseType: ResponseType.bytes,
+            receiveTimeout: const Duration(minutes: 2),
+          ),
+          onReceiveProgress: onProgress,
+        ),
+      );
+
+      final status = response.statusCode ?? 0;
+      if (status < 200 || status >= 400 || response.data == null) {
+        throw HttpException(
+          'MIEL respondió HTTP $status al descargar $normalized',
+        );
+      }
+
+      final extractedName = extractDownloadedFileName(
+        contentDisposition: response.headers.value('content-disposition'),
+        urlOrPath: normalized,
+        fallbackFileName: fallbackFileName,
+      );
+
+      final targetFile = allocateUniqueFilePath(destinationDir, extractedName);
+      final bytes = response.data!;
+      await File(targetFile).writeAsBytes(bytes, flush: true);
+
+      return DownloadedFileResult(
+        filePath: targetFile,
+        fileName: p.basename(targetFile),
+        bytesWritten: bytes.length,
+      );
+    });
+  }
+}
+
+/// Extrae y sanitiza el nombre de un archivo descargado desde `Content-Disposition` o la URL de MIeL.
+String extractDownloadedFileName({
+  String? contentDisposition,
+  required String urlOrPath,
+  String? fallbackFileName,
+}) {
+  var candidate = '';
+
+  if (contentDisposition != null && contentDisposition.isNotEmpty) {
+    // filename*=UTF-8''nombre.pdf
+    final utf8Match = RegExp(
+      r"filename\*\s*=\s*UTF-8''([^;\r\n]+)",
+      caseSensitive: false,
+    ).firstMatch(contentDisposition);
+    if (utf8Match != null) {
+      candidate = Uri.decodeFull(utf8Match.group(1)!.trim());
+    } else {
+      final stdMatch = RegExp(
+        r'filename\s*=\s*"?([^";\r\n]+)"?',
+        caseSensitive: false,
+      ).firstMatch(contentDisposition);
+      if (stdMatch != null) {
+        candidate = stdMatch.group(1)!.trim();
+      }
+    }
+  }
+
+  if (candidate.isEmpty) {
+    // URLs de MIeL: /a/{nombreCodificado}/id/{id} o /a/{nombreCodificado}/t/M
+    final aMatch = RegExp(r'/a/([^/?#]+)').firstMatch(urlOrPath);
+    if (aMatch != null) {
+      var decoded = aMatch.group(1)!;
+      try {
+        decoded = Uri.decodeComponent(decoded);
+      } catch (_) {}
+      // Quitar prefijo de código de materia como "3656\_" o "3656_"
+      decoded = decoded
+          .replaceAll(r'\_', '_')
+          .replaceFirst(RegExp(r'^\d{3,6}_'), '');
+      if (decoded.contains('.')) {
+        candidate = decoded;
+      }
+    }
+  }
+
+  if (candidate.isEmpty &&
+      fallbackFileName != null &&
+      fallbackFileName.trim().isNotEmpty) {
+    candidate = fallbackFileName.trim();
+  }
+
+  if (candidate.isEmpty) {
+    candidate = 'archivo_miel.pdf';
+  }
+
+  // Sanitizar caracteres inválidos o traversal de directorios
+  var safe = candidate
+      .replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '_')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  while (safe.startsWith('.')) {
+    safe = safe.substring(1).trim();
+  }
+  if (safe.isEmpty) {
+    safe = 'archivo_miel.pdf';
+  }
+  return safe;
+}
+
+/// Si el archivo ya existe en `dirPath`, genera `nombre (2).ext`, `nombre (3).ext`, etc.
+String allocateUniqueFilePath(String dirPath, String fileName) {
+  var candidatePath = p.join(dirPath, fileName);
+  if (!File(candidatePath).existsSync()) {
+    return candidatePath;
+  }
+
+  final ext = p.extension(fileName);
+  final base = p.basenameWithoutExtension(fileName);
+  for (var i = 2; i < 1000; i++) {
+    candidatePath = p.join(dirPath, '$base ($i)$ext');
+    if (!File(candidatePath).existsSync()) {
+      return candidatePath;
+    }
+  }
+  return p.join(
+    dirPath,
+    '${base}_${DateTime.now().millisecondsSinceEpoch}$ext',
+  );
 }

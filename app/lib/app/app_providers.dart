@@ -13,6 +13,7 @@ import '../core/sync/sync_engine.dart';
 import '../platform/android_background_worker.dart';
 import '../platform/autostart_service.dart';
 import '../platform/desktop_tray_service.dart';
+import '../platform/file_download_service.dart';
 import '../platform/notification_service.dart';
 import '../platform/secure_credentials_store.dart';
 
@@ -34,7 +35,21 @@ final autostartServiceProvider = Provider<AutostartService>((ref) {
   return AutostartService();
 });
 
+final fileDownloadServiceProvider = Provider<FileDownloadService>((ref) {
+  return const FileDownloadService();
+});
+
 final mielClientProvider = FutureProvider<MielApiClient>((ref) async {
+  return DioMielClient.createPersistent();
+});
+
+final mielInteractiveReaderProvider = FutureProvider<MielInteractiveReader>((
+  ref,
+) async {
+  final client = await ref.watch(mielClientProvider.future);
+  if (client is MielInteractiveReader) {
+    return client;
+  }
   return DioMielClient.createPersistent();
 });
 
@@ -184,7 +199,7 @@ class AppSessionController extends Notifier<AppSessionState> {
     }
   }
 
-  Future<MielCredentials?> _loadActiveCredentials() async {
+  Future<MielCredentials?> loadActiveCredentials() async {
     if (_memoryCredentials != null) return _memoryCredentials;
     try {
       return await ref.read(credentialsStoreProvider).read();
@@ -247,7 +262,7 @@ class AppSessionController extends Notifier<AppSessionState> {
       final engine = SyncEngine(client: client, database: db);
 
       final summary1 = await engine.runCycle1(
-        loadCredentials: _loadActiveCredentials,
+        loadCredentials: loadActiveCredentials,
         ignoreAuthPause: ignoreAuthPause,
       );
 
@@ -255,7 +270,7 @@ class AppSessionController extends Notifier<AppSessionState> {
 
       if (includeCycle2 && !summary1.authPaused && !summary1.isBaseline) {
         final summary2 = await engine.runCycle2(
-          loadCredentials: _loadActiveCredentials,
+          loadCredentials: loadActiveCredentials,
           ignoreAuthPause: ignoreAuthPause,
         );
         allNotifs.addAll(summary2.notifications);
