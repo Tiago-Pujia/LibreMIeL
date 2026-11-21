@@ -303,6 +303,12 @@ ForumThreadData parseForoMensajesHtml(
       avatarEl?.attributes['style'],
     );
 
+    final replyMentionName = cleanWhitespace(
+      replyBtn?.attributes['data-nombreusuario'] ??
+          replyBtn?.attributes['data-nombreUsuario'] ??
+          authorName,
+    );
+
     messages.add(
       ForumMessageItem(
         id: id,
@@ -311,6 +317,7 @@ ForumThreadData parseForoMensajesHtml(
         authorName: authorName,
         authorId: authorId,
         authorAvatarUrl: authorAvatarUrl,
+        replyMentionName: replyMentionName,
         role: role,
         isTeacher: isTeacher,
         date: date,
@@ -334,6 +341,14 @@ ForumThreadData parseForoMensajesHtml(
     lastMessageDate = messages.last.date;
   }
 
+  final canPostMessage =
+      !isClosed &&
+      (doc.querySelector('#formNuevoMensaje') != null ||
+          doc.querySelector('.botonNuevoMensaje') != null);
+  final allowsAttachments =
+      doc.querySelector('#archivoMensaje') != null ||
+      doc.querySelector('#archivoRespuesta') != null;
+
   return ForumThreadData(
     idComision: idComision,
     idTema: idTema,
@@ -342,6 +357,8 @@ ForumThreadData parseForoMensajesHtml(
     lastMessageDate: lastMessageDate,
     totalMessagesCount: totalMessagesCount,
     isClosed: isClosed,
+    canPostMessage: canPostMessage,
+    allowsAttachments: allowsAttachments,
     currentUserId: currentUserId,
     messages: messages,
     sidebarTopics: sidebarTopics,

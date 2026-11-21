@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/app_providers.dart';
+import '../../../core/network/miel_client.dart';
 import '../../../core/theme/libremiel_brand.dart';
 import '../../../core/theme/miel_theme.dart';
 import '../module_providers.dart';
@@ -611,6 +613,7 @@ SnackBar _buildMielDownloadSnackBar({
   required VoidCallback onClose,
   List<Widget> actions = const [],
   Color borderColor = const Color(0xFF009688),
+  Duration duration = const Duration(seconds: 4),
 }) {
   return SnackBar(
     backgroundColor: const Color(0xFF1F2421),
@@ -618,7 +621,7 @@ SnackBar _buildMielDownloadSnackBar({
     margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
     elevation: 6,
-    duration: const Duration(seconds: 4),
+    duration: duration,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(4),
       side: BorderSide(color: borderColor, width: 1.2),
@@ -685,11 +688,24 @@ Future<void> triggerMielFileDownload(
   try {
     final reader = await ref.read(mielInteractiveReaderProvider.future);
     final downloadService = ref.read(fileDownloadServiceProvider);
-    final result = await downloadService.downloadFromMiel(
-      reader: reader,
-      urlOrPath: url,
-      fallbackFileName: fallbackFileName,
-    );
+    DownloadedFileResult result;
+    try {
+      result = await downloadService.downloadFromMiel(
+        reader: reader,
+        urlOrPath: url,
+        fallbackFileName: fallbackFileName,
+      );
+    } on MielSessionExpiredException {
+      final ok = await ref
+          .read(appSessionProvider.notifier)
+          .ensureActiveSession(forceRelogin: true);
+      if (!ok) rethrow;
+      result = await downloadService.downloadFromMiel(
+        reader: reader,
+        urlOrPath: url,
+        fallbackFileName: fallbackFileName,
+      );
+    }
 
     onDownloaded?.call();
     try {
@@ -796,4 +812,58 @@ Future<void> triggerMielFileDownload(
       });
     }
   }
+}
+
+/// Muestra un aviso flotante estilizado con auto-cierre y botón cerrar.
+void showMielStatusToast(
+  BuildContext context, {
+  required String message,
+  bool isError = false,
+  Duration duration = const Duration(seconds: 4),
+}) {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  if (messenger == null) return;
+  messenger.clearSnackBars();
+  final ctrl = messenger.showSnackBar(
+    _buildMielDownloadSnackBar(
+      leading: Icon(
+        isError ? Icons.error_outline : Icons.check_circle_outline,
+        size: 19,
+        color: isError ? const Color(0xFFEF5350) : const Color(0xFF4DB6AC),
+      ),
+      borderColor: isError
+          ? const Color(0xFFEF5350)
+          : const Color(0xFF009688),
+      message: message,
+      onClose: messenger.clearSnackBars,
+      duration: duration,
+    ),
+  );
+  Timer(duration, () {
+    try {
+      ctrl.close();
+    } catch (_) {}
+  });
+}
+
+/// Abre el selector nativo de archivos (`file_selector`) y valida extensión y tamaño
+/// contra las reglas oficiales de MIeL (`helpers.js`).
+Future<({String path, String name})?> pickValidatedMielAttachment(
+  BuildContext context, {
+  required int maxSizeMb,
+}) async {
+  final file = await openFile();
+  if (file == null || file.path.isEmpty) return null;
+
+  final error = validateMielUploadFile(
+    filePath: file.path,
+    maxSizeMb: maxSizeMb,
+  );
+  if (error != null) {
+    if (context.mounted) {
+      showMielStatusToast(context, message: error, isError: true);
+    }
+    return null;
+  }
+  return (path: file.path, name: file.name);
 }

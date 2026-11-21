@@ -8,6 +8,7 @@ import '../../core/theme/miel_theme.dart';
 import 'module_providers.dart';
 import 'widgets/miel_file_icon.dart';
 import 'widgets/module_state_views.dart';
+import 'widgets/portafolio_submission_card.dart';
 
 /// Vista nativa de lectura del módulo **Portafolio** (`Prácticas`, `Entrega de prácticas`,
 /// `Archivos enviados`, `Mis grupos` y `Asistencia, notas y cert.`)
@@ -470,46 +471,9 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
         ],
         const SizedBox(height: 16),
 
-        // Panel Nueva entrega (en Fase 2 es de solo lectura con acceso directo a MIeL web)
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: palette.cardBackground,
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(color: palette.cardBorder),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Nueva entrega',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w400,
-                  color: palette.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'La Fase 2 de LibreMIeL es de lectura segura. Para adjuntar y enviar una nueva entrega '
-                'de esta práctica, abrila directamente en MIeL.',
-                style: TextStyle(fontSize: 13, color: palette.textSecondary),
-              ),
-              const SizedBox(height: 12),
-              MielActionButton(
-                label: 'Enviar práctica en MIeL',
-                icon: Icons.open_in_new,
-                primary: true,
-                onPressed: () => openMielExternalUrl(webUrl),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 22),
-
         detailAsync.when(
           loading: () => const MielModuleLoadingView(
-            message: 'Consultando historial de entregas y devoluciones…',
+            message: 'Consultando entregas y formulario de envío…',
           ),
           error: (err, _) => MielModuleErrorView(
             message: 'No se pudo cargar el detalle de entregas: $err',
@@ -522,20 +486,75 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
             ),
           ),
           data: (detail) {
-            if (detail.corrections.isEmpty && detail.deliveries.isEmpty) {
-              return const MielModuleEmptyView(
-                message: 'Aún no se registran entregas ni correcciones para esta práctica.',
-                icon: Icons.history,
-              );
-            }
-
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final corr in detail.corrections)
-                  _buildCorrectionBlock(palette, corr, isCompact),
-                for (final deliv in detail.deliveries)
-                  _buildDeliveryBlock(context, palette, deliv, isCompact),
+                if (detail.submissionForm.canSubmit)
+                  PortafolioSubmissionCard(
+                    idComision: widget.subject.idComision,
+                    idPractica: practice.idPractica,
+                    practiceTitle: practice.title,
+                    formMeta: detail.submissionForm,
+                    webUrl: webUrl,
+                    onSubmitted: () {
+                      ref.invalidate(
+                        portafolioEntregasDetalleProvider((
+                          idComision: widget.subject.idComision,
+                          idPractica: practice.idPractica,
+                        )),
+                      );
+                      ref.invalidate(
+                        portafolioPracticasProvider(widget.subject.idComision),
+                      );
+                      ref.invalidate(
+                        portafolioArchivosEnviadosProvider(
+                          widget.subject.idComision,
+                        ),
+                      );
+                    },
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: palette.cardBackground,
+                      borderRadius: BorderRadius.circular(3),
+                      border: Border.all(color: palette.cardBorder),
+                    ),
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        Text(
+                          'Esta práctica no tiene formulario de nueva entrega habilitado en este momento.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                        MielActionButton(
+                          label: 'Ver en MIeL',
+                          icon: Icons.open_in_new,
+                          onPressed: () => openMielExternalUrl(webUrl),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 22),
+                if (detail.corrections.isEmpty && detail.deliveries.isEmpty)
+                  const MielModuleEmptyView(
+                    message:
+                        'Aún no se registran entregas ni correcciones para esta práctica.',
+                    icon: Icons.history,
+                  )
+                else ...[
+                  for (final corr in detail.corrections)
+                    _buildCorrectionBlock(palette, corr, isCompact),
+                  for (final deliv in detail.deliveries)
+                    _buildDeliveryBlock(context, palette, deliv, isCompact),
+                ],
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerRight,

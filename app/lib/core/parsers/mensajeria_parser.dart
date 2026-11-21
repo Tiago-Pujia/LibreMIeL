@@ -255,6 +255,37 @@ MessageDetail parseMensajeriaDetalleHtml(
     senderAvatarEl?.attributes['style'],
   );
 
+  // Metadatos del formulario de respuesta (#formResponder) en verEntrada
+  final replyForm = doc.querySelector('#formResponder');
+  final canReply = replyForm != null;
+  final replyAvailableRecipients = _extractComposeRecipients(doc);
+  ComposeRecipientOption? replyDefaultRecipient;
+  if (canReply) {
+    final normSender = normalizeText(senderName);
+    for (final rec in replyAvailableRecipients) {
+      if (rec.contactType == 'tutores' || rec.contactType == 'alumnos') {
+        continue;
+      }
+      if (normSender.isNotEmpty &&
+          normalizeText(rec.displayName) == normSender) {
+        replyDefaultRecipient = rec;
+        break;
+      }
+    }
+    if (replyDefaultRecipient == null) {
+      final remIdMatch = RegExp(
+        r'''addChip\(\s*['"]?(\d+)['"]?\s*,\s*['"]([^'"]+)['"]\s*,\s*['"]([a-zA-Z]+)['"]''',
+      ).firstMatch(rawHtml);
+      if (remIdMatch != null) {
+        replyDefaultRecipient = ComposeRecipientOption(
+          contactId: remIdMatch.group(1)!,
+          displayName: cleanWhitespace(remIdMatch.group(2)!),
+          contactType: remIdMatch.group(3)!,
+        );
+      }
+    }
+  }
+
   return MessageDetail(
     idComision: idComision,
     idMensaje: idMensaje,
@@ -269,6 +300,94 @@ MessageDetail parseMensajeriaDetalleHtml(
     bodyHtml: bodyHtml,
     bodyPlainText: bodyPlainText,
     attachments: attachments,
+    canReply: canReply,
+    replyDefaultRecipient: replyDefaultRecipient,
+    replyAvailableRecipients: replyAvailableRecipients,
+  );
+}
+
+List<ComposeRecipientOption> _extractComposeRecipients(dynamic doc) {
+  final options = <ComposeRecipientOption>[];
+  final seen = <String>{};
+  for (final a in doc.querySelectorAll('#listaDestinatarios a[data-type]')) {
+    final type = (a.attributes['data-type'] ?? '').trim();
+    final id = (a.attributes['data-id'] ?? '').trim();
+    if (type.isEmpty || id.isEmpty) continue;
+
+    final clone = a.clone(true);
+    for (final icon in clone.querySelectorAll('i.material-icons')) {
+      icon.remove();
+    }
+    final name = cleanWhitespace(clone.text);
+    if (name.isEmpty) continue;
+
+    final roleLabel = switch (type) {
+      'tutores' => 'Todos los docentes',
+      'tutor' => 'Tutor/a',
+      'grupo' => 'Grupo',
+      'alumnos' => 'Todos los alumnos',
+      'alumnosPresentes' => 'Alumnos presentes',
+      _ => 'Alumno/a',
+    };
+    final key = '$type:$id';
+    if (seen.add(key)) {
+      options.add(
+        ComposeRecipientOption(
+          contactType: type,
+          contactId: id,
+          displayName: name,
+          roleLabel: roleLabel,
+        ),
+      );
+    }
+  }
+  return options;
+}
+
+/// Parser puro del formulario `GET /mensajeria/redactar/comision/{idComision}`
+/// (Fase 3 — Redacción y borradores de Mensajería).
+ComposeMessageFormData parseMensajeriaRedactarHtml(
+  String rawHtml,
+  String idComision,
+) {
+  final doc = html_parser.parse(rawHtml);
+  final recipients = _extractComposeRecipients(doc);
+  final initialSubject =
+      (doc.querySelector('input#asunto, input[name="asunto"]')?.attributes['value'] ??
+              '')
+          .trim();
+  final rawBody = doc.querySelector('textarea#texto')?.text ?? '';
+  final initialBodyText = cleanWhitespace(
+    html_parser.parseFragment(rawBody).text ?? rawBody,
+  );
+
+  final preselected = <ComposeRecipientOption>[];
+  for (final input in doc.querySelectorAll('input.inputDestinatario')) {
+    final nameAttr = (input.attributes['name'] ?? '').replaceAll('[]', '');
+    final val = (input.attributes['value'] ?? '').trim();
+    if (nameAttr.isEmpty || val.isEmpty) continue;
+    final match = recipients.where(
+      (r) => r.contactType == nameAttr && r.contactId == val,
+    );
+    if (match.isNotEmpty) {
+      preselected.add(match.first);
+    } else {
+      preselected.add(
+        ComposeRecipientOption(
+          contactType: nameAttr,
+          contactId: val,
+          displayName: '#$val',
+        ),
+      );
+    }
+  }
+
+  return ComposeMessageFormData(
+    idComision: idComision,
+    recipients: recipients,
+    initialSubject: initialSubject,
+    initialBodyText: initialBodyText,
+    preselectedRecipients: preselected,
   );
 }
 

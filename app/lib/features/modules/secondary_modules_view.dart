@@ -221,7 +221,20 @@ class EvaluacionView extends ConsumerWidget {
                                   child: MielHoverLink(
                                     text: '[Ingresar]',
                                     fontSize: 13,
-                                    onTap: () => openMielExternalUrl(webUrl),
+                                    onTap: () {
+                                      if (ev.requiresPassword) {
+                                        _openEvaluacionClaveDialog(
+                                          context,
+                                          ref,
+                                          idComision: idComision,
+                                          idEvaluacion: ev.id,
+                                          title: ev.title,
+                                          webUrl: webUrl,
+                                        );
+                                      } else {
+                                        openMielExternalUrl(webUrl);
+                                      }
+                                    },
                                   ),
                                 ),
                               ),
@@ -237,6 +250,115 @@ class EvaluacionView extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _openEvaluacionClaveDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    required String idComision,
+    required String idEvaluacion,
+    required String title,
+    required String webUrl,
+  }) async {
+    final claveCtrl = TextEditingController();
+    var submitting = false;
+    String? errorMsg;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Ingresar clave — $title'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Ingresá la clave provista por la cátedra para validar el acceso a esta evaluación.',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: claveCtrl,
+                obscureText: true,
+                maxLength: 30,
+                enabled: !submitting,
+                decoration: const InputDecoration(
+                  labelText: 'Clave de evaluación',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              if (errorMsg != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  errorMsg!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12.5),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: submitting ? null : () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: submitting
+                  ? null
+                  : () {
+                      Navigator.of(ctx).pop();
+                      openMielExternalUrl(webUrl);
+                    },
+              child: const Text('Abrir en MIeL'),
+            ),
+            FilledButton(
+              onPressed: submitting
+                  ? null
+                  : () async {
+                      final clave = claveCtrl.text.trim();
+                      if (clave.isEmpty) {
+                        setDialogState(
+                          () => errorMsg = 'Ingresá la clave de la evaluación.',
+                        );
+                        return;
+                      }
+                      setDialogState(() {
+                        submitting = true;
+                        errorMsg = null;
+                      });
+                      try {
+                        await runMielWriteWithAuth(
+                          ref,
+                          (writer) => writer.submitEvaluacionClave(
+                            idComision: idComision,
+                            idEvaluacion: idEvaluacion,
+                            clave: clave,
+                          ),
+                        );
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                        if (context.mounted) {
+                          showMielStatusToast(
+                            context,
+                            message:
+                                'Clave enviada a MIeL. Podés continuar la evaluación en tu navegador.',
+                          );
+                        }
+                        await openMielExternalUrl(webUrl);
+                      } catch (e) {
+                        setDialogState(() {
+                          submitting = false;
+                          errorMsg = 'No se pudo validar la clave: $e';
+                        });
+                      }
+                    },
+              child: Text(submitting ? 'Validando…' : 'Ingresar'),
+            ),
+          ],
+        ),
+      ),
+    );
+    claveCtrl.dispose();
   }
 }
 

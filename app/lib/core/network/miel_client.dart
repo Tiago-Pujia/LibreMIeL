@@ -11,8 +11,23 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/miel_models.dart';
 import '../parsers/text_normalizer.dart';
+import 'miel_upload_helpers.dart';
 
 export '../parsers/text_normalizer.dart' show kMielBaseUrl;
+export 'miel_upload_helpers.dart';
+
+/// Excepción lanzada cuando MIeL devuelve la pantalla de login por sesión vencida
+/// durante una operación interactiva o de escritura.
+class MielSessionExpiredException implements Exception {
+  const MielSessionExpiredException([
+    this.message = 'La sesión con MIeL expiró. Reintentando reconexión…',
+  ]);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
 
 /// Resultado de una descarga autenticada de archivo desde MIeL.
 class DownloadedFileResult {
@@ -38,7 +53,7 @@ bool isLikelyLoginRedirectHtml(String html) {
 /// Contrato abstracto de acceso HTTP de solo lectura a MIeL para `SyncEngine`.
 ///
 /// Nota de diseño: intencionalmente NO expone `/mensajeria/verEntrada/...`
-/// para impedir que el motor de sincronización marque mensajes como leídos.
+/// ni operaciones de escritura para impedir efectos colaterales en segundo plano.
 abstract class MielApiClient {
   Future<MielLoginResult> login(
     String username,
@@ -110,12 +125,102 @@ abstract class MielInteractiveReader implements MielApiClient {
   });
 }
 
+/// Contrato aislado para operaciones de escritura/mutación iniciadas explícitamente
+/// por el usuario en **Fase 3 — Escritura** (jamás expuesto a `SyncEngine`).
+abstract class MielWriter {
+  // --- Mensajería ---
+  Future<String> fetchMensajeriaRedactarHtml(String idComision);
+
+  Future<void> sendMensajeriaMessage({
+    required String idComision,
+    required List<ComposeRecipientOption> recipients,
+    required String subject,
+    required String bodyPlainText,
+    bool saveAsDraft = false,
+    String? attachmentPath,
+  });
+
+  Future<void> sendMensajeriaReply({
+    required String idComision,
+    required String respondsToMessageId,
+    required List<ComposeRecipientOption> recipients,
+    required String bodyPlainText,
+    String? attachmentPath,
+  });
+
+  Future<void> toggleMensajeriaFavorite({
+    required String idComision,
+    required String idMensaje,
+    required bool currentlyFavorite,
+    required String buzonActual,
+  });
+
+  Future<void> toggleMensajeriaRead({
+    required String idComision,
+    required String idMensaje,
+    required bool currentlyRead,
+    required String buzonActual,
+  });
+
+  Future<void> markAllMensajeriaRead(String idComision);
+
+  Future<void> deleteMensajeriaDraft({
+    required String idComision,
+    required String idMensaje,
+  });
+
+  // --- Portafolio ---
+  Future<void> submitPortafolioEntrega({
+    required String idComision,
+    required String idPractica,
+    required String tutorDestinatarioId,
+    String observations = '',
+    String? externalLink,
+    String? attachmentPath,
+  });
+
+  // --- Foros (forov2) ---
+  Future<void> postForoNewMessage({
+    required String idComision,
+    required String idTema,
+    required String bodyPlainText,
+    String? attachmentPath,
+  });
+
+  Future<void> postForoReply({
+    required String idComision,
+    required String idTema,
+    required String rootParentMessageId,
+    required String bodyPlainText,
+    String? mentionUserId,
+    String? mentionMessageId,
+    String? mentionUserName,
+    String? attachmentPath,
+  });
+
+  /// Alterna Me gusta (`marcarUtil`) y devuelve el nuevo contador de votos del servidor.
+  Future<int> toggleForoLike({
+    required String idComision,
+    required String idMensaje,
+    required bool currentlyLiked,
+  });
+
+  Future<void> markAllForoTopicsRead(String idComision);
+
+  // --- Evaluación ---
+  Future<String> submitEvaluacionClave({
+    required String idComision,
+    required String idEvaluacion,
+    String clave = '',
+  });
+}
+
 /// Cliente HTTP nativo de LibreMIeL basado en `Dio` + `CookieJar`.
 ///
 /// - Mantiene `PHPSESSID` y `SESSID` (afinidad de nodo).
 /// - Ejecuta peticiones de forma secuencial para no sobrecargar los servidores de UNLaM.
 /// - Aplica backoff exponencial únicamente en errores transitorios (`5xx` / timeout).
-class DioMielClient implements MielInteractiveReader {
+class DioMielClient implements MielInteractiveReader, MielWriter {
   DioMielClient({
     required this._cookieJar,
     Dio? dio,
@@ -562,6 +667,16 @@ class DioMielClient implements MielInteractiveReader {
         );
       }
 
+      final contentType = (response.headers.value('content-type') ?? '')
+          .toLowerCase();
+      final bytes = response.data!;
+      if (contentType.contains('text/html') && bytes.length < 32768) {
+        final preview = utf8.decode(bytes, allowMalformed: true);
+        if (isLikelyLoginRedirectHtml(preview)) {
+          throw const MielSessionExpiredException();
+        }
+      }
+
       final extractedName = extractDownloadedFileName(
         contentDisposition: response.headers.value('content-disposition'),
         urlOrPath: normalized,
@@ -569,7 +684,6 @@ class DioMielClient implements MielInteractiveReader {
       );
 
       final targetFile = allocateUniqueFilePath(destinationDir, extractedName);
-      final bytes = response.data!;
       await File(targetFile).writeAsBytes(bytes, flush: true);
 
       return DownloadedFileResult(
@@ -577,6 +691,505 @@ class DioMielClient implements MielInteractiveReader {
         fileName: p.basename(targetFile),
         bytesWritten: bytes.length,
       );
+    });
+  }
+
+  // --- Fase 3: Implementación de MielWriter (escritura/mutación aislada) ---
+
+  String _assertWriteResponse(Response<String> response, String endpoint) {
+    final status = response.statusCode ?? 0;
+    final body = response.data ?? '';
+    if (isLikelyLoginRedirectHtml(body)) {
+      throw const MielSessionExpiredException();
+    }
+    if (status < 200 || status >= 400) {
+      throw HttpException('MIeL respondió HTTP $status al enviar a $endpoint');
+    }
+    return body;
+  }
+
+  @override
+  Future<String> fetchMensajeriaRedactarHtml(String idComision) =>
+      _getHtml('/mensajeria/redactar/comision/$idComision');
+
+  @override
+  Future<void> sendMensajeriaMessage({
+    required String idComision,
+    required List<ComposeRecipientOption> recipients,
+    required String subject,
+    required String bodyPlainText,
+    bool saveAsDraft = false,
+    String? attachmentPath,
+  }) {
+    return _enqueue(() async {
+      final cleanSubject = subject.trim();
+      final bodyHtml = plainTextToMielHtml(bodyPlainText);
+      if (cleanSubject.isEmpty) {
+        throw ArgumentError('El asunto es obligatorio.');
+      }
+      if (bodyHtml.isEmpty) {
+        throw ArgumentError('El mensaje no puede estar vacío.');
+      }
+      if (!saveAsDraft && recipients.isEmpty) {
+        throw ArgumentError('Seleccioná al menos un destinatario.');
+      }
+      if (attachmentPath != null && attachmentPath.isNotEmpty) {
+        final err = validateMielUploadFile(
+          filePath: attachmentPath,
+          maxSizeMb: kMielMaxUploadMbLarge,
+        );
+        if (err != null) throw ArgumentError(err);
+      }
+
+      final formData = FormData();
+      formData.fields.add(MapEntry('borrador', saveAsDraft ? '1' : '0'));
+      formData.fields.add(const MapEntry('destinatarios', ''));
+      for (final rec in recipients) {
+        formData.fields.add(MapEntry('${rec.contactType}[]', rec.contactId));
+      }
+      formData.fields.add(MapEntry('asunto', cleanSubject));
+      formData.fields.add(MapEntry('texto', encodeMielBase64Utf8(bodyHtml)));
+      formData.fields.add(const MapEntry('adjuntoReenvio', ''));
+
+      if (attachmentPath != null && attachmentPath.isNotEmpty) {
+        formData.files.add(
+          MapEntry(
+            'archivo',
+            await MultipartFile.fromFile(
+              attachmentPath,
+              filename: p.basename(attachmentPath),
+            ),
+          ),
+        );
+      }
+
+      final path = '/mensajeria/event/enviarMensaje/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        data: formData,
+        options: Options(
+          headers: {
+            'Referer': '$kMielBaseUrl/mensajeria/redactar/comision/$idComision',
+          },
+        ),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<void> sendMensajeriaReply({
+    required String idComision,
+    required String respondsToMessageId,
+    required List<ComposeRecipientOption> recipients,
+    required String bodyPlainText,
+    String? attachmentPath,
+  }) {
+    return _enqueue(() async {
+      final bodyHtml = plainTextToMielHtml(bodyPlainText);
+      if (bodyHtml.isEmpty) {
+        throw ArgumentError('La respuesta no puede estar vacía.');
+      }
+      if (recipients.isEmpty) {
+        throw ArgumentError('Seleccioná al menos un destinatario.');
+      }
+      if (attachmentPath != null && attachmentPath.isNotEmpty) {
+        final err = validateMielUploadFile(
+          filePath: attachmentPath,
+          maxSizeMb: kMielMaxUploadMbLarge,
+        );
+        if (err != null) throw ArgumentError(err);
+      }
+
+      final formData = FormData();
+      formData.fields.add(MapEntry('respondeA', respondsToMessageId));
+      formData.fields.add(const MapEntry('destinatarios', ''));
+      for (final rec in recipients) {
+        formData.fields.add(MapEntry('${rec.contactType}[]', rec.contactId));
+      }
+      formData.fields.add(MapEntry('texto', encodeMielBase64Utf8(bodyHtml)));
+
+      if (attachmentPath != null && attachmentPath.isNotEmpty) {
+        formData.files.add(
+          MapEntry(
+            'archivo',
+            await MultipartFile.fromFile(
+              attachmentPath,
+              filename: p.basename(attachmentPath),
+            ),
+          ),
+        );
+      }
+
+      final path = '/mensajeria/event/enviarRespuesta/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        data: formData,
+        options: Options(
+          headers: {
+            'Referer':
+                '$kMielBaseUrl/mensajeria/verEntrada/comision/$idComision/pag/1/from/entrada/id/$respondsToMessageId',
+          },
+        ),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<void> toggleMensajeriaFavorite({
+    required String idComision,
+    required String idMensaje,
+    required bool currentlyFavorite,
+    required String buzonActual,
+  }) {
+    return _enqueue(() async {
+      final formData = FormData();
+      formData.fields.add(MapEntry('idMensajeFavorito', idMensaje));
+      formData.fields.add(
+        MapEntry('estadoFavorito', currentlyFavorite ? '1' : '0'),
+      );
+      formData.fields.add(MapEntry('buzonActual', buzonActual));
+
+      final path = '/mensajeria/event/marcarFavorito/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        data: formData,
+        options: Options(
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Referer':
+                '$kMielBaseUrl/mensajeria/$buzonActual/comision/$idComision',
+          },
+        ),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<void> toggleMensajeriaRead({
+    required String idComision,
+    required String idMensaje,
+    required bool currentlyRead,
+    required String buzonActual,
+  }) {
+    return _enqueue(() async {
+      final formData = FormData();
+      formData.fields.add(MapEntry('idMensajeLeido', idMensaje));
+      formData.fields.add(MapEntry('estadoLeido', currentlyRead ? '1' : '0'));
+      formData.fields.add(MapEntry('buzonActual', buzonActual));
+
+      final path = '/mensajeria/event/marcarLeido/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        data: formData,
+        options: Options(
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Referer':
+                '$kMielBaseUrl/mensajeria/$buzonActual/comision/$idComision',
+          },
+        ),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<void> markAllMensajeriaRead(String idComision) {
+    return _enqueue(() async {
+      final path =
+          '/mensajeria/event/marcarTodosComoLeidos/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        options: Options(
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Referer': '$kMielBaseUrl/mensajeria/entrada/comision/$idComision',
+          },
+        ),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<void> deleteMensajeriaDraft({
+    required String idComision,
+    required String idMensaje,
+  }) {
+    return _enqueue(() async {
+      final path = '/mensajeria/event/eliminarBorrador/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        data: {'idMensajeEliminar': idMensaje},
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+          headers: {
+            'Referer':
+                '$kMielBaseUrl/mensajeria/borradores/comision/$idComision',
+          },
+        ),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<void> submitPortafolioEntrega({
+    required String idComision,
+    required String idPractica,
+    required String tutorDestinatarioId,
+    String observations = '',
+    String? externalLink,
+    String? attachmentPath,
+  }) {
+    return _enqueue(() async {
+      final hasLink = externalLink != null && externalLink.trim().isNotEmpty;
+      final hasFile = attachmentPath != null && attachmentPath.trim().isNotEmpty;
+      if (!hasFile && !hasLink) {
+        throw ArgumentError('Adjuntá un archivo o ingresá un enlace.');
+      }
+      if (hasFile) {
+        final err = validateMielUploadFile(
+          filePath: attachmentPath,
+          maxSizeMb: kMielMaxUploadMbLarge,
+        );
+        if (err != null) throw ArgumentError(err);
+      }
+
+      final formData = FormData();
+      formData.fields.add(MapEntry('codPractica', idPractica));
+      formData.fields.add(
+        MapEntry(
+          'tutorDestinatario',
+          tutorDestinatarioId.isEmpty ? '0' : tutorDestinatarioId,
+        ),
+      );
+      formData.fields.add(MapEntry('observaciones', observations.trim()));
+      if (hasLink) {
+        formData.fields.add(MapEntry('enlace', externalLink.trim()));
+      }
+      if (hasFile) {
+        formData.files.add(
+          MapEntry(
+            'archivo',
+            await MultipartFile.fromFile(
+              attachmentPath,
+              filename: p.basename(attachmentPath),
+            ),
+          ),
+        );
+      }
+
+      final path = '/portafolio/event/nuevaEntrega/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        data: formData,
+        options: Options(
+          headers: {
+            'Referer':
+                '$kMielBaseUrl/portafolio/entregas/comision/$idComision/id/$idPractica',
+          },
+        ),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<void> postForoNewMessage({
+    required String idComision,
+    required String idTema,
+    required String bodyPlainText,
+    String? attachmentPath,
+  }) {
+    return _enqueue(() async {
+      final bodyHtml = plainTextToMielHtml(bodyPlainText);
+      if (bodyHtml.isEmpty) {
+        throw ArgumentError('Escribí un mensaje antes de publicar.');
+      }
+      if (attachmentPath != null && attachmentPath.isNotEmpty) {
+        final err = validateMielUploadFile(
+          filePath: attachmentPath,
+          maxSizeMb: kMielMaxUploadMbForum,
+        );
+        if (err != null) throw ArgumentError(err);
+      }
+
+      final formData = FormData();
+      formData.fields.add(MapEntry('codTemaMensaje', idTema));
+      formData.fields.add(
+        MapEntry('mensajeNuevo', encodeMielBase64Utf8(bodyHtml)),
+      );
+      if (attachmentPath != null && attachmentPath.isNotEmpty) {
+        formData.files.add(
+          MapEntry(
+            'archivoMensaje',
+            await MultipartFile.fromFile(
+              attachmentPath,
+              filename: p.basename(attachmentPath),
+            ),
+          ),
+        );
+      }
+
+      final path = '/forov2/event/nuevoMensajeAjax/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        data: formData,
+        options: Options(
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Referer':
+                '$kMielBaseUrl/forov2/mensajes/comision/$idComision/tema/$idTema',
+          },
+        ),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<void> postForoReply({
+    required String idComision,
+    required String idTema,
+    required String rootParentMessageId,
+    required String bodyPlainText,
+    String? mentionUserId,
+    String? mentionMessageId,
+    String? mentionUserName,
+    String? attachmentPath,
+  }) {
+    return _enqueue(() async {
+      final mentionPrefix =
+          (mentionUserName != null &&
+              mentionUserName.trim().isNotEmpty &&
+              mentionMessageId != null &&
+              mentionMessageId.trim().isNotEmpty)
+          ? buildForoMentionPrefixHtml(
+              authorUserId: mentionUserId ?? '',
+              messageId: mentionMessageId,
+              mentionName: mentionUserName,
+            )
+          : null;
+      final bodyHtml = plainTextToMielHtml(
+        bodyPlainText,
+        mentionPrefixHtml: mentionPrefix,
+      );
+      if (bodyPlainText.trim().isEmpty) {
+        throw ArgumentError('Escribí una respuesta antes de enviar.');
+      }
+      if (attachmentPath != null && attachmentPath.isNotEmpty) {
+        final err = validateMielUploadFile(
+          filePath: attachmentPath,
+          maxSizeMb: kMielMaxUploadMbForum,
+        );
+        if (err != null) throw ArgumentError(err);
+      }
+
+      final formData = FormData();
+      formData.fields.add(MapEntry('codTemaRespuesta', idTema));
+      formData.fields.add(MapEntry('respondeA', rootParentMessageId));
+      formData.fields.add(
+        MapEntry('respuestaNueva', encodeMielBase64Utf8(bodyHtml)),
+      );
+      if (attachmentPath != null && attachmentPath.isNotEmpty) {
+        formData.files.add(
+          MapEntry(
+            'archivoRespuesta',
+            await MultipartFile.fromFile(
+              attachmentPath,
+              filename: p.basename(attachmentPath),
+            ),
+          ),
+        );
+      }
+
+      final path = '/forov2/event/nuevaRespuestaAjax/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        data: formData,
+        options: Options(
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Referer':
+                '$kMielBaseUrl/forov2/mensajes/comision/$idComision/tema/$idTema',
+          },
+        ),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<int> toggleForoLike({
+    required String idComision,
+    required String idMensaje,
+    required bool currentlyLiked,
+  }) {
+    return _enqueue(() async {
+      final path = '/forov2/event/marcarUtil/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        data: {'idMensaje': idMensaje, 'util': currentlyLiked ? '1' : '0'},
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Referer': '$kMielBaseUrl/forov2/temas/comision/$idComision',
+          },
+        ),
+      );
+      final raw = _assertWriteResponse(response, path).trim();
+      final count = int.tryParse(raw.replaceAll('"', ''));
+      if (count == null || count < 0) {
+        throw FormatException(
+          'MIeL no pudo actualizar el voto del mensaje (respuesta: $raw).',
+        );
+      }
+      return count;
+    });
+  }
+
+  @override
+  Future<void> markAllForoTopicsRead(String idComision) {
+    return _enqueue(() async {
+      final path = '/forov2/event/marcarTemasComoLeidos/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        options: Options(
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Referer': '$kMielBaseUrl/forov2/temas/comision/$idComision',
+          },
+        ),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<String> submitEvaluacionClave({
+    required String idComision,
+    required String idEvaluacion,
+    String clave = '',
+  }) {
+    return _enqueue(() async {
+      final path = '/evaluacion/event/ingresar/comision/$idComision';
+      final response = await _dio.post<String>(
+        path,
+        data: {'idEvaluacion': idEvaluacion, 'clave': clave},
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+          headers: {
+            'Referer':
+                '$kMielBaseUrl/evaluacion/evaluaciones/comision/$idComision',
+          },
+        ),
+      );
+      return _assertWriteResponse(response, path);
     });
   }
 }

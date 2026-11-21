@@ -440,6 +440,31 @@ class PortfolioDelivery {
   final String message;
 }
 
+/// Opción de docente destinatario en `#formNuevaEntrega` (`select[name="tutorDestinatario"]`).
+class PortfolioTutorOption {
+  const PortfolioTutorOption({required this.id, required this.name});
+
+  final String id;
+  final String name;
+}
+
+/// Metadatos del formulario `#formNuevaEntrega` en `/portafolio/entregas/...`.
+class PortfolioSubmissionFormMeta {
+  const PortfolioSubmissionFormMeta({
+    this.canSubmit = false,
+    this.tutors = const [],
+    this.allowsLink = false,
+    this.requiresFile = true,
+    this.maxSizeMb = 40,
+  });
+
+  final bool canSubmit;
+  final List<PortfolioTutorOption> tutors;
+  final bool allowsLink;
+  final bool requiresFile;
+  final int maxSizeMb;
+}
+
 /// Detalle completo de una práctica (`/portafolio/entregas/...`).
 class PortfolioPracticeDetail {
   const PortfolioPracticeDetail({
@@ -450,6 +475,7 @@ class PortfolioPracticeDetail {
     required this.corrections,
     required this.deliveries,
     this.promptDownloadUrl = '',
+    this.submissionForm = const PortfolioSubmissionFormMeta(),
   });
 
   final String idComision;
@@ -459,6 +485,7 @@ class PortfolioPracticeDetail {
   final String deliveryModeLabel;
   final List<PortfolioCorrection> corrections;
   final List<PortfolioDelivery> deliveries;
+  final PortfolioSubmissionFormMeta submissionForm;
 }
 
 class PortfolioSentFile {
@@ -659,6 +686,41 @@ class MessageRecipient {
   final String roleType;
 }
 
+/// Destinatario seleccionable en `#listaDestinatarios` de `/mensajeria/redactar/comision/{id}`.
+class ComposeRecipientOption {
+  const ComposeRecipientOption({
+    required this.contactType,
+    required this.contactId,
+    required this.displayName,
+    this.roleLabel = '',
+  });
+
+  /// Tipo de campo que MIeL espera como `{contactType}[]` (ej. `tutores`, `tutor`, `alumno`, `grupo`).
+  final String contactType;
+  final String contactId;
+  final String displayName;
+  final String roleLabel;
+
+  String get uniqueKey => '$contactType:$contactId';
+}
+
+/// Datos precargados del formulario `#formRedactar` en `/mensajeria/redactar/...`.
+class ComposeMessageFormData {
+  const ComposeMessageFormData({
+    required this.idComision,
+    required this.recipients,
+    this.initialSubject = '',
+    this.initialBodyText = '',
+    this.preselectedRecipients = const [],
+  });
+
+  final String idComision;
+  final List<ComposeRecipientOption> recipients;
+  final String initialSubject;
+  final String initialBodyText;
+  final List<ComposeRecipientOption> preselectedRecipients;
+}
+
 class MessageDetail {
   const MessageDetail({
     required this.idComision,
@@ -674,6 +736,9 @@ class MessageDetail {
     this.senderAvatarUrl = '',
     this.recipientsPopupUrl = '',
     this.attachments = const [],
+    this.canReply = false,
+    this.replyDefaultRecipient,
+    this.replyAvailableRecipients = const [],
   });
 
   final String idComision;
@@ -689,6 +754,9 @@ class MessageDetail {
   final String bodyHtml;
   final String bodyPlainText;
   final List<MielAttachment> attachments;
+  final bool canReply;
+  final ComposeRecipientOption? replyDefaultRecipient;
+  final List<ComposeRecipientOption> replyAvailableRecipients;
 }
 
 class ForumTopicSummary {
@@ -744,6 +812,7 @@ class ForumMessageItem {
     required this.date,
     required this.bodyText,
     this.authorAvatarUrl = '',
+    this.replyMentionName = '',
     this.bodyHtml = '',
     this.mentionedUserIds = const {},
     this.mentionedMessageIds = const {},
@@ -760,6 +829,7 @@ class ForumMessageItem {
   final String authorName;
   final String authorId;
   final String authorAvatarUrl;
+  final String replyMentionName;
   final String role;
   final bool isTeacher;
   final String date;
@@ -785,6 +855,8 @@ class ForumThreadData {
     this.lastMessageDate = '',
     this.totalMessagesCount = 0,
     this.isClosed = false,
+    this.canPostMessage = false,
+    this.allowsAttachments = false,
     this.sidebarTopics = const [],
   });
 
@@ -795,6 +867,8 @@ class ForumThreadData {
   final String lastMessageDate;
   final int totalMessagesCount;
   final bool isClosed;
+  final bool canPostMessage;
+  final bool allowsAttachments;
   final String currentUserId;
   final List<ForumMessageItem> messages;
   final List<ForumSidebarTopic> sidebarTopics;

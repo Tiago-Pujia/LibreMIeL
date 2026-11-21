@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../app/app_providers.dart';
 import '../../core/models/miel_models.dart';
+import '../../core/network/miel_client.dart';
 import '../../core/parsers/text_normalizer.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/libremiel_brand.dart';
@@ -13,9 +15,9 @@ import 'widgets/miel_file_icon.dart';
 import 'widgets/miel_rich_text.dart';
 import 'widgets/module_state_views.dart';
 
-/// Vista nativa de lectura del módulo **Foros (`forov2`)** (`Temas abiertos` y lector
-/// completo de hilos con respuestas anidadas, colapsado de comentarios anteriores,
-/// `@menciones` interactivas, imágenes autenticadas con zoom y descarga de adjuntos)
+/// Vista nativa de lectura y participación del módulo **Foros (`forov2`)**
+/// (`Temas abiertos`, publicar nuevos hilos, respuestas anidadas con `@menciones`,
+/// Me gusta interactivo, imágenes autenticadas con zoom y descarga de adjuntos)
 /// fiel a MIeL (`2025.2.0`).
 class ForoView extends ConsumerStatefulWidget {
   const ForoView({
@@ -36,6 +38,8 @@ class ForoView extends ConsumerStatefulWidget {
 class _ForoViewState extends ConsumerState<ForoView> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _newMessageController = TextEditingController();
+  final TextEditingController _replyController = TextEditingController();
 
   String _threadSearchQuery = '';
   bool _reverseOrder = false;
@@ -43,6 +47,21 @@ class _ForoViewState extends ConsumerState<ForoView> {
   final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
   final Map<String, int> _topicUnreadBadges = <String, int>{};
   final Set<String> _locallyReadTopicIds = <String>{};
+
+  bool _showNewMessageComposer = false;
+  String? _newMessageAttachmentPath;
+  String? _newMessageAttachmentName;
+  bool _postingNewMessage = false;
+
+  ForumMessageItem? _replyTargetMessage;
+  String? _replyAttachmentPath;
+  String? _replyAttachmentName;
+  bool _postingReply = false;
+
+  bool _markingAllTopicsRead = false;
+  final Map<String, ({int count, bool liked})> _localLikes =
+      <String, ({int count, bool liked})>{};
+  final Set<String> _likeInFlightIds = <String>{};
 
   String? _flashedMessageId;
   Timer? _flashTimer;
@@ -58,6 +77,15 @@ class _ForoViewState extends ConsumerState<ForoView> {
       _expandedThreadRootIds.clear();
       _messageKeys.clear();
       _flashedMessageId = null;
+      _showNewMessageComposer = false;
+      _newMessageController.clear();
+      _newMessageAttachmentPath = null;
+      _newMessageAttachmentName = null;
+      _replyTargetMessage = null;
+      _replyController.clear();
+      _replyAttachmentPath = null;
+      _replyAttachmentName = null;
+      _localLikes.clear();
       if (widget.selectedTopicId != null) {
         _locallyReadTopicIds.add(widget.selectedTopicId!);
       }
@@ -69,6 +97,8 @@ class _ForoViewState extends ConsumerState<ForoView> {
     _flashTimer?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
+    _newMessageController.dispose();
+    _replyController.dispose();
     super.dispose();
   }
 
@@ -108,6 +138,184 @@ class _ForoViewState extends ConsumerState<ForoView> {
         );
       }
     });
+  }
+
+  Future<void> _handleMarkAllTopicsRead(String idComision) async {
+    setState(() => _markingAllTopicsRead = true);
+    try {
+      await runMielWriteWithAuth(
+        ref,
+        (w) => w.markAllForoTopicsRead(idComision),
+      );
+      await ref
+          .read(databaseProvider)
+          .decrementForoBadge(idComision, widget.subject.lastForoBadge);
+      if (!mounted) return;
+      setState(() => _markingAllTopicsRead = false);
+      ref.invalidate(foroTemasProvider(idComision));
+      showMielStatusToast(
+        context,
+        message: 'Todos los temas fueron marcados como leídos.',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _markingAllTopicsRead = false);
+      showMielStatusToast(
+        context,
+        message: 'No se pudo marcar todos como leídos: $e',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _handleToggleLike(ForumMessageItem message) async {
+    if (_likeInFlightIds.contains(message.id)) return;
+    final current = _localLikes[message.id] ??
+        (count: message.likesCount, liked: false);
+    final nextLiked = !current.liked;
+    final nextCount =
+        (current.count + (nextLiked ? 1 : -1)).clamp(0, 99999);
+
+    setState(() {
+      _likeInFlightIds.add(message.id);
+      _localLikes[message.id] = (count: nextCount, liked: nextLiked);
+    });
+
+    try {
+      final serverCount = await runMielWriteWithAuth(
+        ref,
+        (w) => w.toggleForoLike(
+          idComision: widget.subject.idComision,
+          idMensaje: message.id,
+          currentlyLiked: current.liked,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _likeInFlightIds.remove(message.id);
+        _localLikes[message.id] = (count: serverCount, liked: nextLiked);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _likeInFlightIds.remove(message.id);
+        _localLikes[message.id] = current;
+      });
+      showMielStatusToast(
+        context,
+        message: 'No se pudo actualizar Me gusta: $e',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _handlePostNewMessage(String idTema) async {
+    final text = _newMessageController.text.trim();
+    if (text.isEmpty) {
+      showMielStatusToast(
+        context,
+        message: 'Escribí un mensaje antes de publicar.',
+        isError: true,
+      );
+      return;
+    }
+
+    setState(() => _postingNewMessage = true);
+    try {
+      await runMielWriteWithAuth(
+        ref,
+        (w) => w.postForoNewMessage(
+          idComision: widget.subject.idComision,
+          idTema: idTema,
+          bodyPlainText: text,
+          attachmentPath: _newMessageAttachmentPath,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _postingNewMessage = false;
+        _showNewMessageComposer = false;
+        _newMessageController.clear();
+        _newMessageAttachmentPath = null;
+        _newMessageAttachmentName = null;
+      });
+      ref.invalidate(
+        foroMensajesProvider((
+          idComision: widget.subject.idComision,
+          idTema: idTema,
+          unreadBadge: 0,
+        )),
+      );
+      showMielStatusToast(context, message: 'Mensaje publicado en el foro.');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _postingNewMessage = false);
+      showMielStatusToast(
+        context,
+        message: 'No se pudo publicar el mensaje: $e',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _handlePostReply({
+    required String idTema,
+    required String rootId,
+    required ForumMessageItem target,
+  }) async {
+    final text = _replyController.text.trim();
+    if (text.isEmpty) {
+      showMielStatusToast(
+        context,
+        message: 'Escribí una respuesta antes de enviar.',
+        isError: true,
+      );
+      return;
+    }
+
+    setState(() => _postingReply = true);
+    try {
+      await runMielWriteWithAuth(
+        ref,
+        (w) => w.postForoReply(
+          idComision: widget.subject.idComision,
+          idTema: idTema,
+          rootParentMessageId: rootId,
+          bodyPlainText: text,
+          mentionUserId:
+              target.authorId.isNotEmpty ? target.authorId : null,
+          mentionMessageId: target.id,
+          mentionUserName: target.replyMentionName.isNotEmpty
+              ? target.replyMentionName
+              : target.authorName,
+          attachmentPath: _replyAttachmentPath,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _postingReply = false;
+        _replyTargetMessage = null;
+        _replyController.clear();
+        _replyAttachmentPath = null;
+        _replyAttachmentName = null;
+      });
+      ref.invalidate(
+        foroMensajesProvider((
+          idComision: widget.subject.idComision,
+          idTema: idTema,
+          unreadBadge: 0,
+        )),
+      );
+      showMielStatusToast(context, message: 'Respuesta publicada.');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _postingReply = false);
+      showMielStatusToast(
+        context,
+        message: 'No se pudo enviar la respuesta: $e',
+        isError: true,
+      );
+    }
   }
 
   @override
@@ -150,6 +358,16 @@ class _ForoViewState extends ConsumerState<ForoView> {
             spacing: 8,
             runSpacing: 8,
             children: [
+              if (widget.subject.lastForoBadge > 0)
+                MielActionButton(
+                  label: _markingAllTopicsRead
+                      ? 'Marcando…'
+                      : 'Marcar todos leídos',
+                  icon: Icons.done_all,
+                  onPressed: _markingAllTopicsRead
+                      ? null
+                      : () => _handleMarkAllTopicsRead(idComision),
+                ),
               MielActionButton(
                 label: 'Actualizar',
                 icon: Icons.refresh,
@@ -315,7 +533,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Cabecera: Tema: {Título} + Volver | Ir al final | Nuevo mensaje
+        // Cabecera: Tema: {Título} + Volver | Ir al final | Nuevo mensaje | Abrir en MIeL
         MielModuleHeader(
           title: 'Tema: ${thread.title}',
           trailing: Wrap(
@@ -331,10 +549,20 @@ class _ForoViewState extends ConsumerState<ForoView> {
                 icon: Icons.arrow_downward,
                 onPressed: _scrollToBottom,
               ),
+              if (thread.canPostMessage)
+                MielActionButton(
+                  label: _showNewMessageComposer
+                      ? 'Cerrar redacción'
+                      : 'Nuevo mensaje',
+                  icon: _showNewMessageComposer ? Icons.close : Icons.edit,
+                  primary: !_showNewMessageComposer,
+                  onPressed: () => setState(
+                    () => _showNewMessageComposer = !_showNewMessageComposer,
+                  ),
+                ),
               MielActionButton(
-                label: 'Nuevo mensaje',
-                icon: Icons.edit,
-                primary: true,
+                label: 'Abrir en MIeL',
+                icon: Icons.open_in_new,
                 onPressed: () => openMielExternalUrl(webUrl),
               ),
             ],
@@ -428,6 +656,11 @@ class _ForoViewState extends ConsumerState<ForoView> {
           ),
         const SizedBox(height: 16),
 
+        if (_showNewMessageComposer) ...[
+          _buildNewMessageComposer(context, palette, thread),
+          const SizedBox(height: 16),
+        ],
+
         if (orderedGroups.isEmpty)
           MielModuleEmptyView(
             message: _threadSearchQuery.trim().isNotEmpty
@@ -441,6 +674,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
               context,
               palette: palette,
               group: group,
+              idTema: thread.idTema,
               webUrl: webUrl,
               isCompact: isCompact,
             ),
@@ -478,6 +712,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
     BuildContext context, {
     required MielPalette palette,
     required _ForumThreadGroup group,
+    required String idTema,
     required String webUrl,
     required bool isCompact,
   }) {
@@ -508,6 +743,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
             palette: palette,
             message: group.root,
             rootId: rootId,
+            idTema: idTema,
             webUrl: webUrl,
             isCompact: isCompact,
             isReply: false,
@@ -560,9 +796,9 @@ class _ForoViewState extends ConsumerState<ForoView> {
                                 ? 'Ocultar comentarios anteriores'
                                 : 'Ver comentarios anteriores ($hiddenCount)',
                             style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: palette.textPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: palette.textPrimary,
                             ),
                           ),
                         ],
@@ -582,6 +818,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
                 palette: palette,
                 message: reply,
                 rootId: rootId,
+                idTema: idTema,
                 webUrl: webUrl,
                 isCompact: isCompact,
                 isReply: true,
@@ -597,6 +834,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
     required MielPalette palette,
     required ForumMessageItem message,
     required String rootId,
+    required String idTema,
     required String webUrl,
     required bool isCompact,
     required bool isReply,
@@ -634,6 +872,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
                   palette: palette,
                   message: message,
                   rootId: rootId,
+                  idTema: idTema,
                   webUrl: webUrl,
                 ),
               ],
@@ -667,6 +906,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
                     palette: palette,
                     message: message,
                     rootId: rootId,
+                    idTema: idTema,
                     webUrl: webUrl,
                   ),
                 ),
@@ -744,11 +984,13 @@ class _ForoViewState extends ConsumerState<ForoView> {
     required MielPalette palette,
     required ForumMessageItem message,
     required String rootId,
+    required String idTema,
     required String webUrl,
   }) {
-    final likeText = message.likesCount > 0
-        ? 'Me gusta (${message.likesCount})'
-        : 'Me gusta';
+    final likeData =
+        _localLikes[message.id] ?? (count: message.likesCount, liked: false);
+    final likeText =
+        likeData.count > 0 ? 'Me gusta (${likeData.count})' : 'Me gusta';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -818,32 +1060,337 @@ class _ForoViewState extends ConsumerState<ForoView> {
               text: 'Responder',
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              onTap: () => openMielExternalUrl(webUrl),
+              onTap: () {
+                setState(() {
+                  if (_replyTargetMessage?.id == message.id) {
+                    _replyTargetMessage = null;
+                  } else {
+                    _replyTargetMessage = message;
+                    _replyController.clear();
+                    _replyAttachmentPath = null;
+                    _replyAttachmentName = null;
+                  }
+                });
+              },
             ),
             Text(
               '·',
               style: TextStyle(fontSize: 13, color: palette.textPrimary),
             ),
-            Text(
-              likeText,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: palette.linkAccent,
-              ),
+            MielHoverLink(
+              text: likeText,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: likeData.liked ? palette.linkAccent : palette.textPrimary,
+              hoverColor: palette.linkAccent,
+              onTap: () => _handleToggleLike(message),
             ),
-            if (message.likesCount > 0)
+            if (likeData.count > 0)
               Padding(
                 padding: const EdgeInsets.only(left: 2),
                 child: Icon(
-                  Icons.remove_red_eye,
-                  size: 16,
-                  color: palette.linkAccent,
+                  Icons.thumb_up_alt_outlined,
+                  size: 15,
+                  color: likeData.liked ? palette.linkAccent : palette.textMuted,
                 ),
               ),
           ],
         ),
+        if (_replyTargetMessage?.id == message.id) ...[
+          const SizedBox(height: 10),
+          _buildInlineReplyComposer(
+            context,
+            palette,
+            message,
+            rootId,
+            idTema,
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildNewMessageComposer(
+    BuildContext context,
+    MielPalette palette,
+    ForumThreadData thread,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: palette.primary.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.edit_note, size: 20, color: palette.linkAccent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Publicar nuevo mensaje en "${thread.title}"',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: palette.textPrimary,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Cerrar',
+                icon: Icon(Icons.close, size: 18, color: palette.textMuted),
+                onPressed: _postingNewMessage
+                    ? null
+                    : () => setState(() => _showNewMessageComposer = false),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: palette.inputBackground,
+              borderRadius: BorderRadius.circular(2),
+              border: Border.all(color: palette.inputBorder),
+            ),
+            child: TextField(
+              controller: _newMessageController,
+              enabled: !_postingNewMessage,
+              minLines: 3,
+              maxLines: 8,
+              style: TextStyle(fontSize: 13.5, color: palette.textPrimary),
+              decoration: InputDecoration.collapsed(
+                hintText: 'Escribí tu mensaje para el foro…',
+                hintStyle: TextStyle(fontSize: 13, color: palette.textMuted),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (_newMessageAttachmentName != null) ...[
+            Row(
+              children: [
+                Chip(
+                  avatar: const Icon(Icons.attach_file, size: 16),
+                  label: Text(
+                    _newMessageAttachmentName!,
+                    style: TextStyle(fontSize: 12, color: palette.textPrimary),
+                  ),
+                  deleteIcon: const Icon(Icons.close, size: 16),
+                  onDeleted: _postingNewMessage
+                      ? null
+                      : () => setState(() {
+                            _newMessageAttachmentPath = null;
+                            _newMessageAttachmentName = null;
+                          }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
+          Row(
+            children: [
+              OutlinedButton.icon(
+                icon: const Icon(Icons.attach_file, size: 16),
+                label: const Text('Adjuntar archivo (máx 5 MB)'),
+                onPressed: _postingNewMessage
+                    ? null
+                    : () async {
+                        final picked = await pickValidatedMielAttachment(
+                          context,
+                          maxSizeMb: kMielMaxUploadMbForum,
+                        );
+                        if (picked != null && mounted) {
+                          setState(() {
+                            _newMessageAttachmentPath = picked.path;
+                            _newMessageAttachmentName = picked.name;
+                          });
+                        }
+                      },
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: _postingNewMessage
+                    ? null
+                    : () => setState(() => _showNewMessageComposer = false),
+                child: const Text('Cancelar'),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: palette.primary,
+                  foregroundColor: Colors.white,
+                ),
+                icon: _postingNewMessage
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.send, size: 16),
+                label: Text(_postingNewMessage ? 'Publicando…' : 'Publicar'),
+                onPressed: _postingNewMessage
+                    ? null
+                    : () => _handlePostNewMessage(thread.idTema),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInlineReplyComposer(
+    BuildContext context,
+    MielPalette palette,
+    ForumMessageItem target,
+    String rootId,
+    String idTema,
+  ) {
+    final mention = target.replyMentionName.isNotEmpty
+        ? target.replyMentionName
+        : target.authorName;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: palette.linkAccent.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.reply, size: 16, color: palette.linkAccent),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Respondiendo a @$mention',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: palette.textPrimary,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.close, size: 16, color: palette.textMuted),
+                onPressed: _postingReply
+                    ? null
+                    : () => setState(() {
+                          _replyTargetMessage = null;
+                        }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: palette.inputBackground,
+              borderRadius: BorderRadius.circular(2),
+              border: Border.all(color: palette.inputBorder),
+            ),
+            child: TextField(
+              controller: _replyController,
+              enabled: !_postingReply,
+              minLines: 2,
+              maxLines: 6,
+              style: TextStyle(fontSize: 13, color: palette.textPrimary),
+              decoration: InputDecoration.collapsed(
+                hintText: 'Escribí tu respuesta…',
+                hintStyle: TextStyle(fontSize: 12.5, color: palette.textMuted),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_replyAttachmentName != null) ...[
+            Row(
+              children: [
+                Chip(
+                  avatar: const Icon(Icons.attach_file, size: 14),
+                  label: Text(
+                    _replyAttachmentName!,
+                    style: TextStyle(fontSize: 11.5, color: palette.textPrimary),
+                  ),
+                  deleteIcon: const Icon(Icons.close, size: 14),
+                  onDeleted: _postingReply
+                      ? null
+                      : () => setState(() {
+                            _replyAttachmentPath = null;
+                            _replyAttachmentName = null;
+                          }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          Row(
+            children: [
+              OutlinedButton.icon(
+                icon: const Icon(Icons.attach_file, size: 14),
+                label: const Text('Adjunto (máx 5 MB)'),
+                onPressed: _postingReply
+                    ? null
+                    : () async {
+                        final picked = await pickValidatedMielAttachment(
+                          context,
+                          maxSizeMb: kMielMaxUploadMbForum,
+                        );
+                        if (picked != null && mounted) {
+                          setState(() {
+                            _replyAttachmentPath = picked.path;
+                            _replyAttachmentName = picked.name;
+                          });
+                        }
+                      },
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: _postingReply
+                    ? null
+                    : () => setState(() {
+                          _replyTargetMessage = null;
+                        }),
+                child: const Text('Cancelar'),
+              ),
+              const SizedBox(width: 6),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: palette.primary,
+                  foregroundColor: Colors.white,
+                ),
+                icon: _postingReply
+                    ? const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.send, size: 14),
+                label: Text(_postingReply ? 'Enviando…' : 'Responder'),
+                onPressed: _postingReply
+                    ? null
+                    : () => _handlePostReply(
+                          idTema: idTema,
+                          rootId: rootId,
+                          target: target,
+                        ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

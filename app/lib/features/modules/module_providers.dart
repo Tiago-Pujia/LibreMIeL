@@ -61,6 +61,39 @@ Future<bool> _recoverInteractiveSession(
   return false;
 }
 
+/// Ejecuta una operación de escritura de **Fase 3** (`MielWriter`) con reconexión
+/// automática silenciosa (Fase 5) si la sesión expiró en MIeL.
+Future<T> runMielWriteWithAuth<T>(
+  WidgetRef ref,
+  Future<T> Function(MielWriter writer) action,
+) async {
+  final writer = await ref.read(mielWriterProvider.future);
+  try {
+    return await action(writer);
+  } on MielSessionExpiredException {
+    final ok = await ref
+        .read(appSessionProvider.notifier)
+        .ensureActiveSession(forceRelogin: true);
+    if (!ok) rethrow;
+    return action(writer);
+  }
+}
+
+/// Obtiene el formulario de redacción (`/mensajeria/redactar/comision/{id}`)
+/// con la lista real de destinatarios (`tutores`, `tutor`, `alumno`, `grupo`).
+final mensajeriaRedactarFormProvider = FutureProvider.autoDispose
+    .family<ComposeMessageFormData, String>((ref, idComision) async {
+      final writer = await ref.read(mielWriterProvider.future);
+      var html = await writer.fetchMensajeriaRedactarHtml(idComision);
+      if (isLikelyLoginRedirectHtml(html)) {
+        final reader = await ref.read(mielInteractiveReaderProvider.future);
+        if (await _recoverInteractiveSession(ref, reader)) {
+          html = await writer.fetchMensajeriaRedactarHtml(idComision);
+        }
+      }
+      return parseMensajeriaRedactarHtml(html, idComision);
+    });
+
 // --- Contenidos Providers ---
 
 final contenidosPageProvider = FutureProvider.autoDispose

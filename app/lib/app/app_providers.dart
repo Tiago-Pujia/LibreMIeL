@@ -53,6 +53,14 @@ final mielInteractiveReaderProvider = FutureProvider<MielInteractiveReader>((
   return DioMielClient.createPersistent();
 });
 
+final mielWriterProvider = FutureProvider<MielWriter>((ref) async {
+  final client = await ref.watch(mielClientProvider.future);
+  if (client is MielWriter) {
+    return client as MielWriter;
+  }
+  return await DioMielClient.createPersistent();
+});
+
 class SessionGenerationNotifier extends Notifier<int> {
   @override
   int build() => 0;

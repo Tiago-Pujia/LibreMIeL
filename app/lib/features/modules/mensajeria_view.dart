@@ -8,13 +8,14 @@ import '../../core/parsers/text_normalizer.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/miel_theme.dart';
 import 'module_providers.dart';
+import 'widgets/mensajeria_composer.dart';
 import 'widgets/miel_file_icon.dart';
 import 'widgets/miel_rich_text.dart';
 import 'widgets/module_state_views.dart';
 
-/// Vista nativa de lectura del módulo **Mensajería** (`Bandeja de entrada`,
-/// `Bandeja de salida`, `Borradores`, `Favoritos`, bandeja unificada y lector `verEntrada`)
-/// fiel a MIeL (`2025.2.0`).
+/// Vista nativa de lectura y escritura del módulo **Mensajería** (`Nuevo mensaje`,
+/// `Bandeja de entrada`, `Bandeja de salida`, `Borradores`, `Favoritos`, bandeja
+/// unificada, lector `verEntrada` y respuestas) fiel a MIeL (`2025.2.0`).
 class MensajeriaView extends ConsumerStatefulWidget {
   const MensajeriaView({
     super.key,
@@ -36,13 +37,18 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   int _currentPage = 1;
   bool _showFilters = false;
   bool _unifiedCrossSubjectMode = false;
+  bool _inlineComposeMode = false;
+  bool _showReplyPanel = false;
+  bool _markingAllRead = false;
 
   String _filterSenderQuery = '';
   String _filterSubjectQuery = '';
   String _filterReadState = '0'; // 0: Todos, 1: Leídos, 2: No leídos
   String _filterAttachmentState = '0'; // 0: Todos, 1: Sí, 2: No
 
-  final Set<String> _locallyReadMessageKeys = <String>{};
+  final Map<String, bool> _localUnreadOverrides = <String, bool>{};
+  final Map<String, bool> _localFavoriteOverrides = <String, bool>{};
+  final Set<String> _locallyDeletedDraftKeys = <String>{};
 
   @override
   void didUpdateWidget(covariant MensajeriaView oldWidget) {
@@ -53,6 +59,8 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
       _selectedMessage = null;
       _currentPage = 1;
       _showFilters = false;
+      _inlineComposeMode = false;
+      _showReplyPanel = false;
       if (widget.sectionIndex != 1) {
         _unifiedCrossSubjectMode = false;
       }
@@ -69,6 +77,19 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
         return MensajeriaBoxKind.favoritos;
       default:
         return MensajeriaBoxKind.entrada;
+    }
+  }
+
+  String _boxSlug(MensajeriaBoxKind box) {
+    switch (box) {
+      case MensajeriaBoxKind.entrada:
+        return 'entrada';
+      case MensajeriaBoxKind.salida:
+        return 'salida';
+      case MensajeriaBoxKind.borradores:
+        return 'borradores';
+      case MensajeriaBoxKind.favoritos:
+        return 'favoritos';
     }
   }
 
@@ -96,7 +117,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
 
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(hPad, 18, hPad, 32),
-          child: widget.sectionIndex == 0
+          child: widget.sectionIndex == 0 || _inlineComposeMode
               ? _buildNuevoMensajeSection(context)
               : _selectedMessage != null
               ? _buildMessageDetailView(context, _selectedMessage!, isCompact)
@@ -106,10 +127,9 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     );
   }
 
-  // --- Sección 0: Nuevo mensaje (Fase 3 en MIeL web) ---
+  // --- Sección 0: Nuevo mensaje (Fase 3 — Compositor nativo) ---
 
   Widget _buildNuevoMensajeSection(BuildContext context) {
-    final palette = MielPalette.of(context);
     final composeUrl =
         '$kMielBaseUrl/mensajeria/redactar/comision/${widget.subject.idComision}';
 
@@ -118,48 +138,32 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
       children: [
         MielModuleHeader(
           title: 'Nuevo mensaje',
-          trailing: MielActionButton(
-            label: 'Abrir en MIeL',
-            icon: Icons.open_in_new,
-            primary: true,
-            onPressed: () => openMielExternalUrl(composeUrl),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: palette.cardBackground,
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(color: palette.cardBorder),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          trailing: Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Text(
-                'Redacción de mensajes',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: palette.textPrimary,
+              if (_inlineComposeMode)
+                MielActionButton(
+                  label: 'Volver a la bandeja',
+                  icon: Icons.arrow_back,
+                  onPressed: () => setState(() => _inlineComposeMode = false),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'La Fase 2 de LibreMIeL está enfocada en la lectura nativa segura. '
-                'Para redactar y enviar un nuevo mensaje a docentes o compañeros de '
-                '${widget.subject.name}, podés abrir el editor oficial de MIeL con un clic.',
-                style: TextStyle(fontSize: 13.5, color: palette.textSecondary),
-              ),
-              const SizedBox(height: 14),
               MielActionButton(
-                label: 'Redactar mensaje en MIeL',
-                icon: Icons.mode_edit,
-                primary: true,
+                label: 'Abrir en MIeL',
+                icon: Icons.open_in_new,
                 onPressed: () => openMielExternalUrl(composeUrl),
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 16),
+        MensajeriaComposePanel(
+          subject: widget.subject,
+          onSent: () {
+            if (_inlineComposeMode && mounted) {
+              setState(() => _inlineComposeMode = false);
+            }
+          },
         ),
       ],
     );
@@ -323,6 +327,16 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
               ),
             ],
           ],
+          if (box == MensajeriaBoxKind.entrada &&
+              !_unifiedCrossSubjectMode &&
+              widget.subject.lastMensajesBadge > 0)
+            MielActionButton(
+              label: _markingAllRead ? 'Marcando…' : 'Marcar todos leídos',
+              icon: Icons.done_all,
+              onPressed: _markingAllRead
+                  ? null
+                  : () => _handleMarkAllRead(onRefresh),
+            ),
           if (box == MensajeriaBoxKind.entrada)
             MielActionButton(
               label: _unifiedCrossSubjectMode
@@ -342,11 +356,159 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             label: 'Redactar',
             icon: Icons.mode_edit,
             primary: true,
-            onPressed: () => openMielExternalUrl(composeUrl),
+            onPressed: () => setState(() => _inlineComposeMode = true),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleMarkAllRead(VoidCallback onRefresh) async {
+    setState(() => _markingAllRead = true);
+    try {
+      await runMielWriteWithAuth(
+        ref,
+        (writer) => writer.markAllMensajeriaRead(widget.subject.idComision),
+      );
+      await ref
+          .read(databaseProvider)
+          .decrementMensajesBadge(
+            widget.subject.idComision,
+            delta: widget.subject.lastMensajesBadge > 0
+                ? widget.subject.lastMensajesBadge
+                : 999,
+          );
+      if (!mounted) return;
+      setState(() => _markingAllRead = false);
+      onRefresh();
+      showMielStatusToast(
+        context,
+        message: 'Todos los mensajes fueron marcados como leídos.',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _markingAllRead = false);
+      showMielStatusToast(
+        context,
+        message: 'No se pudo marcar todos como leídos: $e',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _toggleFavorite(InboxMessageSummary msg, bool currentFav) async {
+    final msgKey = '${msg.idComision}:${msg.idMensaje}';
+    final newFav = !currentFav;
+    setState(() => _localFavoriteOverrides[msgKey] = newFav);
+
+    try {
+      await runMielWriteWithAuth(
+        ref,
+        (w) => w.toggleMensajeriaFavorite(
+          idComision: msg.idComision,
+          idMensaje: msg.idMensaje,
+          currentlyFavorite: currentFav,
+          buzonActual: _boxSlug(_activeBoxKind()),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _localFavoriteOverrides[msgKey] = currentFav);
+      showMielStatusToast(
+        context,
+        message: 'No se pudo actualizar favorito: $e',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _toggleRead(InboxMessageSummary msg, bool currentUnread) async {
+    final msgKey = '${msg.idComision}:${msg.idMensaje}';
+    final newUnread = !currentUnread;
+    setState(() => _localUnreadOverrides[msgKey] = newUnread);
+
+    try {
+      await runMielWriteWithAuth(
+        ref,
+        (w) => w.toggleMensajeriaRead(
+          idComision: msg.idComision,
+          idMensaje: msg.idMensaje,
+          currentlyRead: !currentUnread,
+          buzonActual: _boxSlug(_activeBoxKind()),
+        ),
+      );
+      if (currentUnread) {
+        await ref
+            .read(databaseProvider)
+            .decrementMensajesBadge(msg.idComision);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _localUnreadOverrides[msgKey] = currentUnread);
+      showMielStatusToast(
+        context,
+        message: 'No se pudo actualizar estado de lectura: $e',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _handleDeleteDraft(InboxMessageSummary msg) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final pal = MielPalette.of(ctx);
+        return AlertDialog(
+          backgroundColor: pal.cardBackground,
+          title: Text(
+            'Eliminar borrador',
+            style: TextStyle(color: pal.textPrimary),
+          ),
+          content: Text(
+            '¿Seguro que querés eliminar el borrador "${msg.subject}"?',
+            style: TextStyle(color: pal.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: pal.badgeRed,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+
+    final msgKey = '${msg.idComision}:${msg.idMensaje}';
+    setState(() => _locallyDeletedDraftKeys.add(msgKey));
+
+    try {
+      await runMielWriteWithAuth(
+        ref,
+        (w) => w.deleteMensajeriaDraft(
+          idComision: msg.idComision,
+          idMensaje: msg.idMensaje,
+        ),
+      );
+      if (!mounted) return;
+      showMielStatusToast(context, message: 'Borrador eliminado.');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _locallyDeletedDraftKeys.remove(msgKey));
+      showMielStatusToast(
+        context,
+        message: 'No se pudo eliminar el borrador: $e',
+        isError: true,
+      );
+    }
   }
 
   Widget _buildFilterPanel(MielPalette palette, bool isCompact) {
@@ -577,13 +739,19 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
 
   bool _matchesMessageFilter(InboxMessageSummary msg) {
     final msgKey = '${msg.idComision}:${msg.idMensaje}';
-    final effectiveUnread =
-        msg.isUnread && !_locallyReadMessageKeys.contains(msgKey);
+    if (_locallyDeletedDraftKeys.contains(msgKey)) return false;
+
+    final effectiveUnread = _localUnreadOverrides[msgKey] ?? msg.isUnread;
 
     if (_filterReadState == '1' && effectiveUnread) return false;
     if (_filterReadState == '2' && !effectiveUnread) return false;
     if (_filterAttachmentState == '1' && !msg.hasAttachment) return false;
     if (_filterAttachmentState == '2' && msg.hasAttachment) return false;
+
+    if (_activeBoxKind() == MensajeriaBoxKind.favoritos) {
+      final effectiveFav = _localFavoriteOverrides[msgKey] ?? msg.isFavorite;
+      if (!effectiveFav) return false;
+    }
 
     final senderQ = normalizeText(_filterSenderQuery);
     if (senderQ.isNotEmpty &&
@@ -704,12 +872,13 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     required Color readGreen,
   }) {
     final msgKey = '${msg.idComision}:${msg.idMensaje}';
-    final isUnread = msg.isUnread && !_locallyReadMessageKeys.contains(msgKey);
+    final isUnread = _localUnreadOverrides[msgKey] ?? msg.isUnread;
+    final isFavorite = _localFavoriteOverrides[msgKey] ?? msg.isFavorite;
     final weight = isUnread ? FontWeight.w700 : FontWeight.w400;
 
     void openMessage() {
       setState(() {
-        _locallyReadMessageKeys.add(msgKey);
+        _localUnreadOverrides[msgKey] = false;
         _selectedMessage = msg;
       });
     }
@@ -726,7 +895,9 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
           ? _buildCompactRowContent(
               palette: palette,
               msg: msg,
+              box: box,
               isUnread: isUnread,
+              isFavorite: isFavorite,
               isTeacherSender: isTeacherSender,
               showSubjectColumn: showSubjectColumn,
               replyPurple: replyPurple,
@@ -855,19 +1026,59 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                           )
                         else
                           const SizedBox.shrink()
-                      else ...[
-                        Icon(
-                          msg.isFavorite ? Icons.star : Icons.star_border,
-                          size: 19,
-                          color: msg.isFavorite ? starBlue : palette.textMuted,
+                      else if (box == MensajeriaBoxKind.borradores) ...[
+                        Tooltip(
+                          message: 'Eliminar borrador',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () => _handleDeleteDraft(msg),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.delete_outline,
+                                size: 19,
+                                color: palette.badgeRed,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        Tooltip(
+                          message: isFavorite
+                              ? 'Quitar de favoritos'
+                              : 'Marcar como favorito',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () => _toggleFavorite(msg, isFavorite),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(
+                                isFavorite ? Icons.star : Icons.star_border,
+                                size: 19,
+                                color: isFavorite ? starBlue : palette.textMuted,
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(
-                          isUnread ? Icons.markunread : Icons.drafts,
-                          size: 19,
-                          color: isUnread
-                              ? palette.textPrimary
-                              : palette.textMuted,
+                        Tooltip(
+                          message: isUnread
+                              ? 'Marcar como leído'
+                              : 'Marcar como no leído',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () => _toggleRead(msg, isUnread),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(
+                                isUnread ? Icons.markunread : Icons.drafts,
+                                size: 19,
+                                color: isUnread
+                                    ? palette.textPrimary
+                                    : palette.textMuted,
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ],
@@ -889,7 +1100,9 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   Widget _buildCompactRowContent({
     required MielPalette palette,
     required InboxMessageSummary msg,
+    required MensajeriaBoxKind box,
     required bool isUnread,
+    required bool isFavorite,
     required bool isTeacherSender,
     required bool showSubjectColumn,
     required Color replyPurple,
@@ -949,7 +1162,45 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
               ),
             ),
             if (msg.isReplied) Icon(Icons.reply, size: 17, color: replyPurple),
-            if (msg.isFavorite) Icon(Icons.star, size: 17, color: starBlue),
+            if (box == MensajeriaBoxKind.borradores)
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _handleDeleteDraft(msg),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Icon(
+                    Icons.delete_outline,
+                    size: 17,
+                    color: palette.badgeRed,
+                  ),
+                ),
+              )
+            else if (box != MensajeriaBoxKind.salida) ...[
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _toggleFavorite(msg, isFavorite),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Icon(
+                    isFavorite ? Icons.star : Icons.star_border,
+                    size: 17,
+                    color: isFavorite ? starBlue : palette.textMuted,
+                  ),
+                ),
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _toggleRead(msg, isUnread),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Icon(
+                    isUnread ? Icons.markunread : Icons.drafts,
+                    size: 17,
+                    color: isUnread ? palette.textPrimary : palette.textMuted,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ],
@@ -1169,15 +1420,42 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
 
                     const SizedBox(height: 22),
 
-                    // Botonera de respuesta (en Fase 2 redirige a MIeL web)
+                    if (_showReplyPanel) ...[
+                      const SizedBox(height: 20),
+                      MensajeriaReplyPanel(
+                        detail: detail,
+                        onReplied: () {
+                          if (mounted) {
+                            setState(() => _showReplyPanel = false);
+                          }
+                        },
+                        onCancel: () {
+                          if (mounted) {
+                            setState(() => _showReplyPanel = false);
+                          }
+                        },
+                      ),
+                    ],
+
+                    const SizedBox(height: 22),
+
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
                         MielActionButton(
-                          label: 'Responder en MIeL',
+                          label: _showReplyPanel
+                              ? 'Ocultar respuesta'
+                              : 'Responder',
                           icon: Icons.reply,
                           primary: true,
+                          onPressed: () => setState(
+                            () => _showReplyPanel = !_showReplyPanel,
+                          ),
+                        ),
+                        MielActionButton(
+                          label: 'Abrir en MIeL',
+                          icon: Icons.open_in_new,
                           onPressed: () => openMielExternalUrl(webUrl),
                         ),
                         MielActionButton(

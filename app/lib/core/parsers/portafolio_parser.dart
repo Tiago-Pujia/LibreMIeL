@@ -260,6 +260,39 @@ PortfolioPracticeDetail parsePortafolioEntregasDetalleHtml(
     );
   }
 
+  // Metadatos del formulario de entrega (#formNuevaEntrega) para Fase 3
+  final formEl = doc.querySelector('#formNuevaEntrega');
+  PortfolioSubmissionFormMeta submissionForm =
+      const PortfolioSubmissionFormMeta();
+  if (formEl != null) {
+    final tutors = <PortfolioTutorOption>[];
+    for (final opt in formEl.querySelectorAll(
+      'select[name="tutorDestinatario"] option',
+    )) {
+      final id = (opt.attributes['value'] ?? '').trim();
+      final name = cleanWhitespace(opt.text);
+      if (name.isNotEmpty) {
+        tutors.add(PortfolioTutorOption(id: id.isEmpty ? '0' : id, name: name));
+      }
+    }
+    if (tutors.isEmpty) {
+      tutors.add(
+        const PortfolioTutorOption(
+          id: '0',
+          name: 'Todos los docentes de la comisión',
+        ),
+      );
+    }
+    final allowsLink = formEl.querySelector('input[name="enlace"]') != null;
+    submissionForm = PortfolioSubmissionFormMeta(
+      canSubmit: true,
+      tutors: tutors,
+      allowsLink: allowsLink,
+      requiresFile: !allowsLink,
+      maxSizeMb: 40,
+    );
+  }
+
   return PortfolioPracticeDetail(
     idComision: idComision,
     idPractica: idPractica,
@@ -268,6 +301,7 @@ PortfolioPracticeDetail parsePortafolioEntregasDetalleHtml(
     deliveryModeLabel: deliveryModeLabel,
     corrections: corrections,
     deliveries: deliveries,
+    submissionForm: submissionForm,
   );
 }
 
