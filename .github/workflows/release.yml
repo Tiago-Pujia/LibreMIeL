@@ -80,12 +80,10 @@ jobs:
         run: |
           if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/android/app/release.keystore
-            cat > app/android/key.properties << EOF
-            storePassword=$ANDROID_KEYSTORE_PASSWORD
-            keyPassword=$ANDROID_KEY_PASSWORD
-            keyAlias=$ANDROID_KEY_ALIAS
-            storeFile=release.keystore
-            EOF
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=release.keystore\n' \
+              "$ANDROID_KEYSTORE_PASSWORD" \
+              "$ANDROID_KEY_PASSWORD" \
+              "$ANDROID_KEY_ALIAS" > app/android/key.properties
           fi
 
       - working-directory: app
@@ -138,12 +136,15 @@ jobs:
             nfpm_arch: amd64
             linux_arch: x86_64
             deb_arch: amd64
+            allow_failure: false
           - runner: ubuntu-24.04-arm
             flutter_arch: arm64
             nfpm_arch: arm64
             linux_arch: aarch64
             deb_arch: arm64
+            allow_failure: true
     runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.allow_failure }}
     steps:
       - uses: actions/checkout@v4
 
@@ -155,11 +156,20 @@ jobs:
             libgtk-3-dev liblzma-dev libsecret-1-dev libjsoncpp-dev \
             libayatana-appindicator3-dev libsqlite3-dev
 
-      - uses: subosito/flutter-action@v2
+      - name: Configurar Flutter (x64)
+        if: matrix.flutter_arch == 'x64'
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
-          architecture: ${{ matrix.flutter_arch }}
+          architecture: x64
           cache: true
+
+      - name: Configurar Flutter (arm64)
+        if: matrix.flutter_arch == 'arm64'
+        run: |
+          git clone --depth 1 -b stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
 
       - working-directory: app
         run: flutter pub get
@@ -215,8 +225,7 @@ jobs:
           path: dist/linux-${{ matrix.flutter_arch }}/*
 
   # ============================================================================
-  # 3. WINDOWS x64 y ARM64 (Instalador .exe Inno Setup + Portable .zip)
-  # Nota: `windows-11-arm` es gratuito en repositorios públicos de GitHub.
+  # 3. WINDOWS x64 (Instalador .exe Inno Setup + Portable .zip)
   # ============================================================================
   build-windows:
     name: Build Windows ${{ matrix.flutter_arch }} (Instalador EXE y Portable ZIP)
@@ -227,12 +236,7 @@ jobs:
         include:
           - runner: windows-latest
             flutter_arch: x64
-            allow_failure: false
-          - runner: windows-11-arm
-            flutter_arch: arm64
-            allow_failure: true
     runs-on: ${{ matrix.runner }}
-    continue-on-error: ${{ matrix.allow_failure }}
     steps:
       - uses: actions/checkout@v4
 
