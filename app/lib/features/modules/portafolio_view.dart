@@ -491,7 +491,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
               ),
               const SizedBox(height: 6),
               Text(
-                'La Fase 2 de LibreMIEL es de lectura segura. Para adjuntar y enviar una nueva entrega '
+                'La Fase 2 de LibreMIeL es de lectura segura. Para adjuntar y enviar una nueva entrega '
                 'de esta práctica, abrila directamente en MIeL.',
                 style: TextStyle(fontSize: 13, color: palette.textSecondary),
               ),

@@ -1,4 +1,4 @@
-/// Utilidades puras de normalización de texto y resolución de URLs de MIEL.
+/// Utilidades puras de normalización de texto y resolución de URLs de MIeL.
 library;
 
 const String kMielBaseUrl = 'https://miel.unlam.edu.ar';
@@ -43,7 +43,7 @@ String cleanWhitespace(String input) {
   return input.replaceAll('\u00A0', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
 }
 
-/// Resuelve una URL relativa de MIEL a URL absoluta.
+/// Resuelve una URL relativa de MIeL a URL absoluta.
 String resolveMielUrl(String? rawHref) {
   if (rawHref == null) return '';
   final trimmed = rawHref.trim();

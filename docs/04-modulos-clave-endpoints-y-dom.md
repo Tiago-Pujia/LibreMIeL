@@ -1,6 +1,6 @@
 # 04 — Referencia de Endpoints, DOM y Efectos Colaterales (4 Módulos Clave)
 
-Este documento detalla la estructura HTTP y HTML/JSON de las cuatro áreas prioritarias de MIEL que motivan el proyecto: **Contenidos**, **Portafolio**, **Mensajería** y **Foros (`forov2`)**.
+Este documento detalla la estructura HTTP y HTML/JSON de las cuatro áreas prioritarias de MIeL que motivan el proyecto: **Contenidos**, **Portafolio**, **Mensajería** y **Foros (`forov2`)**.
 
 ---
 
@@ -10,7 +10,7 @@ Este documento detalla la estructura HTTP y HTML/JSON de las cuatro áreas prior
 - **Listado completo:** `GET https://miel.unlam.edu.ar/contenido/archivos/comision/{idComision}`
   - Subsecciones opcionales: `/contenido/glosario/comision/{idComision}`, `/contenido/faq/comision/{idComision}`.
   - Búsqueda/filtro: `POST` al mismo URL con `buscarTipo` y `buscarPalabra`.
-- **Descarga de archivo alojado en MIEL:**  
+- **Descarga de archivo alojado en MIeL:**  
   `GET https://miel.unlam.edu.ar/contenido/event/descargarElemento/comision/{idComision}/a/{nombreCodificado}/id/{idElemento}`
 - **Marcar enlace/video externo como visto/descargado:**  
   `GET https://miel.unlam.edu.ar/contenido/event/marcarElementoDescargadoAjax/comision/{idComision}?id={idElemento}`
@@ -30,7 +30,7 @@ Este documento detalla la estructura HTTP y HTML/JSON de las cuatro áreas prior
 - Antes de entrar a Contenidos, si el docente subió material nuevo:
   - `/principal/interno/` muestra `<span class="w3-badge w3-red w3-small">{N}</span>` en `Contenidos`.
   - En el **primer `GET`** a `/contenido/archivos/comision/{idComision}`, la carpeta `.desplegarModulo` afectada muestra `<span class="w3-badge w3-red w3-small">{N}</span>` y las filas nuevas tienen la clase `<tr class="w3-pale-yellow">`.
-- **Al responder ese primer `GET`**, el backend de MIEL **limpia automáticamente** el badge de `/principal/interno/`, el badge de la carpeta y la clase `w3-pale-yellow` (aunque no se descargue ningún archivo).
+- **Al responder ese primer `GET`**, el backend de MIeL **limpia automáticamente** el badge de `/principal/interno/`, el badge de la carpeta y la clase `w3-pale-yellow` (aunque no se descargue ningún archivo).
 - **Regla obligatoria:** No hacer polling ciego a `/contenido/archivos/comision/{idComision}`. Consultar primero `/principal/interno/` y solo pedir `/contenido/archivos/...` cuando el badge sea `> 0` (capturando en ese único `GET` las filas `w3-pale-yellow` y haciendo *diff* contra el snapshot local de `{idElemento}`).
 
 ---
@@ -68,7 +68,7 @@ Este documento detalla la estructura HTTP y HTML/JSON de las cuatro áreas prior
 
 ### Relación con Mensajería y Detección de Cambios
 - Portafolio **no muestra badge** en `/principal/interno/`.
-- Sin embargo, **cuando un docente corrige una entrega**, MIEL genera un **mensaje automático en Mensajería** (asunto `"Corrección"`, con `Módulo`, `Práctica` y `Estado`), lo que sí enciende el badge de `Mensajes`.
+- Sin embargo, **cuando un docente corrige una entrega**, MIeL genera un **mensaje automático en Mensajería** (asunto `"Corrección"`, con `Módulo`, `Práctica` y `Estado`), lo que sí enciende el badge de `Mensajes`.
 - Para detectar **prácticas nuevas publicadas** o **cambios en `F. vencim.`**, el cliente debe comparar periódicamente un snapshot de `/portafolio/practicas/comision/{idComision}` indexado por `{idPractica}`.
 
 ---
@@ -157,7 +157,7 @@ En `/mensajeria/entrada/comision/{idComision}`:
     - Respuesta: `<li id="idMensaje-{id}" class="... foro-respuesta ..." data-idmensajepadre="{idMensajeRaiz}">`
   - **Rol del autor:** primer `.w3-text-gray` muestra `Tutor/a (com ...)` (ícono `school`) o `Alumno/a (com ...)`.
   - **ID del autor:** atributo `data-idusuario="{idAutor}"` en `.btnMostrarDivRespuesta` (junto con `data-idmensaje` y `data-idmensajepadre`).
-  - **Mención / respuesta directa:** cuando alguien responde a un mensaje, MIEL inserta en `.foro-contenido-mensaje`:
+  - **Mención / respuesta directa:** cuando alguien responde a un mensaje, MIeL inserta en `.foro-contenido-mensaje`:
     ```html
     <strong class="tagUsuario" data-idusuario="{idUsuarioDestinatario}" data-idmensaje="{idMensajeRespondido}">@NOMBRE</strong>
     ```

@@ -10,7 +10,7 @@ import '../core/network/miel_client.dart';
 class FileDownloadService {
   const FileDownloadService();
 
-  /// Obtiene el directorio de descargas para archivos de LibreMIEL (`Downloads/LibreMIEL`
+  /// Obtiene el directorio de descargas para archivos de LibreMIeL (`Downloads/LibreMIeL`
   /// en escritorio o directorio de documentos de la aplicación si no está disponible).
   Future<Directory> resolveDownloadsDirectory() async {
     Directory? baseDir;
@@ -21,14 +21,14 @@ class FileDownloadService {
     }
     baseDir ??= await getApplicationDocumentsDirectory();
 
-    final target = Directory(p.join(baseDir.path, 'LibreMIEL'));
+    final target = Directory(p.join(baseDir.path, 'LibreMIeL'));
     if (!target.existsSync()) {
       target.createSync(recursive: true);
     }
     return target;
   }
 
-  /// Descarga un archivo autenticado desde MIeL hacia la carpeta `LibreMIEL` local.
+  /// Descarga un archivo autenticado desde MIeL hacia la carpeta `LibreMIeL` local.
   Future<DownloadedFileResult> downloadFromMiel({
     required MielInteractiveReader reader,
     required String urlOrPath,

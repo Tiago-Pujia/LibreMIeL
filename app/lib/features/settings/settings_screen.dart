@@ -44,7 +44,7 @@ class SettingsScreen extends ConsumerWidget {
                             color: palette.linkAccent,
                           ),
                           title: const Text(
-                            'Ejecutar LibreMIEL al iniciar el sistema',
+                            'Ejecutar LibreMIeL al iniciar el sistema',
                           ),
                           subtitle: Text(
                             'Inicia la aplicación automáticamente al encender tu equipo '

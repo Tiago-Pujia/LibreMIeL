@@ -1,4 +1,4 @@
-/// Modelos inmutables del dominio de LibreMIEL.
+/// Modelos inmutables del dominio de LibreMIeL.
 library;
 
 enum MielAuthStatus {
@@ -129,7 +129,7 @@ enum MielToolKind {
 }
 
 enum ForumSyncMode {
-  /// Consulta solo /forov2/temas/comision/{id} sin abrir hilos (no borra badges en MIEL web).
+  /// Consulta solo /forov2/temas/comision/{id} sin abrir hilos (no borra badges en MIeL web).
   nonInvasive,
 
   /// Abre hilos con actividad para detectar respuestas de docentes (Tutor/a) al usuario.

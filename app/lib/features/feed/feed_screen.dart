@@ -7,7 +7,7 @@ import '../../core/models/miel_models.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/miel_theme.dart';
 
-/// Feed unificado de notificaciones de LibreMIEL estilizado con la estética de MIeL
+/// Feed unificado de notificaciones de LibreMIeL estilizado con la estética de MIeL
 /// (encabezado h1 Light, botones planos y filas no leídas estilo `.mensaje-no-leido`).
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key, this.onOpenSubjectModule});

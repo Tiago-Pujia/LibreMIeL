@@ -1,13 +1,13 @@
-# AGENTS.md — Guía para Modelos de IA y Agentes de Código (LibreMIEL)
+# AGENTS.md — Guía para Modelos de IA y Agentes de Código (LibreMIeL)
 
-Este archivo concentra el contexto operativo, las invariantes técnicas y las reglas obligatorias para cualquier asistente o agente de IA que trabaje sobre el repositorio **LibreMIEL**.
+Este archivo concentra el contexto operativo, las invariantes técnicas y las reglas obligatorias para cualquier asistente o agente de IA que trabaje sobre el repositorio **LibreMIeL**.
 
 ---
 
 ## 1. Contexto del Proyecto
 
-- **Nombre:** LibreMIEL
-- **Propósito:** Cliente alternativo, gratuito, *local-first* y de código abierto (Licencia MIT) para la plataforma **MIEL (UNLaM)** (`https://miel.unlam.edu.ar/`).
+- **Nombre:** LibreMIeL
+- **Propósito:** Cliente alternativo, gratuito, *local-first* y de código abierto (Licencia MIT) para la plataforma **MIeL (UNLaM)** (`https://miel.unlam.edu.ar/`).
 - **Plataformas objetivo:** Windows, macOS, Linux (`AppImage`, `.deb`, `.rpm`, Arch `.pkg.tar.zst`, portable `.tar.gz`) y Android (`.apk`).
 - **Identificador de aplicación:** `io.github.tiago_pujia.libremiel`
 - **Stack:** Flutter (Dart), `dio` + `cookie_jar`, `html` (DOM parser), `drift` (SQLite), `flutter_riverpod`, `flutter_secure_storage`, `flutter_local_notifications`, `workmanager`, `tray_manager`, `window_manager`.
@@ -51,7 +51,7 @@ Antes de editar código, revisá únicamente el documento que corresponde a tu t
    - Todo código en `app/lib/core/parsers/` debe ser puro (`String html -> Modelo`), sin dependencia de `Dio`, Flutter UI ni SQLite, y acompañado de tests en `app/test/parsers/` usando HTML anonimizado en `app/test/fixtures/`.
 7. **Seguridad y privacidad:**
    - Nunca commitear `.env`, DNIs, contraseñas, `PHPSESSID`, datos personales reales ni archivos de firma (`.jks`, `.keystore`, `key.properties`).
-   - No copiar CSS, JS, imágenes ni logotipos de MIEL/UNLaM.
+   - No copiar CSS, JS, imágenes ni logotipos de MIeL/UNLaM.
    - Mantener la raíz del repositorio limpia: el proyecto Flutter completo vive en `app/` y toda la documentación/gestión en `docs/`, dejando únicamente `README.md` y `LICENSE` en la raíz.
 8. **Separación entre polling (`MielApiClient`) y lectura interactiva (`MielInteractiveReader`):**
    - `SyncEngine` únicamente depende de `MielApiClient` (solo lectura segura). Toda lectura iniciada explícitamente por el usuario (abrir mensajes `verEntrada`, descargar archivos/imágenes autenticadas o explorar subsecciones de Fase 2) debe pasar por `MielInteractiveReader`.

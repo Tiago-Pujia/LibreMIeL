@@ -146,7 +146,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
               ),
               const SizedBox(height: 8),
               Text(
-                'La Fase 2 de LibreMIEL está enfocada en la lectura nativa segura. '
+                'La Fase 2 de LibreMIeL está enfocada en la lectura nativa segura. '
                 'Para redactar y enviar un nuevo mensaje a docentes o compañeros de '
                 '${widget.subject.name}, podés abrir el editor oficial de MIeL con un clic.',
                 style: TextStyle(fontSize: 13.5, color: palette.textSecondary),

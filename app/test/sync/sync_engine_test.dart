@@ -174,7 +174,7 @@ void main() {
           (_) async => const MielLoginResult(
             status: MielAuthStatus.accountBlocked,
             rawCode: 3,
-            message: 'Tu cuenta de MIEL figura bloqueada (estado 3).',
+            message: 'Tu cuenta de MIeL figura bloqueada (estado 3).',
           ),
         );
 
@@ -183,7 +183,7 @@ void main() {
         expect(first.notifications, hasLength(1));
         expect(first.notifications.first.module, MielModuleType.sistema);
 
-        // Segundo ciclo automático NO debe volver a intentar login ni llamar a MIEL
+        // Segundo ciclo automático NO debe volver a intentar login ni llamar a MIeL
         final second = await engine.runCycle1(loadCredentials: fakeCreds);
         expect(second.authPaused, isTrue);
         expect(second.notifications, isEmpty);

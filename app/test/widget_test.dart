@@ -53,7 +53,7 @@ void main() {
       // Avanzar la animación del fondo sin errores
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('LibreMIEL'), findsOneWidget);
+      expect(find.text('LibreMIeL'), findsOneWidget);
       expect(find.text('Usuario:'), findsOneWidget);
       expect(find.text('Contraseña:'), findsOneWidget);
       expect(find.text('Olvidé mi contraseña'), findsOneWidget);
@@ -173,13 +173,18 @@ void main() {
       expect(find.text('Mi perfil'), findsOneWidget);
       expect(find.text('Sincronizar'), findsNothing);
 
-      // Barra lateral exacta: Utilidades (Materias Activas), Funcionalidades (Ajustes, Notificaciones), Abrir MIeL web
+      // Barra lateral exacta: Utilidades (Materias Activas), Funcionalidades (Ajustes, Notificaciones), Repositorio GitHub, Abrir MIeL web
       expect(find.text('Utilidades'), findsOneWidget);
       expect(find.text('Materias Activas'), findsOneWidget);
       expect(find.text('Funcionalidades'), findsOneWidget);
       expect(find.text('Ajustes'), findsOneWidget);
       expect(find.text('Notificaciones'), findsOneWidget);
+      expect(find.text('Repositorio GitHub'), findsOneWidget);
       expect(find.text('Abrir MIeL web'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Repositorio GitHub')).dy,
+        lessThan(tester.getTopLeft(find.text('Abrir MIeL web')).dy),
+      );
       expect(find.text('Calendario'), findsNothing);
       expect(find.text('Biblioteca BiDi'), findsNothing);
 
@@ -246,7 +251,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Apariencia'), findsNothing);
       expect(
-        find.text('Ejecutar LibreMIEL al iniciar el sistema'),
+        find.text('Ejecutar LibreMIeL al iniciar el sistema'),
         findsOneWidget,
       );
 

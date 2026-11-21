@@ -1,10 +1,10 @@
 [Desktop Entry]
-Name=LibreMIEL
-Comment=Cliente alternativo open source y multiplataforma para MIEL (UNLaM)
+Name=LibreMIeL
+Comment=Cliente alternativo open source y multiplataforma para MIeL (UNLaM)
 Exec=libremiel
 Icon=io.github.tiago_pujia.libremiel
 Terminal=false
 Type=Application
 Categories=Education;
 StartupWMClass=io.github.tiago_pujia.libremiel
-Keywords=UNLaM;MIEL;Universidad;Notificaciones;
+Keywords=UNLaM;MIeL;Universidad;Notificaciones;

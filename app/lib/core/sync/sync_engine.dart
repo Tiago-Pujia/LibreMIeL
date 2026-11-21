@@ -6,11 +6,11 @@ import '../storage/app_database.dart';
 typedef CredentialsLoader = Future<MielCredentials?> Function();
 typedef NowProvider = DateTime Function();
 
-/// Motor de sincronización en dos ciclos de LibreMIEL.
+/// Motor de sincronización en dos ciclos de LibreMIeL.
 ///
 /// Respeta todas las invariantes críticas documentadas en `docs/AGENTS.md`:
 /// - Ciclo 1 parte de un único `GET /principal/interno/` y solo profundiza donde hay badge > 0.
-/// - Jamás llama a `/contenido/archivos/...` si su badge es 0 (evita borrar avisos en MIEL).
+/// - Jamás llama a `/contenido/archivos/...` si su badge es 0 (evita borrar avisos en MIeL).
 /// - Jamás llama a `/mensajeria/verEntrada/...` (evita marcar mensajes como leídos).
 /// - En foros, respeta `ForumSyncMode.nonInvasive` vs `ForumSyncMode.teacherReplies`.
 /// - Ante error de autenticación (`estado: 1/2/3`), pausa el polling automático para evitar bloqueos.
@@ -90,7 +90,7 @@ class SyncEngine {
     if (overview.subjects.isEmpty && !internoHtml.contains('materia-bloque')) {
       warnings.add(
         'No se detectaron tarjetas de materias en /principal/interno/. '
-        'Verificá si la sesión expiró o si MIEL cambió su formato HTML.',
+        'Verificá si la sesión expiró o si MIeL cambió su formato HTML.',
       );
       return SyncRunSummary(
         cycle: 1,
@@ -127,11 +127,11 @@ class SyncEngine {
         dedupeKey:
             'novedades:${overview.globalNovedadesBadge}:${now.year}-${now.month}-${now.day}',
         idComision: 'global',
-        subjectName: 'MIEL — Institucional',
+        subjectName: 'MIeL — Institucional',
         module: MielModuleType.novedades,
         title: 'Nuevas novedades institucionales',
         body:
-            'Tenés ${overview.globalNovedadesBadge} aviso(s) nuevo(s) en la sección Novedades de MIEL.',
+            'Tenés ${overview.globalNovedadesBadge} aviso(s) nuevo(s) en la sección Novedades de MIeL.',
         targetUrl: '$kMielBaseUrl/principal/novedades/',
         detectedAt: now,
       );
@@ -380,7 +380,7 @@ class SyncEngine {
         notifications: [],
         authPaused: true,
         authErrorMessage:
-            'No hay credenciales guardadas para iniciar sesión en MIEL.',
+            'No hay credenciales guardadas para iniciar sesión en MIeL.',
       );
     }
 
@@ -395,14 +395,14 @@ class SyncEngine {
         loginRes.status == MielAuthStatus.accountBlocked) {
       final reason =
           loginRes.message ??
-          'Error de autenticación en MIEL (código ${loginRes.rawCode}).';
+          'Error de autenticación en MIeL (código ${loginRes.rawCode}).';
       await _db.setSetting(SettingKeys.accountPausedReason, reason);
 
       final alert = DetectedNotification(
         dedupeKey:
             'auth_paused:${loginRes.status.name}:${now.year}-${now.month}-${now.day}',
         idComision: 'sistema',
-        subjectName: 'LibreMIEL — Cuenta',
+        subjectName: 'LibreMIeL — Cuenta',
         module: MielModuleType.sistema,
         title: loginRes.status == MielAuthStatus.accountBlocked
             ? 'Sincronización pausada: cuenta bloqueada'
@@ -427,7 +427,7 @@ class SyncEngine {
       cycle: 1,
       isBaseline: false,
       notifications: const [],
-      warnings: [loginRes.message ?? 'Error temporal al autenticar con MIEL.'],
+      warnings: [loginRes.message ?? 'Error temporal al autenticar con MIeL.'],
     );
   }
 

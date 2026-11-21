@@ -34,7 +34,7 @@ class DesktopTrayService with TrayListener, WindowListener {
       await trayManager.setContextMenu(
         Menu(
           items: [
-            MenuItem(key: 'show', label: 'Abrir LibreMIEL'),
+            MenuItem(key: 'show', label: 'Abrir LibreMIeL'),
             MenuItem.separator(),
             MenuItem(key: 'quit', label: 'Salir completamente'),
           ],
@@ -48,7 +48,7 @@ class DesktopTrayService with TrayListener, WindowListener {
 
     if (_trayReady && !Platform.isLinux) {
       try {
-        await trayManager.setToolTip('LibreMIEL — Monitor de novedades MIeL');
+        await trayManager.setToolTip('LibreMIeL — Monitor de novedades MIeL');
       } catch (_) {
         // Tooltip opcional; no afecta el menú contextual.
       }
@@ -59,7 +59,7 @@ class DesktopTrayService with TrayListener, WindowListener {
     // de la bandeja quedó registrado correctamente (evita dejar procesos atrapados).
     try {
       await windowManager.ensureInitialized();
-      await windowManager.setTitle('LibreMIEL');
+      await windowManager.setTitle('LibreMIeL');
       await windowManager.setMinimumSize(const Size(720, 520));
       await windowManager.setPreventClose(_trayReady);
       windowManager.addListener(this);

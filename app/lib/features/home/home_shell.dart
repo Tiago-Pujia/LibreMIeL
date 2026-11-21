@@ -18,7 +18,7 @@ import '../subjects/miel_home_view.dart';
 
 enum _ShellSection { home, novedades, ajustes, moduleDraft }
 
-/// Shell principal de LibreMIEL fiel al layout de MIeL UNLaM:
+/// Shell principal de LibreMIeL fiel al layout de MIeL UNLaM:
 /// - Fila 1: Barra de marca superior (`#FFFFFF` / `#121212`) con usuario y links.
 /// - Fila 2: Barra verde `#menu-principal` (`#009674` / `#128268`) con breadcrumbs y acciones.
 /// - Menú lateral izquierdo (`230px` fijo en `>992px`, Drawer deslizable en `<=992px`).
@@ -1087,21 +1087,13 @@ class _MielSidebar extends ConsumerWidget {
             ),
           ),
           Divider(color: palette.divider, height: 1),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: _SidebarItem(
-              icon: Icons.open_in_new,
-              label: 'Abrir MIeL web',
-              selected: false,
-              onTap: () => onOpenExternal('$kMielBaseUrl/principal/interno/'),
-            ),
-          ),
+          _SidebarFooterLinks(onOpenExternal: onOpenExternal),
         ],
       );
     }
 
-    // Menú lateral personalizado de LibreMIEL:
-    // Utilidades (Materias Activas) + Funcionalidades (Ajustes, Notificaciones) + Abrir MIeL web abajo
+    // Menú lateral personalizado de LibreMIeL:
+    // Utilidades (Materias Activas) + Funcionalidades (Ajustes, Notificaciones) + enlaces externos abajo
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1137,16 +1129,40 @@ class _MielSidebar extends ConsumerWidget {
           ),
         ),
         Divider(color: palette.divider, height: 1),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: _SidebarItem(
+        _SidebarFooterLinks(onOpenExternal: onOpenExternal),
+      ],
+    );
+  }
+}
+
+const String _kLibreMielRepoUrl = 'https://github.com/Tiago-Pujia/LibreMIeL';
+
+class _SidebarFooterLinks extends StatelessWidget {
+  const _SidebarFooterLinks({required this.onOpenExternal});
+
+  final ValueChanged<String> onOpenExternal;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _SidebarItem(
+            icon: Icons.code,
+            label: 'Repositorio GitHub',
+            selected: false,
+            onTap: () => onOpenExternal(_kLibreMielRepoUrl),
+          ),
+          _SidebarItem(
             icon: Icons.open_in_new,
             label: 'Abrir MIeL web',
             selected: false,
             onTap: () => onOpenExternal('$kMielBaseUrl/principal/interno/'),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

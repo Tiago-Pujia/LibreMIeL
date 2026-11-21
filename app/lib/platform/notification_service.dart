@@ -15,10 +15,10 @@ class NotificationService {
   bool _initialized = false;
 
   static const String _androidChannelId = 'libremiel_updates';
-  static const String _androidChannelName = 'Novedades de MIEL';
+  static const String _androidChannelName = 'Novedades de MIeL';
   static const String _androidChannelDesc =
-      'Avisos de Contenidos, Portafolio, Mensajería y Foros en MIEL (UNLaM)';
-  static const String _windowsAppUserModelId = 'LibreMIEL.UNLaM.Desktop.1';
+      'Avisos de Contenidos, Portafolio, Mensajería y Foros en MIeL (UNLaM)';
+  static const String _windowsAppUserModelId = 'LibreMIeL.UNLaM.Desktop.1';
   static const String _windowsGuid = '7c3a8d12-4b65-4e9a-9f11-84c0a5c8f310';
 
   Future<void> initialize() async {
@@ -31,9 +31,9 @@ class NotificationService {
         requestBadgePermission: true,
         requestSoundPermission: true,
       ),
-      linux: LinuxInitializationSettings(defaultActionName: 'Abrir en MIEL'),
+      linux: LinuxInitializationSettings(defaultActionName: 'Abrir en MIeL'),
       windows: WindowsInitializationSettings(
-        appName: 'LibreMIEL',
+        appName: 'LibreMIeL',
         appUserModelId: _windowsAppUserModelId,
         guid: _windowsGuid,
       ),

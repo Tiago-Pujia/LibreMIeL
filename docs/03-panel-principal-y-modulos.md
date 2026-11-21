@@ -8,7 +8,7 @@ El panel principal (`GET https://miel.unlam.edu.ar/principal/interno/`) es el pu
 
 El HTML renderizado del servidor incluye todas las comisiones asociadas al estudiante dentro de bloques `.materia-bloque`:
 
-- **Atributo clave:** `data-id="{idComision}"` (identificador numérico único de la comisión en MIEL).
+- **Atributo clave:** `data-id="{idComision}"` (identificador numérico único de la comisión en MIeL).
 - **Nombre de la materia:** `.materia-titulo` (ej. `<div class="w3-slarge materia-titulo">...</div>`).
 - **Código de comisión:** dentro del primer bloque `.w3-small` bajo el título (`Com: XX-XXXX`).
 - **Materias ocultas:** Permanecen en el DOM con clase `.materia-bloque-oculta` (y `w3-hide`, alternables en la web con `.btnMostrarOcultas` / `.btnOcultarOcultas`). El cliente debe distinguirlas para no consultar innecesariamente materias archivadas u ocultas por el estudiante.

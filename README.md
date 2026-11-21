@@ -1,8 +1,8 @@
-# LibreMIEL
+# LibreMIeL
 
-Alternativa **gratuita, libre y open source** para usar **MIEL** desde tus dispositivos, creada por y para estudiantes.
+Alternativa **gratuita, libre y open source** para usar **MIeL** desde tus dispositivos, creada por y para estudiantes.
 
-> **Aviso:** LibreMIEL es un proyecto independiente de la comunidad. No es una aplicación oficial ni está afiliado a la Universidad Nacional de La Matanza.
+> **Aviso:** LibreMIeL es un proyecto independiente de la comunidad. No es una aplicación oficial ni está afiliado a la Universidad Nacional de La Matanza.
 
 ---
 
@@ -14,7 +14,7 @@ Mejorar la experiencia diaria de cursada incorporando poco a poco funciones úti
 Enterarte a tiempo cuando un docente sube material en **Contenidos**, publica o corrige algo en **Portafolio**, envía un aviso por **Mensajería** o responde en los **Foros**, sin tener que entrar manualmente materia por materia.
 
 **Próximamente:**
-- **Enviar contenido desde LibreMIEL:** redactar y responder en **Mensajería**, subir entregas en **Portafolio** y participar en **Foros**.
+- **Enviar contenido desde LibreMIeL:** redactar y responder en **Mensajería**, subir entregas en **Portafolio** y participar en **Foros**.
 - Descargar **foros** completos por materia (basado en [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)) y **contenidos** organizados por carpeta.
 - **Sesión permanente:** iniciar sesión una vez y reconectarse automáticamente siempre, cerrando sesión solo cuando vos lo pidas.
 - **Buscador global offline** para encontrar archivos, mensajes, foros y entregas en todas tus materias sin conexión.

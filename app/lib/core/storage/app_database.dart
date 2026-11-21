@@ -72,7 +72,7 @@ class SnapshotEntries extends Table {
   Set<Column> get primaryKey => {idComision, module, itemId};
 }
 
-/// Historial local de notificaciones emitidas por LibreMIEL (Feed unificado).
+/// Historial local de notificaciones emitidas por LibreMIeL (Feed unificado).
 class NotificationLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get dedupeKey => text().unique()();

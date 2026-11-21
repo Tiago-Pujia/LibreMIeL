@@ -1,4 +1,4 @@
-# 02 — Arquitectura Interna, Autenticación y Sesión de MIEL
+# 02 — Arquitectura Interna, Autenticación y Sesión de MIeL
 
 > Relevamiento realizado sobre `https://miel.unlam.edu.ar/` — versión observada en assets/footer: **`2025.2.0`**.
 
@@ -57,18 +57,18 @@ Todas las páginas internas incluyen en su `<head>` dos utilidades globales que 
 
 ## 4. Cabeceras HTTP, CORS y Restricciones de Embebido
 
-- **CORS (`Access-Control-Allow-Origin`):** **Ausente.** MIEL opera bajo política *same-origin* estricta.
+- **CORS (`Access-Control-Allow-Origin`):** **Ausente.** MIeL opera bajo política *same-origin* estricta.
   - *Consecuencia arquitectónica:* Una SPA o PWA alojada en un dominio externo **no puede comunicarse directamente** con `miel.unlam.edu.ar` desde el navegador del usuario porque el navegador bloqueará las peticiones por CORS.
   - En cambio, un cliente con motor HTTP nativo fuera de un navegador web (aplicación de escritorio o app móvil nativa/multiplataforma) **no está sujeto a CORS** y gestiona las cookies directamente.
-- **Embebido en iframes:** `x-frame-options: SAMEORIGIN` (no se puede incrustar MIEL en un `<iframe>` desde otro origen).
+- **Embebido en iframes:** `x-frame-options: SAMEORIGIN` (no se puede incrustar MIeL en un `<iframe>` desde otro origen).
 - **Caché:** `cache-control: no-store, no-cache, must-revalidate` en rutas PHP dinámicas.
 - **CSP (`Content-Security-Policy`):** No se observó cabecera CSP activa.
 
 ---
 
-## 5. Estado Real del Sistema Web Push Nativo de MIEL
+## 5. Estado Real del Sistema Web Push Nativo de MIeL
 
-Durante la inspección se descubrió que MIEL posee infraestructura parcial de Web Push registrada en el frontend, pero con limitaciones que explican por qué no resuelve el problema actual de los estudiantes:
+Durante la inspección se descubrió que MIeL posee infraestructura parcial de Web Push registrada en el frontend, pero con limitaciones que explican por qué no resuelve el problema actual de los estudiantes:
 
 - Registra `https://miel.unlam.edu.ar/sw.js?2025.2.0` (Service Worker con listeners `push` y `notificationclick`) y carga `https://miel.unlam.edu.ar/vista/script/push-notifications.js?2025.2.0` con una clave VAPID (`pushKey`) y endpoints:
   - `POST /principal/event/guardarSuscripcionPush/`
@@ -87,10 +87,10 @@ Durante la inspección se descubrió que MIEL posee infraestructura parcial de W
 
 Del aviso legal publicado en `https://miel.unlam.edu.ar/principal/legal/` (última actualización observada: 18/05/2024):
 
-- El nombre, diseño visual y código de MIEL son propiedad / marca registrada de la **UNLaM**, prohibiéndose su reproducción, redistribución o explotación comercial.
+- El nombre, diseño visual y código de MIeL son propiedad / marca registrada de la **UNLaM**, prohibiéndose su reproducción, redistribución o explotación comercial.
 - Las interacciones entre usuarios (foros, mensajería, etc.) se depuran al finalizar cada cuatrimestre (materias cuatrimestrales) o al finalizar el año (materias anuales).
 
 **Buenas prácticas para este proyecto open source:**
-1. Desarrollar una **interfaz, íconos, estilos y branding 100% propios**, sin copiar ni redistribuir CSS, JS, imágenes o logotipos de MIEL/UNLaM.
+1. Desarrollar una **interfaz, íconos, estilos y branding 100% propios**, sin copiar ni redistribuir CSS, JS, imágenes o logotipos de MIeL/UNLaM.
 2. Dejar explícito en el proyecto que es una **herramienta independiente y no oficial**, gratuita y sin fines comerciales.
 3. Implementar consultas conservadoras (respetuosas con la infraestructura de la universidad) y no almacenar datos de terceros en servidores centrales.

@@ -106,13 +106,13 @@ jobs:
           mkdir -p ../dist/android
           flutter build apk --release --build-name="$VERSION"
           cp build/app/outputs/flutter-apk/app-release.apk \
-            "../dist/android/LibreMIEL-${VERSION}-android-universal.apk"
+            "../dist/android/LibreMIeL-${VERSION}-android-universal.apk"
 
           flutter build apk --release --split-per-abi --build-name="$VERSION"
           for abi in arm64-v8a armeabi-v7a x86_64; do
             src="build/app/outputs/flutter-apk/app-${abi}-release.apk"
             if [ -f "$src" ]; then
-              cp "$src" "../dist/android/LibreMIEL-${VERSION}-android-${abi}.apk"
+              cp "$src" "../dist/android/LibreMIeL-${VERSION}-android-${abi}.apk"
             fi
           done
 
@@ -170,7 +170,7 @@ jobs:
           VERSION="${{ needs.prepare.outputs.version }}"
           FARCH="${{ matrix.flutter_arch }}"
           mkdir -p "dist/linux-${FARCH}"
-          tar -czf "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${FARCH}-portable.tar.gz" \
+          tar -czf "dist/linux-${FARCH}/LibreMIeL-${VERSION}-linux-${FARCH}-portable.tar.gz" \
             -C "app/build/linux/${FARCH}/release/bundle" .
 
       - name: Instalar appimagetool (${{ matrix.linux_arch }}) y compilar AppImage
@@ -202,11 +202,11 @@ jobs:
           envsubst < packaging/linux/nfpm.yaml > /tmp/nfpm-resolved.yaml
 
           nfpm package -f /tmp/nfpm-resolved.yaml -p deb \
-            -t "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${DARCH}.deb"
+            -t "dist/linux-${FARCH}/LibreMIeL-${VERSION}-linux-${DARCH}.deb"
           nfpm package -f /tmp/nfpm-resolved.yaml -p rpm \
-            -t "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${LARCH}.rpm"
+            -t "dist/linux-${FARCH}/LibreMIeL-${VERSION}-linux-${LARCH}.rpm"
           nfpm package -f /tmp/nfpm-resolved.yaml -p archlinux \
-            -t "dist/linux-${FARCH}/LibreMIEL-${VERSION}-linux-${LARCH}.pkg.tar.zst"
+            -t "dist/linux-${FARCH}/LibreMIeL-${VERSION}-linux-${LARCH}.pkg.tar.zst"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -257,7 +257,7 @@ jobs:
           }
           New-Item -ItemType Directory -Force -Path "dist\windows-${arch}" | Out-Null
           Compress-Archive -Path "$releaseDir\*" `
-            -DestinationPath "dist\windows-${arch}\LibreMIEL-${ver}-windows-${arch}-portable.zip" -Force
+            -DestinationPath "dist\windows-${arch}\LibreMIeL-${ver}-windows-${arch}-portable.zip" -Force
 
       - name: Compilar Instalador Windows (.exe con Inno Setup)
         shell: pwsh
@@ -298,19 +298,19 @@ jobs:
       - name: Verificar Universal Binary (x86_64 + arm64) y empaquetar (.zip y .dmg)
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          APP_PATH="app/build/macos/Build/Products/Release/LibreMIEL.app"
-          lipo -info "$APP_PATH/Contents/MacOS/LibreMIEL"
+          APP_PATH="app/build/macos/Build/Products/Release/LibreMIeL.app"
+          lipo -info "$APP_PATH/Contents/MacOS/LibreMIeL"
           mkdir -p dist/macos dist/macos/dmg_root
 
           # Portable .zip (Universal x86_64 + arm64)
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" \
-            "dist/macos/LibreMIEL-${VERSION}-macos-universal-portable.zip"
+            "dist/macos/LibreMIeL-${VERSION}-macos-universal-portable.zip"
 
           # Instalador .dmg (Universal x86_64 + arm64)
           cp -R "$APP_PATH" dist/macos/dmg_root/
           ln -s /Applications dist/macos/dmg_root/Applications
-          hdiutil create -volname "LibreMIEL" -srcfolder dist/macos/dmg_root \
-            -ov -format UDZO "dist/macos/LibreMIEL-${VERSION}-macos-universal.dmg"
+          hdiutil create -volname "LibreMIeL" -srcfolder dist/macos/dmg_root \
+            -ov -format UDZO "dist/macos/LibreMIeL-${VERSION}-macos-universal.dmg"
           rm -rf dist/macos/dmg_root
 
       - uses: actions/upload-artifact@v4

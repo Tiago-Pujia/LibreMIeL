@@ -1,13 +1,13 @@
 # 01 — Proyecto Relacionado: ExtraerForosMiel
 
-Antes de iniciar **LibreMIEL**, se analizó el proyecto open source previo **[ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)**, que ya demostró en producción la viabilidad de autenticarse y extraer información estructurada de MIEL (UNLaM) mediante peticiones HTTP estándar, sin navegadores *headless*.
+Antes de iniciar **LibreMIeL**, se analizó el proyecto open source previo **[ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)**, que ya demostró en producción la viabilidad de autenticarse y extraer información estructurada de MIeL (UNLaM) mediante peticiones HTTP estándar, sin navegadores *headless*.
 
 ---
 
 ## 1. Resumen de [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)
 
 ### Propósito y enfoque
-Herramienta CLI en Node.js (CommonJS, sin dependencias externas) diseñada para iniciar sesión en MIEL, obtener el listado de comisiones inscriptas del estudiante, descargar hilos completos de los foros (`forov2`) junto con sus adjuntos binarios (PDFs, imágenes y documentos) y exportarlos a Markdown (`.md`), JSON estructurado (`.json`) y HTML offline (`.html`).
+Herramienta CLI en Node.js (CommonJS, sin dependencias externas) diseñada para iniciar sesión en MIeL, obtener el listado de comisiones inscriptas del estudiante, descargar hilos completos de los foros (`forov2`) junto con sus adjuntos binarios (PDFs, imágenes y documentos) y exportarlos a Markdown (`.md`), JSON estructurado (`.json`) y HTML offline (`.html`).
 
 ### Arquitectura y módulos clave
 - **`mielClient.js` (Cliente HTTP y gestión de sesión):**
@@ -28,15 +28,15 @@ Herramienta CLI en Node.js (CommonJS, sin dependencias externas) diseñada para 
 
 ---
 
-## 2. Lecciones Reutilizables para LibreMIEL (y Guía para Agentes IA)
+## 2. Lecciones Reutilizables para LibreMIeL (y Guía para Agentes IA)
 
-Cuando un desarrollador o agente IA diseñe el core de **LibreMIEL**, puede apoyarse en estas conclusiones ya validadas en [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel):
+Cuando un desarrollador o agente IA diseñe el core de **LibreMIeL**, puede apoyarse en estas conclusiones ya validadas en [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel):
 
-1. **Cliente HTTP nativo > Navegador headless:** No hace falta automatizar Chromium/Puppeteer para interactuar con MIEL; un cliente HTTP con *cookie jar* y seguimiento de redirecciones es órdenes de magnitud más liviano y portable a escritorio y Android.
-2. **Parser DOM real recomendado:** En `ExtraerForosMiel` el parsing se hizo con expresiones regulares por su restricción de cero dependencias. En **LibreMIEL** conviene usar un **parser DOM real** (ej. `html` en Dart, `cheerio`/`linkedom` en TS, `jsoup`/`ksoup` en Kotlin) para mayor resistencia ante cambios menores de atributos o espacios en las plantillas PHP de MIEL.
+1. **Cliente HTTP nativo > Navegador headless:** No hace falta automatizar Chromium/Puppeteer para interactuar con MIeL; un cliente HTTP con *cookie jar* y seguimiento de redirecciones es órdenes de magnitud más liviano y portable a escritorio y Android.
+2. **Parser DOM real recomendado:** En `ExtraerForosMiel` el parsing se hizo con expresiones regulares por su restricción de cero dependencias. En **LibreMIeL** conviene usar un **parser DOM real** (ej. `html` en Dart, `cheerio`/`linkedom` en TS, `jsoup`/`ksoup` en Kotlin) para mayor resistencia ante cambios menores de atributos o espacios en las plantillas PHP de MIeL.
 3. **Descarga autenticada de binarios:** Todos los adjuntos de foros y contenidos requieren reutilizar exactamente la misma sesión (`PHPSESSID` + `SESSID`).
 4. **Sanitización multiplataforma:** Mantener sanitización estricta de nombres al guardar archivos descargados en Windows, macOS, Linux y Android.
-5. **Peticiones conservadoras:** Respetar ejecución secuencial (o concurrencia muy baja) para no sobrecargar los nodos de MIEL.
+5. **Peticiones conservadoras:** Respetar ejecución secuencial (o concurrencia muy baja) para no sobrecargar los nodos de MIeL.
 
 ---
 
@@ -45,4 +45,4 @@ Cuando un desarrollador o agente IA diseñe el core de **LibreMIEL**, puede apoy
 `ExtraerForosMiel` cubría únicamente login básico, listado de materias y descarga estática de foros. Los documentos `02` a `05` amplían esa base con el relevamiento completo de:
 - **Contenidos**, **Portafolio**, **Mensajería** y módulos adicionales (`Evaluación`, `Autoguía`, `Encuestas`, `Chat`, `Calendario`, `Novedades`).
 - **Badges en `/principal/interno/`** y los **efectos colaterales de lectura** de cada endpoint.
-- **Endpoints AJAX/JSON del foro**, verificación/renovación de sesión, restricciones CORS y estrategia para notificaciones y futuras funcionalidades de **LibreMIEL**.
+- **Endpoints AJAX/JSON del foro**, verificación/renovación de sesión, restricciones CORS y estrategia para notificaciones y futuras funcionalidades de **LibreMIeL**.

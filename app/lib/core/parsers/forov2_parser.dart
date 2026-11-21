@@ -4,7 +4,7 @@ import '../models/miel_models.dart';
 import 'text_normalizer.dart';
 
 /// Parser puro del listado de temas `GET /forov2/temas/comision/{idComision}`.
-/// Este endpoint es de solo lectura y no altera los badges de no leídos en MIEL.
+/// Este endpoint es de solo lectura y no altera los badges de no leídos en MIeL.
 List<ForumTopicSummary> parseForoTemasHtml(String rawHtml, String idComision) {
   final doc = html_parser.parse(rawHtml);
   final topics = <ForumTopicSummary>[];

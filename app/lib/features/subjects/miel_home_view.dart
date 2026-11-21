@@ -41,7 +41,7 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
     );
   }
 
-  /// Campana de LibreMIEL junto a los 3 puntitos: configuración de notificaciones por materia/módulo.
+  /// Campana de LibreMIeL junto a los 3 puntitos: configuración de notificaciones por materia/módulo.
   void _openSubjectAlerts(Subject subject) {
     showDialog<void>(
       context: context,
@@ -137,7 +137,7 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                   ),
                 ],
 
-                // Aviso compacto de novedades sin leer (adaptación LibreMIEL)
+                // Aviso compacto de novedades sin leer (adaptación LibreMIeL)
                 if (unreadCount > 0) ...[
                   const SizedBox(height: 12),
                   ClipRRect(
@@ -170,8 +170,8 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                               Expanded(
                                 child: Text(
                                   unreadCount == 1
-                                      ? 'Tenés 1 novedad nueva detectada por LibreMIEL.'
-                                      : 'Tenés $unreadCount novedades nuevas detectadas por LibreMIEL.',
+                                      ? 'Tenés 1 novedad nueva detectada por LibreMIeL.'
+                                      : 'Tenés $unreadCount novedades nuevas detectadas por LibreMIeL.',
                                   style: TextStyle(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w500,
@@ -377,7 +377,7 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                 Divider(color: palette.divider, height: 1),
                 const SizedBox(height: 16),
                 Text(
-                  'LibreMIEL · Cliente libre y no oficial (Licencia MIT) para MIeL UNLaM',
+                  'LibreMIeL · Cliente libre y no oficial (Licencia MIT) para MIeL UNLaM',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13.5, color: palette.textMuted),
                 ),
@@ -684,7 +684,7 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
       );
     }
 
-    // Modo normal: campana de notificaciones de LibreMIEL al lado de los 3 puntitos (Ver detalle de MIeL)
+    // Modo normal: campana de notificaciones de LibreMIeL al lado de los 3 puntitos (Ver detalle de MIeL)
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

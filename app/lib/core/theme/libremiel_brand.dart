@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Emblema de LibreMIEL usando la imagen personalizada (`assets/icons/libremiel.png`).
+/// Emblema de LibreMIeL usando la imagen personalizada (`assets/icons/libremiel.png`).
 class LibreMielMark extends StatelessWidget {
   const LibreMielMark({
     super.key,
@@ -36,7 +36,7 @@ class LibreMielMark extends StatelessWidget {
         if (showWordmark) ...[
           const SizedBox(width: 9),
           Text(
-            'LibreMIEL',
+            'LibreMIeL',
             style: TextStyle(
               fontSize: size * 0.56,
               fontWeight: FontWeight.w700,

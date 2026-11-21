@@ -35,7 +35,7 @@ bool isLikelyLoginRedirectHtml(String html) {
           html.contains('name="clave"'));
 }
 
-/// Contrato abstracto de acceso HTTP de solo lectura a MIEL para `SyncEngine`.
+/// Contrato abstracto de acceso HTTP de solo lectura a MIeL para `SyncEngine`.
 ///
 /// Nota de diseño: intencionalmente NO expone `/mensajeria/verEntrada/...`
 /// para impedir que el motor de sincronización marque mensajes como leídos.
@@ -110,7 +110,7 @@ abstract class MielInteractiveReader implements MielApiClient {
   });
 }
 
-/// Cliente HTTP nativo de LibreMIEL basado en `Dio` + `CookieJar`.
+/// Cliente HTTP nativo de LibreMIeL basado en `Dio` + `CookieJar`.
 ///
 /// - Mantiene `PHPSESSID` y `SESSID` (afinidad de nodo).
 /// - Ejecuta peticiones de forma secuencial para no sobrecargar los servidores de UNLaM.
@@ -132,7 +132,7 @@ class DioMielClient implements MielInteractiveReader {
                maxRedirects: 5,
                responseType: ResponseType.plain,
                headers: const {
-                 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LibreMIEL/0.2',
+                 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LibreMIeL/0.2',
                  'Accept-Language': 'es-AR,es;q=0.9',
                },
                validateStatus: (status) => status != null && status < 500,
@@ -257,14 +257,14 @@ class DioMielClient implements MielInteractiveReader {
           if (parsed is! Map<String, dynamic>) {
             return const MielLoginResult(
               status: MielAuthStatus.invalidResponse,
-              message: 'Respuesta inesperada del servidor de MIEL.',
+              message: 'Respuesta inesperada del servidor de MIeL.',
             );
           }
           decoded = parsed;
         } catch (_) {
           return const MielLoginResult(
             status: MielAuthStatus.invalidResponse,
-            message: 'No se pudo interpretar la respuesta de login de MIEL.',
+            message: 'No se pudo interpretar la respuesta de login de MIeL.',
           );
         }
 
@@ -280,13 +280,13 @@ class DioMielClient implements MielInteractiveReader {
             return MielLoginResult(
               status: MielAuthStatus.invalidCredentials,
               rawCode: estado,
-              message: 'Usuario o contraseña incorrectos en MIEL.',
+              message: 'Usuario o contraseña incorrectos en MIeL.',
             );
           case 3:
             return const MielLoginResult(
               status: MielAuthStatus.accountBlocked,
               rawCode: 3,
-              message: 'Tu cuenta de MIEL figura bloqueada (estado 3).',
+              message: 'Tu cuenta de MIeL figura bloqueada (estado 3).',
             );
           default:
             return MielLoginResult(
@@ -299,7 +299,7 @@ class DioMielClient implements MielInteractiveReader {
         return MielLoginResult(
           status: MielAuthStatus.networkError,
           message:
-              'Error de red al conectar con MIEL: ${e.message ?? e.type.name}',
+              'Error de red al conectar con MIeL: ${e.message ?? e.type.name}',
         );
       }
     });
@@ -354,7 +354,7 @@ class DioMielClient implements MielInteractiveReader {
       final status = response.statusCode ?? 0;
       if (status < 200 || status >= 400) {
         throw HttpException(
-          'MIEL respondió HTTP $status al consultar $normalized',
+          'MIeL respondió HTTP $status al consultar $normalized',
         );
       }
       return response.data ?? '';
@@ -558,7 +558,7 @@ class DioMielClient implements MielInteractiveReader {
       final status = response.statusCode ?? 0;
       if (status < 200 || status >= 400 || response.data == null) {
         throw HttpException(
-          'MIEL respondió HTTP $status al descargar $normalized',
+          'MIeL respondió HTTP $status al descargar $normalized',
         );
       }
 

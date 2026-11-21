@@ -6,7 +6,7 @@ import 'text_normalizer.dart';
 /// Parser puro de la bandeja `GET /mensajeria/entrada/comision/{idComision}`.
 ///
 /// Opera exclusivamente sobre el listado (no requiere abrir `/verEntrada/...`),
-/// preservando el estado "no leído" del estudiante en MIEL web.
+/// preservando el estado "no leído" del estudiante en MIeL web.
 List<InboxMessageSummary> parseMensajeriaEntradaHtml(
   String rawHtml,
   String idComision,
@@ -323,7 +323,7 @@ bool isSenderTeacher(
   return false;
 }
 
-/// Detecta los mensajes automáticos generados por MIEL al corregir una entrega en Portafolio.
+/// Detecta los mensajes automáticos generados por MIeL al corregir una entrega en Portafolio.
 bool isPortfolioCorrectionMessage(InboxMessageSummary message) {
   final norm = normalizeText(message.subject);
   return norm == 'correccion' || norm.startsWith('correccion ');

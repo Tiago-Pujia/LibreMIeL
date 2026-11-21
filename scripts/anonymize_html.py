@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Anonimizador de capturas HTML de MIEL para reportes y fixtures de LibreMIEL.
+"""Anonimizador de capturas HTML de MIeL para reportes y fixtures de LibreMIeL.
 
 Elimina datos personales (DNIs, nombres, correos, teléfonos, cookies, tokens y
 cuerpos privados de mensajes/observaciones) preservando intactas las etiquetas,
 clases CSS, estructura de tablas y atributos `data-*` necesarios para depurar
-y testear los parsers de LibreMIEL.
+y testear los parsers de LibreMIeL.
 
 Uso:
     python3 scripts/anonymize_html.py entrada.html -o salida_anonimizada.html
@@ -21,7 +21,7 @@ from typing import Dict, Iterable, List
 
 
 class Anonymizer:
-    """Reemplaza PII en HTML de MIEL de manera determinista y consistente."""
+    """Reemplaza PII en HTML de MIeL de manera determinista y consistente."""
 
     def __init__(self, extra_terms: Iterable[str] = ()) -> None:
         self._person_map: Dict[str, str] = {}
@@ -220,7 +220,7 @@ class Anonymizer:
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Anonimiza capturas HTML de MIEL para usarlas en reportes o tests de LibreMIEL."
+        description="Anonimiza capturas HTML de MIeL para usarlas en reportes o tests de LibreMIeL."
     )
     parser.add_argument("input", type=Path, help="Ruta al archivo HTML original.")
     parser.add_argument(

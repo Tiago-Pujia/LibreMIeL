@@ -1,6 +1,6 @@
-# Flujo de Trabajo y Uso de Ramas Git — LibreMIEL
+# Flujo de Trabajo y Uso de Ramas Git — LibreMIeL
 
-Esta guía explica de forma simple cómo organizar las ramas, los commits y los lanzamientos (*releases*) en **LibreMIEL** usando un modelo liviano basado en **GitHub Flow + tags semánticos**.
+Esta guía explica de forma simple cómo organizar las ramas, los commits y los lanzamientos (*releases*) en **LibreMIeL** usando un modelo liviano basado en **GitHub Flow + tags semánticos**.
 
 ---
 
@@ -10,7 +10,7 @@ Esta guía explica de forma simple cómo organizar las ramas, los commits y los 
 | :--- | :--- | :---: |
 | `main` | Rama principal y **siempre estable**. Todo lo que entra acá debe compilar y pasar `flutter analyze` + `flutter test`. Desde `main` se crean los tags de Release (`v0.1.0`, `v0.2.0`, etc.). | No |
 | `feat/<nombre>` | Desarrollo de una nueva funcionalidad (ej. `feat/lector-contenidos`, `feat/notificaciones-portafolio`). | Sí |
-| `fix/<nombre>` | Corrección de un error o ajuste cuando MIEL cambia algún selector HTML (ej. `fix/parser-forov2-fechas`). | Sí |
+| `fix/<nombre>` | Corrección de un error o ajuste cuando MIeL cambia algún selector HTML (ej. `fix/parser-forov2-fechas`). | Sí |
 | `docs/<nombre>` | Cambios únicamente en documentación (ej. `docs/actualizar-status`). | Sí |
 | `refactor/<nombre>` | Mejoras internas de código sin cambiar el comportamiento externo. | Sí |
 | `chore/<nombre>` | Mantenimiento, dependencias, CI/CD o empaquetado (ej. `chore/actualizar-nfpm`). | Sí |

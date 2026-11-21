@@ -18,7 +18,7 @@ case "$FLUTTER_ARCH" in
 esac
 
 BUNDLE_DIR="app/build/linux/${FLUTTER_ARCH}/release/bundle"
-APPDIR="build/appimage/LibreMIEL-${FLUTTER_ARCH}.AppDir"
+APPDIR="build/appimage/LibreMIeL-${FLUTTER_ARCH}.AppDir"
 OUT_DIR="dist/linux-${FLUTTER_ARCH}"
 
 if [ ! -d "$BUNDLE_DIR" ]; then
@@ -47,4 +47,4 @@ EOF
 chmod +x "$APPDIR/AppRun"
 
 ARCH="$APPIMAGE_ARCH" appimagetool --appimage-extract-and-run "$APPDIR" \
-  "$OUT_DIR/LibreMIEL-${VERSION}-linux-${FLUTTER_ARCH}.AppImage"
+  "$OUT_DIR/LibreMIeL-${VERSION}-linux-${FLUTTER_ARCH}.AppImage"

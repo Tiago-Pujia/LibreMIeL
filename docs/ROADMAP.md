@@ -1,6 +1,6 @@
-# Roadmap — Próximas Fases de LibreMIEL
+# Roadmap — Próximas Fases de LibreMIeL
 
-Este documento describe en detalle las próximas fases planificadas para **LibreMIEL** a partir de la base ya completada (**Fase 0 — Core**, **Fase 1 — MVP de Notificaciones** y **Fase 2 — Lectura Nativa**).
+Este documento describe en detalle las próximas fases planificadas para **LibreMIeL** a partir de la base ya completada (**Fase 0 — Core**, **Fase 1 — MVP de Notificaciones** y **Fase 2 — Lectura Nativa**).
 
 > Ver el tablero de avance actual en [`STATUS.md`](STATUS.md) y las reglas técnicas invariantes en [`AGENTS.md`](AGENTS.md).
 
@@ -23,7 +23,7 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 
 ## Fase 3 — Escritura y Envío de Contenido en MIeL
 
-**Objetivo:** Pasar de un cliente de solo lectura a un cliente completo donde el estudiante pueda redactar, responder y subir entregas directamente desde LibreMIEL sin tener que abrir el navegador.
+**Objetivo:** Pasar de un cliente de solo lectura a un cliente completo donde el estudiante pueda redactar, responder y subir entregas directamente desde LibreMIeL sin tener que abrir el navegador.
 
 ### Alcance por módulo
 - **Mensajería:**
@@ -66,7 +66,7 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 
 ## Fase 5 — Sesión Permanente
 
-**Objetivo:** Que el estudiante inicie sesión una sola vez y LibreMIEL mantenga la sesión permanentemente activa en cada apertura y durante todo el uso, cerrando sesión **únicamente** cuando el usuario presione explícitamente **Cerrar sesión**.
+**Objetivo:** Que el estudiante inicie sesión una sola vez y LibreMIeL mantenga la sesión permanentemente activa en cada apertura y durante todo el uso, cerrando sesión **únicamente** cuando el usuario presione explícitamente **Cerrar sesión**.
 
 ### Comportamiento esperado
 - **Inicio automático siempre activo:** una vez autenticado con éxito, la app persiste las credenciales localmente y entra directo al panel de materias al abrirse (sin pedir login de nuevo tras reinicios, cierres o actualizaciones de la app).
@@ -79,7 +79,7 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 - **Opción recomendada por defecto (segura):** almacenar la credencial en el llavero nativo del sistema operativo (`Android Keystore`, `Windows Credential Manager`, `macOS Keychain`, `Linux libsecret`) con *fallback* automático a archivo local cifrado/protegido (`chmod 600`) en el directorio privado de soporte de la app.
 - **Soporte de archivo local tipo `.env` (consideraciones):**
   - Si se incorpora persistencia en un archivo `.env` local dedicado para garantizar portabilidad o configuración directa, debe guardarse **exclusivamente** en el directorio privado de datos de la aplicación del usuario (nunca dentro del repositorio ni en carpetas sincronizadas como Google Drive/OneDrive), con permisos `0600` (solo propietario) y, preferentemente, cifrado en reposo o advirtiendo claramente si se almacena en texto plano.
-- **Invariante anti-bloqueo (`estado: 1, 2, 3`):** si el usuario cambia su contraseña en MIeL web y el re-login automático recibe `estado != 0`, LibreMIEL debe **detener inmediatamente los reintentos** para evitar bloquear la cuenta (`estado: 3`) y mostrar un aviso puntual para actualizar la clave, sin borrar las materias ni el archivo offline local.
+- **Invariante anti-bloqueo (`estado: 1, 2, 3`):** si el usuario cambia su contraseña en MIeL web y el re-login automático recibe `estado != 0`, LibreMIeL debe **detener inmediatamente los reintentos** para evitar bloquear la cuenta (`estado: 3`) y mostrar un aviso puntual para actualizar la clave, sin borrar las materias ni el archivo offline local.
 
 ---
 

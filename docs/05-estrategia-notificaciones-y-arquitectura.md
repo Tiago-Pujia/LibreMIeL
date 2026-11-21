@@ -1,6 +1,6 @@
-# 05 — Estrategia de Notificaciones y Arquitectura Multiplataforma (LibreMIEL)
+# 05 — Estrategia de Notificaciones y Arquitectura Multiplataforma (LibreMIeL)
 
-Este documento sintetiza las decisiones técnicas recomendadas para construir **LibreMIEL** como un cliente alternativo **gratuito, open source y multiplataforma** (Windows, macOS, Linux y Android).
+Este documento sintetiza las decisiones técnicas recomendadas para construir **LibreMIeL** como un cliente alternativo **gratuito, open source y multiplataforma** (Windows, macOS, Linux y Android).
 
 > **Visión evolutiva para colaboradores e IAs:**  
 > Las **notificaciones** (Contenidos, Portafolio, Mensajería y Foros) constituyen el **primer hito funcional**, pero la arquitectura debe ser modular y extensible para incorporar progresivamente otras capacidades (navegación cómoda de materias, descarga organizada de apuntes, lectura/respuesta en foros y mensajería, recordatorios de vencimientos, etc.).
@@ -9,14 +9,14 @@ Este documento sintetiza las decisiones técnicas recomendadas para construir **
 
 ## 1. Motor de Sincronización en Dos Ciclos (Mínima Carga y Máxima Precisión)
 
-Dado que MIEL no ofrece WebSockets ni SSE, el motor debe basarse en **polling inteligente + comparación contra estado local (*snapshots*)**, estructurado en dos frecuencias para no sobrecargar los servidores de la UNLaM ni consumir batería innecesariamente:
+Dado que MIeL no ofrece WebSockets ni SSE, el motor debe basarse en **polling inteligente + comparación contra estado local (*snapshots*)**, estructurado en dos frecuencias para no sobrecargar los servidores de la UNLaM ni consumir batería innecesariamente:
 
 ### Ciclo 1 — Sondeo Principal (cada ~15 min en Android / 5–15 min en Escritorio)
 1. **Validar sesión:** `GET /principal/event/isLogged/`. Si no devuelve `"1"`, re-autenticar transparentemente con `POST /principal/event/login/` (conservando `PHPSESSID` y `SESSID`).
 2. **Lectura única del panel:** `GET /principal/interno/` (solo lectura, sin efectos colaterales).
    - Filtrar materias activas (ignorando `.materia-bloque-oculta` y materias silenciadas por el usuario).
 3. **Actuar únicamente donde hubo badge `> 0`:**
-   - **Contenidos (`badge > 0`):** Hacer 1 `GET /contenido/archivos/comision/{id}`. Extraer las filas con `w3-pale-yellow` y comparar `{idElemento}` contra el snapshot local. Emitir notificación con título del archivo, carpeta y materia, y guardar en el historial de notificaciones local *(ya que MIEL limpiará el badge al entregar la página)*.
+   - **Contenidos (`badge > 0`):** Hacer 1 `GET /contenido/archivos/comision/{id}`. Extraer las filas con `w3-pale-yellow` y comparar `{idElemento}` contra el snapshot local. Emitir notificación con título del archivo, carpeta y materia, y guardar en el historial de notificaciones local *(ya que MIeL limpiará el badge al entregar la página)*.
    - **Mensajería (`badge > 0`):** Hacer `GET /mensajeria/entrada/comision/{id}` (**nunca** `verEntrada`). Detectar `tr.mensaje-no-leido` cuyo `data-id` no haya sido notificado aún. Identificar si el remitente es docente cruzándolo contra la lista cacheada de `/principal/cursoDetalles/id/{id}`. Si el asunto es `"Corrección"`, disparar además una actualización inmediata de **Portafolio** para traer los detalles de la devolución.
    - **Foros (`badge > 0`):** Hacer `GET /forov2/temas/comision/{id}` (no borra badges). Detectar temas cuyo `badge > 0` o cuya fecha de `Último mensaje` / `cantidadMensajes` haya cambiado.
      - *Modo no invasivo:* notificar actividad nueva en el tema sin abrir `/forov2/mensajes/...`.
@@ -35,7 +35,7 @@ Para módulos que **no emiten badge** en `/principal/interno/`:
 
 ## 2. Reglas de Seguridad, Privacidad y Modelo *Local-First*
 
-Para que **LibreMIEL** sea confiable y sostenible como software libre sin costos de infraestructura:
+Para que **LibreMIeL** sea confiable y sostenible como software libre sin costos de infraestructura:
 
 - **Sin servidor central propio:** Cada dispositivo se conecta directamente a `https://miel.unlam.edu.ar/`. Ningún tercero recibe ni almacena el DNI, la contraseña ni las sesiones de los estudiantes.
 - **Almacenamiento seguro de credenciales por sistema operativo:**
@@ -45,16 +45,16 @@ Para que **LibreMIEL** sea confiable y sostenible como software libre sin costos
   - **Linux:** Secret Service API (`libsecret` / GNOME Keyring / KWallet).
 - **Respeto por los servidores de UNLaM:**
   - Peticiones secuenciales (o concurrencia máxima de 2) por ciclo de sincronización.
-  - Backoff exponencial ante errores `5xx`, timeouts o caídas temporales de MIEL.
+  - Backoff exponencial ante errores `5xx`, timeouts o caídas temporales de MIeL.
   - Detener reintentos automáticos inmediatamente si el login devuelve `estado: 1`, `2` (clave cambiada/incorrecta) o `3` (usuario bloqueado), avisando al usuario para evitar bloqueos de cuenta.
 
 ---
 
 ## 3. Elección Tecnológica para Escritorio + Android (Superando CORS)
 
-Como MIEL **no envía cabeceras CORS** (`Access-Control-Allow-Origin` ausente) y bloquea iframes (`x-frame-options: SAMEORIGIN`), queda descartada una Web App / PWA pura en navegador. El cliente **debe ejecutar sus peticiones HTTP de forma nativa** fuera de las restricciones CORS de un browser.
+Como MIeL **no envía cabeceras CORS** (`Access-Control-Allow-Origin` ausente) y bloquea iframes (`x-frame-options: SAMEORIGIN`), queda descartada una Web App / PWA pura en navegador. El cliente **debe ejecutar sus peticiones HTTP de forma nativa** fuera de las restricciones CORS de un browser.
 
-> **Decisión adoptada:** **LibreMIEL está implementado en Flutter (Dart)** (en `app/`), manteniendo la tabla comparativa debajo como registro de la decisión arquitectónica.
+> **Decisión adoptada:** **LibreMIeL está implementado en Flutter (Dart)** (en `app/`), manteniendo la tabla comparativa debajo como registro de la decisión arquitectónica.
 
 | Opción | Plataformas | Ventajas | Consideraciones |
 | :--- | :--- | :--- | :--- |
@@ -73,9 +73,9 @@ Como MIEL **no envía cabeceras CORS** (`Access-Control-Allow-Origin` ausente) y
 
 ## 5. Estrategia de Mantenibilidad y Guía de Implementación para IAs
 
-Dado que la plataforma renderiza HTML server-side sin una API REST pública oficial, la implementación de **LibreMIEL** sigue esta separación de capas:
+Dado que la plataforma renderiza HTML server-side sin una API REST pública oficial, la implementación de **LibreMIeL** sigue esta separación de capas:
 
 1. **Capa de red desacoplada (`MielApiClient` y `MielInteractiveReader`):** Manejo centralizado de `PHPSESSID` + `SESSID`, reseteo limpio de `CookieJar` en cada login, redirecciones, re-login transparente ante sesión vencida y control de tasa/backoff. El polling de fondo (`SyncEngine`) solo consume `MielApiClient`, mientras que la lectura interactiva y descargas autenticadas de archivos/avatares pasan por `MielInteractiveReader`.
 2. **Capa de *Adapters / Parsers* (`MielParsers`):** Un módulo independiente por sección (`interno`, `contenidos`, `portafolio`, `mensajeria`, `forov2`, `evaluacion`, `encuestas`, `autoguia`), desacoplado de la interfaz y validado con pruebas unitarias sobre *fixtures* HTML anonimizados.
 3. **Capa de estado local, diff y aislamiento multi-cuenta (`SyncEngine` / `AppDatabase`):** Persistencia local SQLite (`Drift`) de snapshots por comisión, historial de notificaciones, configuración por materia, poda de comisiones inactivas (`pruneSubjectsNotIn`) y limpieza automática por cuenta (`clearAccountData` + `sessionGenerationProvider`) cuando cambia el usuario autenticado.
-4. **Detección defensiva de cambios en MIEL:** Si un parser espera estructuras conocidas (ej. `.materia-bloque` o `table.w3-table`) y recibe un HTML distinto tras una actualización de MIEL (`2025.2.0` → futuras versiones), emitir una alerta controlada de *"formato de MIEL modificado"* en lugar de corromper snapshots o disparar falsas notificaciones masivas.
+4. **Detección defensiva de cambios en MIeL:** Si un parser espera estructuras conocidas (ej. `.materia-bloque` o `table.w3-table`) y recibe un HTML distinto tras una actualización de MIeL (`2025.2.0` → futuras versiones), emitir una alerta controlada de *"formato de MIeL modificado"* en lugar de corromper snapshots o disparar falsas notificaciones masivas.

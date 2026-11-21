@@ -19,7 +19,7 @@ class LibreMielApp extends ConsumerWidget {
     final session = ref.watch(appSessionProvider);
 
     return MaterialApp(
-      title: 'LibreMIEL',
+      title: 'LibreMIeL',
       debugShowCheckedModeBanner: false,
       themeMode: session.themeMode,
       theme: buildMielLightTheme(),

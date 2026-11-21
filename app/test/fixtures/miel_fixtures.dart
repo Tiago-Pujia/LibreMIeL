@@ -1,4 +1,4 @@
-/// Fixtures HTML 100% anonimizados replicando la estructura real de MIEL (2025.2.0).
+/// Fixtures HTML 100% anonimizados replicando la estructura real de MIeL (2025.2.0).
 library;
 
 const String fixtureInternoSinBadges = '''

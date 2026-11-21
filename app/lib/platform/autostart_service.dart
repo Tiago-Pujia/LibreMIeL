@@ -8,7 +8,7 @@ typedef ProcessRunner = Future<ProcessResult> Function(
   List<String> arguments,
 );
 
-/// Gestiona el inicio automático de LibreMIEL al encender el sistema en escritorio
+/// Gestiona el inicio automático de LibreMIeL al encender el sistema en escritorio
 /// (Linux XDG Autostart, Windows HKCU Run y macOS LaunchAgents).
 class AutostartService {
   AutostartService({
@@ -21,7 +21,7 @@ class AutostartService {
   static const String _desktopEntryId = 'io.github.tiago_pujia.libremiel';
   static const String _windowsRegKey =
       r'HKCU\Software\Microsoft\Windows\CurrentVersion\Run';
-  static const String _windowsValueName = 'LibreMIEL';
+  static const String _windowsValueName = 'LibreMIeL';
 
   final String? linuxConfigHome;
   final String? macOsHome;
@@ -101,7 +101,7 @@ class AutostartService {
           '[Desktop Entry]\n'
           'Type=Application\n'
           'Version=1.0\n'
-          'Name=LibreMIEL\n'
+          'Name=LibreMIeL\n'
           'Comment=Cliente libre para MIeL (UNLaM)\n'
           'Exec=$quotedExec\n'
           'Icon=$_desktopEntryId\n'

@@ -1,4 +1,4 @@
-; Script de Inno Setup para generar el instalador de Windows (.exe) de LibreMIEL (x64 y arm64)
+; Script de Inno Setup para generar el instalador de Windows (.exe) de LibreMIeL (x64 y arm64)
 ; Compilación:
 ;   iscc /DAppVersion=0.1.0 /DAppArch=x64   packaging\windows\installer.iss
 ;   iscc /DAppVersion=0.1.0 /DAppArch=arm64 packaging\windows\installer.iss
@@ -19,9 +19,9 @@
   #define SetupArch64Bit "x64compatible"
 #endif
 
-#define AppName "LibreMIEL"
-#define AppPublisher "LibreMIEL Contributors"
-#define AppURL "https://github.com/Tiago-Pujia/LibreMIEL"
+#define AppName "LibreMIeL"
+#define AppPublisher "LibreMIeL Contributors"
+#define AppURL "https://github.com/Tiago-Pujia/LibreMIeL"
 #define AppExeName "libremiel.exe"
 
 [Setup]
@@ -36,7 +36,7 @@ DefaultGroupName={#AppName}
 AllowNoIcons=yes
 LicenseFile=..\..\LICENSE
 OutputDir=..\..\dist\windows-{#AppArch}
-OutputBaseFilename=LibreMIEL-{#AppVersion}-windows-{#AppArch}-setup
+OutputBaseFilename=LibreMIeL-{#AppVersion}-windows-{#AppArch}-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -51,7 +51,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "startup"; Description: "Iniciar LibreMIEL automáticamente con Windows"; GroupDescription: "Opciones adicionales:"; Flags: unchecked
+Name: "startup"; Description: "Iniciar LibreMIeL automáticamente con Windows"; GroupDescription: "Opciones adicionales:"; Flags: unchecked
 
 [Files]
 Source: "..\..\app\build\windows\{#AppArch}\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
