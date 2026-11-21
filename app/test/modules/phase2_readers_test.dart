@@ -13,6 +13,7 @@ import 'package:libremiel/core/theme/miel_theme.dart';
 import 'package:libremiel/features/modules/contenidos_view.dart';
 import 'package:libremiel/features/modules/foro_view.dart';
 import 'package:libremiel/features/modules/mensajeria_view.dart';
+import 'package:libremiel/features/modules/module_sections.dart';
 import 'package:libremiel/features/modules/portafolio_view.dart';
 import 'package:libremiel/features/modules/secondary_modules_view.dart';
 import 'package:material_ui/material_ui.dart';
@@ -80,7 +81,7 @@ class _FakeInteractiveReader implements MielInteractiveReader {
 
   @override
   Future<String> fetchPortafolioArchivosEnviadosHtml(String idComision) async =>
-      '<p>Aún no ha enviado ningún archivo.</p>';
+      fixturePortafolioArchivosEnviados;
 
   @override
   Future<String> fetchPortafolioGruposHtml(String idComision) async =>
@@ -214,6 +215,16 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
+      expect(mielSectionsForTool(MielToolKind.contenidos).map((s) => s.label), [
+        'Archivos',
+      ]);
+      expect(mielSectionsForTool(MielToolKind.portafolio).map((s) => s.label), [
+        'Prácticas',
+        'Archivos enviados',
+        'Mis grupos',
+        'Asistencia, notas y cert.',
+      ]);
+
       final (db, subject) = await createTestSubject();
       final fakeReader = _FakeInteractiveReader();
 
@@ -264,7 +275,7 @@ void main() {
   );
 
   testWidgets(
-    'PortafolioView renderiza tabla de Prácticas, navega a Entrega de prácticas y muestra Asistencia',
+    'PortafolioView renderiza tabla de Prácticas, Archivos enviados con cabecera, Entrega de prácticas y Asistencia',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 840);
       tester.view.devicePixelRatio = 1.0;
@@ -286,6 +297,10 @@ void main() {
               home: Scaffold(
                 appBar: AppBar(
                   actions: [
+                    TextButton(
+                      onPressed: () => setHostState(() => activeTab = 1),
+                      child: const Text('Ir a Enviados'),
+                    ),
                     TextButton(
                       onPressed: () => setHostState(() => activeTab = 3),
                       child: const Text('Ir a Notas'),
@@ -312,6 +327,18 @@ void main() {
       expect(find.text('Excelente resolución.'), findsOneWidget);
       expect(find.text('1º ENTREGA'), findsOneWidget);
       expect(find.text('Entrega-Grupo-Demo.pdf'), findsOneWidget);
+
+      // Cambiar a pestaña 1: Archivos enviados con cabecera de tabla oficial
+      await tester.tap(find.text('Ir a Enviados'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Prácticas: Archivos enviados'), findsOneWidget);
+      expect(find.text('Archivo o enlace enviado'), findsOneWidget);
+      expect(find.text('Fecha y hora'), findsOneWidget);
+      expect(find.text('Tamaño'), findsOneWidget);
+      expect(find.text('Descargar'), findsOneWidget);
+      expect(find.text('Entrega-Grupo-Demo.pdf'), findsOneWidget);
+      expect(find.text('6.562 KB'), findsOneWidget);
 
       // Cambiar a pestaña 3: Asistencia, notas y certificados
       await tester.tap(find.text('Ir a Notas'));

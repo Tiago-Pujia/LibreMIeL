@@ -298,6 +298,11 @@ ForumThreadData parseForoMensajesHtml(
         ? (int.tryParse(likeCountMatch.group(1)!) ?? 0)
         : 0;
 
+    final avatarEl = li.querySelector('.foro-fotoPerfil');
+    final authorAvatarUrl = extractBackgroundImageUrl(
+      avatarEl?.attributes['style'],
+    );
+
     messages.add(
       ForumMessageItem(
         id: id,
@@ -305,6 +310,7 @@ ForumThreadData parseForoMensajesHtml(
         isReply: isReply,
         authorName: authorName,
         authorId: authorId,
+        authorAvatarUrl: authorAvatarUrl,
         role: role,
         isTeacher: isTeacher,
         date: date,

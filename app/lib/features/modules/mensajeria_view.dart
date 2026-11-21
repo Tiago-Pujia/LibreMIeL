@@ -374,139 +374,61 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             ],
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 14,
-            runSpacing: 12,
-            children: [
-              SizedBox(
-                width: isCompact ? double.infinity : 240,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Usuario / Remitente:',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      height: 36,
-                      child: TextField(
-                        onChanged: (v) =>
-                            setState(() => _filterSenderQuery = v),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: palette.textPrimary,
-                        ),
-                        decoration: _filterInputDecoration(
-                          palette,
-                          'Ej: apellido del docente…',
-                        ),
-                      ),
-                    ),
-                  ],
+          if (isCompact)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildFilterTextField(
+                  palette: palette,
+                  label: 'Usuario / Remitente:',
+                  hint: 'Ej: apellido del docente…',
+                  onChanged: (v) => setState(() => _filterSenderQuery = v),
                 ),
-              ),
-              SizedBox(
-                width: isCompact ? double.infinity : 260,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Asunto:',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      height: 36,
-                      child: TextField(
-                        onChanged: (v) =>
-                            setState(() => _filterSubjectQuery = v),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: palette.textPrimary,
-                        ),
-                        decoration: _filterInputDecoration(
-                          palette,
-                          'Palabra clave en el asunto…',
-                        ),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 10),
+                _buildFilterTextField(
+                  palette: palette,
+                  label: 'Asunto:',
+                  hint: 'Palabra clave en el asunto…',
+                  onChanged: (v) => setState(() => _filterSubjectQuery = v),
                 ),
-              ),
-              SizedBox(
-                width: isCompact ? double.infinity : 170,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Leído:',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    _buildFilterDropdown(
-                      palette: palette,
-                      value: _filterReadState,
-                      items: const [
-                        DropdownMenuItem(
-                          value: '0',
-                          child: Text('-- Todos --'),
-                        ),
-                        DropdownMenuItem(
-                          value: '1',
-                          child: Text('Sí (leídos)'),
-                        ),
-                        DropdownMenuItem(
-                          value: '2',
-                          child: Text('No (no leídos)'),
-                        ),
-                      ],
-                      onChanged: (v) => setState(() => _filterReadState = v),
-                    ),
-                  ],
+                const SizedBox(height: 10),
+                _buildReadFilterColumn(palette),
+                const SizedBox(height: 10),
+                _buildAttachmentFilterColumn(palette),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: _buildFilterTextField(
+                    palette: palette,
+                    label: 'Usuario / Remitente:',
+                    hint: 'Ej: apellido del docente…',
+                    onChanged: (v) => setState(() => _filterSenderQuery = v),
+                  ),
                 ),
-              ),
-              SizedBox(
-                width: isCompact ? double.infinity : 170,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Archivo adjunto:',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    _buildFilterDropdown(
-                      palette: palette,
-                      value: _filterAttachmentState,
-                      items: const [
-                        DropdownMenuItem(
-                          value: '0',
-                          child: Text('-- Todos --'),
-                        ),
-                        DropdownMenuItem(value: '1', child: Text('Sí')),
-                        DropdownMenuItem(value: '2', child: Text('No')),
-                      ],
-                      onChanged: (v) =>
-                          setState(() => _filterAttachmentState = v),
-                    ),
-                  ],
+                const SizedBox(width: 14),
+                Expanded(
+                  flex: 4,
+                  child: _buildFilterTextField(
+                    palette: palette,
+                    label: 'Asunto:',
+                    hint: 'Palabra clave en el asunto…',
+                    onChanged: (v) => setState(() => _filterSubjectQuery = v),
+                  ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 14),
+                SizedBox(width: 170, child: _buildReadFilterColumn(palette)),
+                const SizedBox(width: 14),
+                SizedBox(
+                  width: 170,
+                  child: _buildAttachmentFilterColumn(palette),
+                ),
+              ],
+            ),
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
@@ -538,22 +460,85 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     );
   }
 
-  InputDecoration _filterInputDecoration(MielPalette palette, String hint) {
-    return InputDecoration(
-      isDense: true,
-      filled: true,
-      fillColor: palette.inputBackground,
-      hintText: hint,
-      hintStyle: TextStyle(fontSize: 12.5, color: palette.textMuted),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      enabledBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: palette.inputBorder),
-        borderRadius: BorderRadius.circular(2),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: palette.primary),
-        borderRadius: BorderRadius.circular(2),
-      ),
+  Widget _buildFilterTextField({
+    required MielPalette palette,
+    required String label,
+    required String hint,
+    required ValueChanged<String> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 12.5, color: palette.textSecondary),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: palette.inputBackground,
+            border: Border.all(color: palette.inputBorder),
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: TextField(
+            onChanged: onChanged,
+            style: TextStyle(fontSize: 13, color: palette.textPrimary),
+            decoration: InputDecoration.collapsed(
+              hintText: hint,
+              hintStyle: TextStyle(fontSize: 12.5, color: palette.textMuted),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReadFilterColumn(MielPalette palette) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Leído:',
+          style: TextStyle(fontSize: 12.5, color: palette.textSecondary),
+        ),
+        const SizedBox(height: 4),
+        _buildFilterDropdown(
+          palette: palette,
+          value: _filterReadState,
+          items: const [
+            DropdownMenuItem(value: '0', child: Text('-- Todos --')),
+            DropdownMenuItem(value: '1', child: Text('Sí (leídos)')),
+            DropdownMenuItem(value: '2', child: Text('No (no leídos)')),
+          ],
+          onChanged: (v) => setState(() => _filterReadState = v),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAttachmentFilterColumn(MielPalette palette) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Archivo adjunto:',
+          style: TextStyle(fontSize: 12.5, color: palette.textSecondary),
+        ),
+        const SizedBox(height: 4),
+        _buildFilterDropdown(
+          palette: palette,
+          value: _filterAttachmentState,
+          items: const [
+            DropdownMenuItem(value: '0', child: Text('-- Todos --')),
+            DropdownMenuItem(value: '1', child: Text('Sí')),
+            DropdownMenuItem(value: '2', child: Text('No')),
+          ],
+          onChanged: (v) => setState(() => _filterAttachmentState = v),
+        ),
+      ],
     );
   }
 
@@ -718,44 +703,53 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     final isUnread = msg.isUnread && !_locallyReadMessageKeys.contains(msgKey);
     final weight = isUnread ? FontWeight.w700 : FontWeight.w400;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isUnread ? palette.unreadBackground : Colors.transparent,
-        border: Border(
-          left: isUnread
-              ? BorderSide(color: palette.unreadBorder, width: 4)
-              : BorderSide.none,
-          bottom: BorderSide(color: palette.divider),
-        ),
+    void openMessage() {
+      setState(() {
+        _locallyReadMessageKeys.add(msgKey);
+        _selectedMessage = msg;
+      });
+    }
+
+    return MielHoverRow(
+      backgroundColor: isUnread ? palette.unreadBackground : Colors.transparent,
+      border: Border(
+        left: isUnread
+            ? BorderSide(color: palette.unreadBorder, width: 4)
+            : BorderSide.none,
+        bottom: BorderSide(color: palette.divider),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            setState(() {
-              _locallyReadMessageKeys.add(msgKey);
-              _selectedMessage = msg;
-            });
-          },
-          hoverColor: palette.cardHover.withValues(alpha: 0.45),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: isCompact
-                ? _buildCompactRowContent(
-                    palette: palette,
-                    msg: msg,
-                    isUnread: isUnread,
-                    isTeacherSender: isTeacherSender,
-                    showSubjectColumn: showSubjectColumn,
-                    replyPurple: replyPurple,
-                    starBlue: starBlue,
-                  )
-                : Row(
+      child: isCompact
+          ? _buildCompactRowContent(
+              palette: palette,
+              msg: msg,
+              isUnread: isUnread,
+              isTeacherSender: isTeacherSender,
+              showSubjectColumn: showSubjectColumn,
+              replyPurple: replyPurple,
+              starBlue: starBlue,
+              onOpen: openMessage,
+            )
+          : Row(
+              children: [
+                SizedBox(
+                  width: 95,
+                  child: Text(
+                    msg.date,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: weight,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 220,
+                  child: Row(
                     children: [
-                      SizedBox(
-                        width: 95,
+                      Flexible(
                         child: Text(
-                          msg.date,
+                          msg.senderName,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: weight,
@@ -763,154 +757,128 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                           ),
                         ),
                       ),
-                      SizedBox(
-                        width: 220,
-                        child: Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                msg.senderName,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: weight,
-                                  color: palette.textPrimary,
-                                ),
-                              ),
-                            ),
-                            if (isTeacherSender) ...[
-                              const SizedBox(width: 4),
-                              Tooltip(
-                                message: 'Tutor/a de la comisión',
-                                child: Icon(
-                                  Icons.school,
-                                  size: 15,
-                                  color: palette.linkAccent,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      SizedBox(
-                        width: 34,
-                        child: msg.hasAttachment
-                            ? Tooltip(
-                                message: 'Contiene archivo adjunto',
-                                child: Icon(
-                                  Icons.attach_file,
-                                  size: 19,
-                                  color: palette.textMuted,
-                                ),
-                              )
-                            : null,
-                      ),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            if (showSubjectColumn &&
-                                msg.subjectNameLabel.isNotEmpty) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: palette.cardBackground,
-                                  borderRadius: BorderRadius.circular(3),
-                                  border: Border.all(color: palette.cardBorder),
-                                ),
-                                child: Text(
-                                  msg.subjectNameLabel,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: palette.textSecondary,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                            Expanded(
-                              child: Text(
-                                msg.subject,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: weight,
-                                  color: isUnread
-                                      ? palette.linkAccent
-                                      : palette.textPrimary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(
-                        width: 90,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (msg.isReplied)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 4),
-                                child: Tooltip(
-                                  message: 'Respondido',
-                                  child: Icon(
-                                    Icons.reply,
-                                    size: 19,
-                                    color: replyPurple,
-                                  ),
-                                ),
-                              ),
-                            if (box == MensajeriaBoxKind.salida)
-                              if (msg.readByRecipient)
-                                Tooltip(
-                                  message: 'Leído por el destinatario',
-                                  child: Icon(
-                                    Icons.done,
-                                    size: 19,
-                                    color: readGreen,
-                                  ),
-                                )
-                              else
-                                const SizedBox.shrink()
-                            else ...[
-                              Icon(
-                                msg.isFavorite ? Icons.star : Icons.star_border,
-                                size: 19,
-                                color: msg.isFavorite
-                                    ? starBlue
-                                    : palette.textMuted,
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                isUnread ? Icons.markunread : Icons.drafts,
-                                size: 19,
-                                color: isUnread
-                                    ? palette.textPrimary
-                                    : palette.textMuted,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      SizedBox(
-                        width: 95,
-                        child: Text(
-                          isUnread ? '' : msg.readDate,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: palette.textPrimary,
+                      if (isTeacherSender) ...[
+                        const SizedBox(width: 4),
+                        Tooltip(
+                          message: 'Tutor/a de la comisión',
+                          child: Icon(
+                            Icons.school,
+                            size: 15,
+                            color: palette.linkAccent,
                           ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  width: 34,
+                  child: msg.hasAttachment
+                      ? Tooltip(
+                          message: 'Contiene archivo adjunto',
+                          child: Icon(
+                            Icons.attach_file,
+                            size: 19,
+                            color: palette.textMuted,
+                          ),
+                        )
+                      : null,
+                ),
+                Expanded(
+                  child: Row(
+                    children: [
+                      if (showSubjectColumn &&
+                          msg.subjectNameLabel.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.cardBackground,
+                            borderRadius: BorderRadius.circular(3),
+                            border: Border.all(color: palette.cardBorder),
+                          ),
+                          child: Text(
+                            msg.subjectNameLabel,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Flexible(
+                        child: MielHoverLink(
+                          text: msg.subject,
+                          onTap: openMessage,
+                          fontSize: 13,
+                          fontWeight: weight,
+                          color: isUnread
+                              ? palette.linkAccent
+                              : palette.textPrimary,
+                          hoverColor: palette.linkAccent,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-          ),
-        ),
-      ),
+                ),
+                SizedBox(
+                  width: 90,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (msg.isReplied)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Tooltip(
+                            message: 'Respondido',
+                            child: Icon(
+                              Icons.reply,
+                              size: 19,
+                              color: replyPurple,
+                            ),
+                          ),
+                        ),
+                      if (box == MensajeriaBoxKind.salida)
+                        if (msg.readByRecipient)
+                          Tooltip(
+                            message: 'Leído por el destinatario',
+                            child: Icon(Icons.done, size: 19, color: readGreen),
+                          )
+                        else
+                          const SizedBox.shrink()
+                      else ...[
+                        Icon(
+                          msg.isFavorite ? Icons.star : Icons.star_border,
+                          size: 19,
+                          color: msg.isFavorite ? starBlue : palette.textMuted,
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          isUnread ? Icons.markunread : Icons.drafts,
+                          size: 19,
+                          color: isUnread
+                              ? palette.textPrimary
+                              : palette.textMuted,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 95,
+                  child: Text(
+                    isUnread ? '' : msg.readDate,
+                    style: TextStyle(fontSize: 13, color: palette.textPrimary),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 
@@ -922,6 +890,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     required bool showSubjectColumn,
     required Color replyPurple,
     required Color starBlue,
+    required VoidCallback onOpen,
   }) {
     final weight = isUnread ? FontWeight.w700 : FontWeight.w400;
     return Column(
@@ -964,15 +933,15 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                 ),
               ),
             Expanded(
-              child: Text(
-                showSubjectColumn && msg.subjectNameLabel.isNotEmpty
+              child: MielHoverLink(
+                text: showSubjectColumn && msg.subjectNameLabel.isNotEmpty
                     ? '[${msg.subjectNameLabel}] ${msg.subject}'
                     : msg.subject,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: weight,
-                  color: isUnread ? palette.linkAccent : palette.textPrimary,
-                ),
+                onTap: onOpen,
+                fontSize: 13.5,
+                fontWeight: weight,
+                color: isUnread ? palette.linkAccent : palette.textPrimary,
+                hoverColor: palette.linkAccent,
               ),
             ),
             if (msg.isReplied) Icon(Icons.reply, size: 17, color: replyPurple),
@@ -1061,10 +1030,11 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!isCompact) ...[
-                const CircleAvatar(
+                MielAvatar(
+                  avatarUrl: detail.senderAvatarUrl,
                   radius: 25,
-                  backgroundColor: Color(0xFF4F90C4),
-                  child: Icon(Icons.person, size: 28, color: Colors.white),
+                  fallbackBackgroundColor: const Color(0xFF4F90C4),
+                  fallbackIconSize: 28,
                 ),
                 const SizedBox(width: 15),
               ],
@@ -1113,22 +1083,24 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                             const SizedBox(width: 4),
                             Tooltip(
                               message: 'Ver destinatarios',
-                              child: InkWell(
-                                onTap: () => _openRecipientsDialog(
-                                  context,
-                                  palette,
-                                  detail.recipientsPopupUrl,
-                                ),
-                                borderRadius: BorderRadius.circular(3),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 1,
+                              child: MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                  onTap: () => _openRecipientsDialog(
+                                    context,
+                                    palette,
+                                    detail.recipientsPopupUrl,
                                   ),
-                                  child: Icon(
-                                    Icons.more_horiz,
-                                    size: 19,
-                                    color: palette.textMuted,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 1,
+                                    ),
+                                    child: Icon(
+                                      Icons.more_horiz,
+                                      size: 19,
+                                      color: palette.textMuted,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1176,19 +1148,14 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                                   color: palette.textPrimary,
                                 ),
                               ),
-                              InkWell(
+                              MielHoverLink(
+                                text: att.fileName,
+                                fontSize: 13.5,
                                 onTap: () => triggerMielFileDownload(
                                   context,
                                   ref,
                                   url: att.downloadUrl,
                                   fallbackFileName: att.fileName,
-                                ),
-                                child: Text(
-                                  att.fileName,
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    color: palette.linkAccent,
-                                  ),
                                 ),
                               ),
                             ],

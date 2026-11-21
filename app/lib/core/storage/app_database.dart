@@ -102,6 +102,7 @@ class SettingKeys {
   static const String monitorEvaluaciones = 'monitor_evaluaciones';
   static const String accountPausedReason = 'account_paused_reason';
   static const String studentName = 'student_name';
+  static const String studentAvatarUrl = 'student_avatar_url';
   static const String globalNovedadesBadge = 'global_novedades_badge';
   static const String lastCycle1At = 'last_cycle1_at';
   static const String lastCycle2At = 'last_cycle2_at';

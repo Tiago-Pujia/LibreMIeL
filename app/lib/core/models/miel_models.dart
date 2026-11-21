@@ -189,9 +189,11 @@ class InternoOverview {
     required this.globalNovedadesBadge,
     required this.unreadTitleMessages,
     required this.subjects,
+    this.studentAvatarUrl = '',
   });
 
   final String studentName;
+  final String studentAvatarUrl;
   final int globalNovedadesBadge;
   final int unreadTitleMessages;
   final List<MielSubjectBadgeSummary> subjects;
@@ -667,6 +669,7 @@ class MessageDetail {
     required this.dateTime,
     required this.bodyHtml,
     required this.bodyPlainText,
+    this.senderAvatarUrl = '',
     this.recipientsPopupUrl = '',
     this.attachments = const [],
   });
@@ -676,6 +679,7 @@ class MessageDetail {
   final String subject;
   final String senderName;
   final String senderRole;
+  final String senderAvatarUrl;
   final bool isTeacher;
   final String recipientsSummary;
   final String recipientsPopupUrl;
@@ -737,6 +741,7 @@ class ForumMessageItem {
     required this.isTeacher,
     required this.date,
     required this.bodyText,
+    this.authorAvatarUrl = '',
     this.bodyHtml = '',
     this.mentionedUserIds = const {},
     this.mentionedMessageIds = const {},
@@ -752,6 +757,7 @@ class ForumMessageItem {
   final bool isReply;
   final String authorName;
   final String authorId;
+  final String authorAvatarUrl;
   final String role;
   final bool isTeacher;
   final String date;

@@ -250,12 +250,18 @@ MessageDetail parseMensajeriaDetalleHtml(
     );
   }
 
+  final senderAvatarEl = doc.querySelector('.fotoRemitente');
+  final senderAvatarUrl = extractBackgroundImageUrl(
+    senderAvatarEl?.attributes['style'],
+  );
+
   return MessageDetail(
     idComision: idComision,
     idMensaje: idMensaje,
     subject: subject.isEmpty ? '(Sin asunto)' : subject,
     senderName: senderName.isEmpty ? 'Remitente' : senderName,
     senderRole: senderRole,
+    senderAvatarUrl: senderAvatarUrl,
     isTeacher: isTeacher,
     recipientsSummary: recipientsSummary,
     recipientsPopupUrl: recipientsPopupUrl,

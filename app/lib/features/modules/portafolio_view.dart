@@ -10,7 +10,7 @@ import 'widgets/miel_file_icon.dart';
 import 'widgets/module_state_views.dart';
 
 /// Vista nativa de lectura del módulo **Portafolio** (`Prácticas`, `Entrega de prácticas`,
-/// `Archivos enviados`, `Mis grupos`, `Asistencia, notas y cert.` y `Competencias`)
+/// `Archivos enviados`, `Mis grupos` y `Asistencia, notas y cert.`)
 /// fiel a MIeL (`2025.2.0`).
 class PortafolioView extends ConsumerStatefulWidget {
   const PortafolioView({
@@ -51,7 +51,6 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
             1 => _buildArchivosEnviadosTab(context, isCompact),
             2 => _buildGruposTab(context, isCompact),
             3 => _buildNotasAsistenciaTab(context, isCompact),
-            4 => _buildCompetenciasTab(context),
             _ =>
               _selectedPractice != null
                   ? _buildPracticeDetailView(
@@ -172,143 +171,113 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
           ),
         ),
         for (final p in practices)
-          Container(
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: palette.divider)),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => setState(() => _selectedPractice = p),
-                hoverColor: palette.cardHover.withValues(alpha: 0.45),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+          MielHoverRow(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  flex: 4,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        flex: 4,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (p.moduleName.isNotEmpty)
-                              Text(
-                                p.moduleName,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: palette.textPrimary,
-                                ),
-                              ),
-                            if (p.promptDownloadUrl.isNotEmpty)
-                              InkWell(
-                                onTap: () => triggerMielFileDownload(
-                                  context,
-                                  ref,
-                                  url: p.promptDownloadUrl,
-                                  fallbackFileName: p.title,
-                                ),
-                                child: Text(
-                                  p.title,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: palette.linkAccent,
-                                  ),
-                                ),
-                              )
-                            else
-                              Text(
-                                p.title,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: palette.textPrimary,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(
-                        width: 95,
-                        child: Text(
-                          p.deliveryType.isEmpty ? '---' : p.deliveryType,
+                      if (p.moduleName.isNotEmpty)
+                        Text(
+                          p.moduleName,
                           style: TextStyle(
                             fontSize: 13,
                             color: palette.textPrimary,
                           ),
                         ),
-                      ),
-                      SizedBox(
-                        width: 95,
-                        child: Text(
-                          p.dueDate.isEmpty ? '---' : p.dueDate,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 135,
-                        child: Text(
-                          '[ENTREGAR / VER]',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: palette.linkAccent,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 95,
-                        child: Text(
-                          p.deliveryDate.isEmpty ? '---' : p.deliveryDate,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 95,
-                        child: Text(
-                          p.correctionDate.isEmpty ? '---' : p.correctionDate,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 110,
-                        child: Text(
-                          p.status.isEmpty ? '---' : p.status,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: p.status.isNotEmpty
-                                ? FontWeight.w500
-                                : FontWeight.w400,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 65,
-                        child: Text(
-                          p.grade.isEmpty ? '---' : p.grade,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: p.grade.isNotEmpty
-                                ? FontWeight.w700
-                                : FontWeight.w400,
-                            color: palette.textPrimary,
-                          ),
-                        ),
+                      MielHoverLink(
+                        text: p.title,
+                        fontSize: 13,
+                        color: p.promptDownloadUrl.isNotEmpty
+                            ? palette.linkAccent
+                            : palette.textPrimary,
+                        hoverColor: palette.linkAccent,
+                        onTap: () {
+                          if (p.promptDownloadUrl.isNotEmpty) {
+                            triggerMielFileDownload(
+                              context,
+                              ref,
+                              url: p.promptDownloadUrl,
+                              fallbackFileName: p.title,
+                            );
+                          } else {
+                            setState(() => _selectedPractice = p);
+                          }
+                        },
                       ),
                     ],
                   ),
                 ),
-              ),
+                SizedBox(
+                  width: 95,
+                  child: Text(
+                    p.deliveryType.isEmpty ? '---' : p.deliveryType,
+                    style: TextStyle(fontSize: 13, color: palette.textPrimary),
+                  ),
+                ),
+                SizedBox(
+                  width: 95,
+                  child: Text(
+                    p.dueDate.isEmpty ? '---' : p.dueDate,
+                    style: TextStyle(fontSize: 13, color: palette.textPrimary),
+                  ),
+                ),
+                SizedBox(
+                  width: 135,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: MielHoverLink(
+                      text: '[ENTREGAR / VER]',
+                      fontSize: 13,
+                      onTap: () => setState(() => _selectedPractice = p),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 95,
+                  child: Text(
+                    p.deliveryDate.isEmpty ? '---' : p.deliveryDate,
+                    style: TextStyle(fontSize: 13, color: palette.textPrimary),
+                  ),
+                ),
+                SizedBox(
+                  width: 95,
+                  child: Text(
+                    p.correctionDate.isEmpty ? '---' : p.correctionDate,
+                    style: TextStyle(fontSize: 13, color: palette.textPrimary),
+                  ),
+                ),
+                SizedBox(
+                  width: 110,
+                  child: Text(
+                    p.status.isEmpty ? '---' : p.status,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: p.status.isNotEmpty
+                          ? FontWeight.w500
+                          : FontWeight.w400,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 65,
+                  child: Text(
+                    p.grade.isEmpty ? '---' : p.grade,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: p.grade.isNotEmpty
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
       ],
@@ -340,13 +309,26 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                     p.moduleName,
                     style: TextStyle(fontSize: 12, color: palette.textMuted),
                   ),
-                Text(
-                  p.title,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w600,
-                    color: palette.textPrimary,
-                  ),
+                MielHoverLink(
+                  text: p.title,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: p.promptDownloadUrl.isNotEmpty
+                      ? palette.linkAccent
+                      : palette.textPrimary,
+                  hoverColor: palette.linkAccent,
+                  onTap: () {
+                    if (p.promptDownloadUrl.isNotEmpty) {
+                      triggerMielFileDownload(
+                        context,
+                        ref,
+                        url: p.promptDownloadUrl,
+                        fallbackFileName: p.title,
+                      );
+                    } else {
+                      setState(() => _selectedPractice = p);
+                    }
+                  },
                 ),
                 const SizedBox(height: 6),
                 Wrap(
@@ -459,16 +441,14 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
             ),
             if (practice.promptDownloadUrl.isNotEmpty) ...[
               Text('·', style: TextStyle(color: palette.textMuted)),
-              InkWell(
+              MielHoverLink(
+                text: '[Descargar]',
+                fontSize: 13.5,
                 onTap: () => triggerMielFileDownload(
                   context,
                   ref,
                   url: practice.promptDownloadUrl,
                   fallbackFileName: practice.title,
-                ),
-                child: Text(
-                  '[Descargar]',
-                  style: TextStyle(fontSize: 13.5, color: palette.linkAccent),
                 ),
               ),
             ],
@@ -691,32 +671,17 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
             palette,
             'Práctica enviada:',
             deliv.downloadUrl.isNotEmpty
-                ? InkWell(
+                ? MielHoverLink(
+                    text: deliv.fileName,
+                    leadingIcon: Icons.attach_file,
+                    leadingIconSize: 18,
+                    leadingIconColor: palette.textMuted,
+                    fontSize: 13,
                     onTap: () => triggerMielFileDownload(
                       context,
                       ref,
                       url: deliv.downloadUrl,
                       fallbackFileName: deliv.fileName,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.attach_file,
-                          size: 18,
-                          color: palette.textMuted,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            deliv.fileName,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: palette.linkAccent,
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   )
                 : Text(
@@ -837,6 +802,12 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
       portafolioArchivosEnviadosProvider(idComision),
     );
 
+    TextStyle headerStyle() => TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+      color: palette.textPrimary,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -870,88 +841,165 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final f in files)
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: palette.divider),
-                      ),
+                // Cabecera oficial MIeL: Archivo o enlace enviado | Fecha y hora | Tamaño | Descargar
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: palette.divider, width: 1.2),
                     ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: f.downloadUrl.isNotEmpty
-                            ? () => triggerMielFileDownload(
-                                context,
-                                ref,
-                                url: f.downloadUrl,
-                                fallbackFileName: f.fileName,
-                              )
-                            : null,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Archivo o enlace enviado',
+                          style: headerStyle(),
+                        ),
+                      ),
+                      if (!isCompact) ...[
+                        SizedBox(
+                          width: 170,
+                          child: Text('Fecha y hora', style: headerStyle()),
+                        ),
+                        SizedBox(
+                          width: 100,
+                          child: Text(
+                            'Tamaño',
+                            textAlign: TextAlign.right,
+                            style: headerStyle(),
                           ),
-                          child: Row(
+                        ),
+                      ],
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 90,
+                        child: Text(
+                          'Descargar',
+                          textAlign: TextAlign.center,
+                          style: headerStyle(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                for (final f in files)
+                  MielHoverRow(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 40,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: MielFileTypeIcon(
+                              fileType: f.fileType,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              MielFileTypeIcon(fileType: f.fileType, size: 22),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      f.practiceTitle,
-                                      style: TextStyle(
-                                        fontSize: 13.5,
-                                        color: palette.textPrimary,
-                                      ),
-                                    ),
-                                    if (f.fileName != f.practiceTitle)
-                                      Text(
-                                        f.fileName,
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          color: palette.textMuted,
-                                        ),
-                                      ),
-                                  ],
+                              Text(
+                                f.practiceTitle,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: palette.textPrimary,
                                 ),
                               ),
-                              if (!isCompact) ...[
-                                SizedBox(
-                                  width: 150,
+                              if (f.fileName.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
                                   child: Text(
-                                    f.dateTime,
+                                    f.fileName,
                                     style: TextStyle(
-                                      fontSize: 13,
-                                      color: palette.textPrimary,
+                                      fontSize: 12.5,
+                                      color: palette.textMuted,
                                     ),
                                   ),
                                 ),
-                                SizedBox(
-                                  width: 90,
+                              if (isCompact)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 3),
                                   child: Text(
-                                    f.sizeLabel,
-                                    textAlign: TextAlign.right,
+                                    [
+                                      if (f.dateTime.isNotEmpty) f.dateTime,
+                                      if (f.sizeLabel.isNotEmpty) f.sizeLabel,
+                                    ].join(' · '),
                                     style: TextStyle(
-                                      fontSize: 13,
-                                      color: palette.textPrimary,
+                                      fontSize: 11.5,
+                                      color: palette.textMuted,
                                     ),
                                   ),
                                 ),
-                              ],
-                              const SizedBox(width: 16),
-                              Icon(
-                                Icons.file_download,
-                                size: 22,
-                                color: palette.linkAccent,
-                              ),
                             ],
                           ),
                         ),
-                      ),
+                        if (!isCompact) ...[
+                          SizedBox(
+                            width: 170,
+                            child: Text(
+                              f.dateTime,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: palette.textPrimary,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 100,
+                            child: Text(
+                              f.sizeLabel,
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: palette.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 90,
+                          child: Center(
+                            child: f.downloadUrl.isNotEmpty
+                                ? Tooltip(
+                                    message: 'Descargar archivo enviado',
+                                    child: MouseRegion(
+                                      cursor: SystemMouseCursors.click,
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () => triggerMielFileDownload(
+                                          context,
+                                          ref,
+                                          url: f.downloadUrl,
+                                          fallbackFileName: f.fileName,
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(4),
+                                          child: Icon(
+                                            Icons.file_download,
+                                            size: 22,
+                                            color: palette.textMuted,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -969,6 +1017,12 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
     final idComision = widget.subject.idComision;
     final webUrl = '$kMielBaseUrl/portafolio/grupos/comision/$idComision';
     final groupsAsync = ref.watch(portafolioGruposProvider(idComision));
+
+    TextStyle headerStyle() => TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+      color: palette.textPrimary,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -998,60 +1052,142 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
               );
             }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final g in groups)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: palette.cardBackground,
-                      borderRadius: BorderRadius.circular(3),
-                      border: Border.all(color: palette.cardBorder),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                g.name,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: palette.textPrimary,
-                                ),
-                              ),
-                            ),
-                            if (g.messageUrl.isNotEmpty)
-                              InkWell(
-                                onTap: () => openMielExternalUrl(g.messageUrl),
+            if (isCompact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final g in groups)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: palette.cardBackground,
+                        borderRadius: BorderRadius.circular(3),
+                        border: Border.all(color: palette.cardBorder),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
                                 child: Text(
-                                  '[Enviar mensaje]',
+                                  g.name,
                                   style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: palette.linkAccent,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: palette.textPrimary,
                                   ),
                                 ),
                               ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        for (final member in g.members)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: Text(
-                              member,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: palette.textSecondary,
+                              if (g.messageUrl.isNotEmpty)
+                                MielHoverLink(
+                                  text: '[Enviar mensaje]',
+                                  fontWeight: FontWeight.w700,
+                                  onTap: () =>
+                                      openMielExternalUrl(g.messageUrl),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          for (final member in g.members)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Text(
+                                member,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: palette.textSecondary,
+                                ),
                               ),
                             ),
+                        ],
+                      ),
+                    ),
+                ],
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: palette.divider, width: 1.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Text('Nombre del grupo', style: headerStyle()),
+                      ),
+                      Expanded(
+                        flex: 5,
+                        child: Text('Integrantes', style: headerStyle()),
+                      ),
+                      SizedBox(
+                        width: 240,
+                        child: Text('Opciones', style: headerStyle()),
+                      ),
+                    ],
+                  ),
+                ),
+                for (final g in groups)
+                  MielHoverRow(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            g.name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: palette.textPrimary,
+                            ),
                           ),
+                        ),
+                        Expanded(
+                          flex: 5,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (final member in g.members)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: Text(
+                                    member,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: palette.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 240,
+                          child: g.messageUrl.isNotEmpty
+                              ? MielHoverLink(
+                                  text: '[Enviar mensaje]',
+                                  fontWeight: FontWeight.w700,
+                                  onTap: () =>
+                                      openMielExternalUrl(g.messageUrl),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
                       ],
                     ),
                   ),
@@ -1268,86 +1404,6 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                 ),
             ],
           ),
-        ),
-      ],
-    );
-  }
-
-  // --- Pestaña 4: Competencias ---
-
-  Widget _buildCompetenciasTab(BuildContext context) {
-    final palette = MielPalette.of(context);
-    final idComision = widget.subject.idComision;
-    final webUrl = '$kMielBaseUrl/portafolio/competencias/comision/$idComision';
-    final compAsync = ref.watch(portafolioCompetenciasProvider(idComision));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        MielModuleHeader(
-          title: 'Competencias',
-          trailing: MielActionButton(
-            label: 'Abrir en MIeL',
-            icon: Icons.open_in_new,
-            onPressed: () => openMielExternalUrl(webUrl),
-          ),
-        ),
-        const SizedBox(height: 16),
-        compAsync.when(
-          loading: () => const MielModuleLoadingView(
-            message: 'Consultando evaluación por competencias…',
-          ),
-          error: (err, _) => MielModuleErrorView(
-            message: 'No se pudieron cargar las competencias: $err',
-            mielWebUrl: webUrl,
-            onRetry: () =>
-                ref.invalidate(portafolioCompetenciasProvider(idComision)),
-          ),
-          data: (comp) {
-            if (!comp.isEnabled || comp.rows.isEmpty) {
-              return Text(
-                comp.emptyMessage.isNotEmpty ? comp.emptyMessage : 'Esta materia no tiene habilitada la evaluación por competencias.',
-                style: TextStyle(fontSize: 13.5, color: palette.textPrimary),
-              );
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final r in comp.rows)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: palette.divider),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            r.title,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          r.level,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: palette.linkAccent,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            );
-          },
         ),
       ],
     );

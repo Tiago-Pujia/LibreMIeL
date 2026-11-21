@@ -12,6 +12,7 @@ import '../feed/feed_screen.dart';
 import '../modules/module_providers.dart';
 import '../modules/module_reader_host.dart';
 import '../modules/module_sections.dart';
+import '../modules/widgets/module_state_views.dart';
 import '../settings/settings_screen.dart';
 import '../subjects/miel_home_view.dart';
 
@@ -73,8 +74,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             .where((s) => s.isEffectivelyHidden)
             .length,
         storageLabel: ref.read(credentialsStoreProvider).storageBackendLabel,
-        onOpenMielProfile: () =>
-            _openExternal('$kMielBaseUrl/principal/perfil/'),
+        onOpenMielProfile: () => _openExternal('$kMielBaseUrl/perfil/datos/'),
         onLogout: () {
           Navigator.of(context).pop();
           ref.read(appSessionProvider.notifier).logout();
@@ -406,6 +406,7 @@ class _MielDoubleHeader extends StatelessWidget {
                           const SizedBox(width: 12),
                           _HoverableAvatarButton(
                             palette: palette,
+                            avatarUrl: session.studentAvatarUrl,
                             onTap: onOpenProfile,
                           ),
                         ],
@@ -557,9 +558,14 @@ class _HoverableBrandButtonState extends State<_HoverableBrandButton> {
 }
 
 class _HoverableAvatarButton extends StatefulWidget {
-  const _HoverableAvatarButton({required this.palette, required this.onTap});
+  const _HoverableAvatarButton({
+    required this.palette,
+    required this.avatarUrl,
+    required this.onTap,
+  });
 
   final MielPalette palette;
+  final String avatarUrl;
   final VoidCallback onTap;
 
   @override
@@ -591,16 +597,16 @@ class _HoverableAvatarButtonState extends State<_HoverableAvatarButton> {
                 width: 2,
               ),
             ),
-            child: CircleAvatar(
+            child: MielAvatar(
+              avatarUrl: widget.avatarUrl,
               radius: 17,
-              backgroundColor: _hovered
+              fallbackBackgroundColor: _hovered
                   ? widget.palette.primary.withValues(alpha: 0.85)
                   : widget.palette.textMuted.withValues(alpha: 0.35),
-              child: Icon(
-                Icons.person,
-                size: 24,
-                color: _hovered ? Colors.white : widget.palette.pageBackground,
-              ),
+              fallbackIconColor: _hovered
+                  ? Colors.white
+                  : widget.palette.pageBackground,
+              fallbackIconSize: 24,
             ),
           ),
         ),
@@ -1290,10 +1296,12 @@ class _UserProfileDialog extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const CircleAvatar(
+                  MielAvatar(
+                    avatarUrl: session.studentAvatarUrl,
                     radius: 20,
-                    backgroundColor: Colors.white24,
-                    child: Icon(Icons.person, color: Colors.white, size: 26),
+                    fallbackBackgroundColor: Colors.white24,
+                    fallbackIconColor: Colors.white,
+                    fallbackIconSize: 26,
                   ),
                   const SizedBox(width: 12),
                   Expanded(

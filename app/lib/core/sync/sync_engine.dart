@@ -83,6 +83,12 @@ class SyncEngine {
     }
 
     await _db.setSetting(SettingKeys.studentName, overview.studentName);
+    if (overview.studentAvatarUrl.isNotEmpty) {
+      await _db.setSetting(
+        SettingKeys.studentAvatarUrl,
+        overview.studentAvatarUrl,
+      );
+    }
     final isBaseline = !(await _db.isBaselineCompleted());
     final forumMode = await _db.getForumSyncMode();
     final notifications = <DetectedNotification>[];

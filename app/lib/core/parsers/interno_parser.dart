@@ -156,8 +156,15 @@ InternoOverview parseInternoHtml(String rawHtml) {
     );
   }
 
+  // Foto de perfil desde #encabezado .fotoPerfil / .fotoPerfil
+  final avatarEl = doc.querySelector('#encabezado .fotoPerfil, .fotoPerfil');
+  final studentAvatarUrl = extractBackgroundImageUrl(
+    avatarEl?.attributes['style'],
+  );
+
   return InternoOverview(
     studentName: studentName,
+    studentAvatarUrl: studentAvatarUrl,
     globalNovedadesBadge: globalNovedadesBadge,
     unreadTitleMessages: unreadTitleMessages,
     subjects: subjects,

@@ -6,10 +6,14 @@ import '../fixtures/miel_fixtures.dart';
 
 void main() {
   group('MielParsers', () {
-    test('parseInternoHtml extrae materias, ocultas y badges exactos', () {
+    test('parseInternoHtml extrae materias, ocultas, foto de perfil y badges exactos', () {
       final overview = parseInternoHtml(fixtureInternoConBadges);
 
       expect(overview.studentName, 'ALUMNO, EJEMPLO');
+      expect(
+        overview.studentAvatarUrl,
+        'https://miel.unlam.edu.ar/data2/avatares/demo_student.jpg?1001',
+      );
       expect(overview.unreadTitleMessages, 1);
       expect(overview.globalNovedadesBadge, 1);
       expect(overview.subjects, hasLength(1));
@@ -212,6 +216,10 @@ void main() {
       expect(detail.subject, 'Ejercicio de bondad de ajuste');
       expect(detail.senderName, 'DOCENTE, UNO');
       expect(detail.senderRole, 'Tutor/a');
+      expect(
+        detail.senderAvatarUrl,
+        'https://miel.unlam.edu.ar/data2/avatares/demo_teacher.jpg?2002',
+      );
       expect(detail.isTeacher, isTrue);
       expect(detail.recipientsSummary, 'Para: 49 personas');
       expect(detail.recipientsPopupUrl, contains('verDestinatariosEntrada'));
@@ -242,6 +250,10 @@ void main() {
       expect(thread.messages, hasLength(5));
 
       final rootMsg = thread.messages.firstWhere((m) => m.id == '6193115');
+      expect(
+        rootMsg.authorAvatarUrl,
+        'https://miel.unlam.edu.ar/data2/avatares/demo_student.jpg?1001',
+      );
       expect(rootMsg.likesCount, 2);
       expect(rootMsg.imageAttachments, hasLength(1));
       expect(
@@ -251,6 +263,10 @@ void main() {
 
       final teacherReplyToMe = thread.messages.firstWhere(
         (m) => m.id == '6193120',
+      );
+      expect(
+        teacherReplyToMe.authorAvatarUrl,
+        'https://miel.unlam.edu.ar/data2/avatares/demo_teacher.jpg?2002',
       );
       expect(teacherReplyToMe.fileAttachments, hasLength(1));
       expect(

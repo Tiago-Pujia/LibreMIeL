@@ -63,3 +63,16 @@ int parseBadgeCount(String? raw) {
   final digits = RegExp(r'\d+').firstMatch(raw)?.group(0);
   return digits == null ? 0 : (int.tryParse(digits) ?? 0);
 }
+
+/// Extrae y resuelve la URL dentro de un atributo `style="background-image: url('...')"` de MIeL.
+String extractBackgroundImageUrl(String? styleAttr) {
+  if (styleAttr == null || styleAttr.isEmpty) return '';
+  final match = RegExp(
+    r"""url\(\s*['"]?([^'")\s]+)['"]?\s*\)""",
+    caseSensitive: false,
+  ).firstMatch(styleAttr);
+  if (match == null) return '';
+  final raw = match.group(1)?.trim() ?? '';
+  if (raw.isEmpty || raw.toLowerCase() == 'none') return '';
+  return resolveMielUrl(raw);
+}

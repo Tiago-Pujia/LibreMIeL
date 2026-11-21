@@ -59,6 +59,7 @@ class AppSessionState {
     this.isAuthenticated = false,
     this.isSyncing = false,
     this.studentName = '',
+    this.studentAvatarUrl = '',
     this.authPausedReason,
     this.lastSyncMessage,
     this.lastSyncAt,
@@ -75,6 +76,7 @@ class AppSessionState {
   final bool isAuthenticated;
   final bool isSyncing;
   final String studentName;
+  final String studentAvatarUrl;
   final String? authPausedReason;
   final String? lastSyncMessage;
   final DateTime? lastSyncAt;
@@ -91,6 +93,7 @@ class AppSessionState {
     bool? isAuthenticated,
     bool? isSyncing,
     String? studentName,
+    String? studentAvatarUrl,
     String? authPausedReason,
     bool clearAuthPausedReason = false,
     String? lastSyncMessage,
@@ -108,6 +111,7 @@ class AppSessionState {
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       isSyncing: isSyncing ?? this.isSyncing,
       studentName: studentName ?? this.studentName,
+      studentAvatarUrl: studentAvatarUrl ?? this.studentAvatarUrl,
       authPausedReason: clearAuthPausedReason
           ? null
           : (authPausedReason ?? this.authPausedReason),
@@ -160,6 +164,8 @@ class AppSessionController extends Notifier<AppSessionState> {
     final monitorEval = await db.getMonitorEvaluaciones();
     final pausedReason = await db.getSetting(SettingKeys.accountPausedReason);
     final studentName = (await db.getSetting(SettingKeys.studentName)) ?? '';
+    final studentAvatarUrl =
+        (await db.getSetting(SettingKeys.studentAvatarUrl)) ?? '';
     final themeRaw = await db.getSetting(SettingKeys.themeMode);
     final globalNovRaw = await db.getSetting(SettingKeys.globalNovedadesBadge);
     final lastCycle1Raw = await db.getSetting(SettingKeys.lastCycle1At);
@@ -183,6 +189,7 @@ class AppSessionController extends Notifier<AppSessionState> {
       isChecking: false,
       isAuthenticated: authenticated,
       studentName: studentName,
+      studentAvatarUrl: studentAvatarUrl,
       authPausedReason: pausedReason,
       syncIntervalMinutes: interval,
       forumSyncMode: forumMode,
@@ -196,6 +203,9 @@ class AppSessionController extends Notifier<AppSessionState> {
 
     if (authenticated) {
       await _startBackgroundSchedulers(interval);
+      if (studentAvatarUrl.isEmpty) {
+        unawaited(syncNow(includeCycle2: false));
+      }
     }
   }
 
@@ -282,6 +292,9 @@ class AppSessionController extends Notifier<AppSessionState> {
 
       final studentName =
           (await db.getSetting(SettingKeys.studentName)) ?? state.studentName;
+      final studentAvatarUrl =
+          (await db.getSetting(SettingKeys.studentAvatarUrl)) ??
+          state.studentAvatarUrl;
       final globalNovRaw = await db.getSetting(
         SettingKeys.globalNovedadesBadge,
       );
@@ -298,6 +311,7 @@ class AppSessionController extends Notifier<AppSessionState> {
       state = state.copyWith(
         isSyncing: false,
         studentName: studentName,
+        studentAvatarUrl: studentAvatarUrl,
         globalNovedadesBadge: globalNov,
         authPausedReason: summary1.authPaused
             ? summary1.authErrorMessage

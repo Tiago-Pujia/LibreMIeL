@@ -37,6 +37,9 @@ const String fixtureInternoConBadges = '''
   <title>(1) MIeL - Materias Interactivas en Línea</title>
 </head>
 <body>
+  <header id="encabezado">
+    <a href="https://miel.unlam.edu.ar/perfil/datos/" class="w3-circle w3-right fotoPerfil" style="background-image: url('https://miel.unlam.edu.ar/data2/avatares/demo_student.jpg?1001');"></a>
+  </header>
   <nav>
     <a href="https://miel.unlam.edu.ar/principal/novedades/">
       Novedades <span class="w3-badge w3-red w3-small">1</span>
@@ -305,6 +308,28 @@ const String fixturePortafolioNotasAsistencia = '''
 </main>
 ''';
 
+const String fixturePortafolioArchivosEnviados = '''
+<table class="w3-table w3-bordered w3-hoverable">
+  <thead>
+    <tr>
+      <th colspan="2">Archivo o enlace enviado</th>
+      <th style="width: 170px;">Fecha y hora</th>
+      <th style="width: 100px;" class="w3-right-align">Tamaño</th>
+      <th style="width: 90px;" class="w3-center">Descargar</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="width: 40px;"><i class="material-icons icon-file-pdf icono-td"></i></td>
+      <td>TP N°1<br><span class="w3-text-gray">Entrega-Grupo-Demo.pdf</span></td>
+      <td>24/09/2026 01:07:59</td>
+      <td class="w3-right-align">6.562 KB</td>
+      <td class="w3-center"><a href="/portafolio/event/descargarEntrega/comision/117967/id/3712651"><i class="material-icons w3-text-gray icono-td">file_download</i></a></td>
+    </tr>
+  </tbody>
+</table>
+''';
+
 const String fixtureMensajeriaVacia = '''
 <table><tbody></tbody></table>
 ''';
@@ -351,7 +376,7 @@ const String fixtureMensajeriaVerEntradaDetalle = '''
     <div class="w3-right"><a href="/mensajeria/entrada/comision/117967/pag/1" class="w3-btn w3-theme">Volver</a></div>
   </div>
   <div class="w3-row w3-section">
-    <div class="w3-col w3-hide-small" style="width:65px;"><div class="w3-circle fotoRemitente"></div></div>
+    <div class="w3-col w3-hide-small" style="width:65px;"><div class="w3-circle fotoRemitente" style='background-image: url("https://miel.unlam.edu.ar/data2/avatares/demo_teacher.jpg?2002");'></div></div>
     <div class="w3-rest">
       <div><span class="w3-medium">De: DOCENTE, UNO</span><span class="w3-text-grey"> · Tutor/a</span></div>
       <div class="w3-text-grey">Para: 49 personas <a href="javascript:void(0)" data-mfp-src="/mensajeria/verDestinatariosEntrada/comision/117967/usuario/66174/idMensaje/11023589" class="popup-destinatarios"><i class="material-icons">more_horiz</i></a></div>
@@ -403,6 +428,7 @@ const String fixtureForoMensajesHilo = '''
   <div id="6193115">
     <ul>
       <li class="w3-padding-16 foro-mensaje" data-idmensajepadre="6193115" id="idMensaje-6193115">
+        <div class="w3-col w3-hide-small w3-circle w3-margin-right foro-fotoPerfil" style="background-image: url('https://miel.unlam.edu.ar/data2/avatares/demo_student.jpg?1001');"></div>
         <div><strong>ALUMNO, EJEMPLO</strong></div>
         <div class="w3-text-gray"><i class="material-icons">account_circle</i> Alumno/a (com 01-2900)</div>
         <div>Enviado el 19/11/2026 18:00:00</div>
@@ -412,6 +438,7 @@ const String fixtureForoMensajesHilo = '''
         <a class="btnMarcarUtil" data-idmensaje="6193115" data-util="0"><strong class="mensaje" id="msj_6193115">Me gusta (2)</strong></a>
       </li>
       <li class="w3-padding-16 foro-respuesta" data-idmensajepadre="6193115" id="idMensaje-6193120">
+        <div class="w3-col w3-hide-small w3-circle w3-margin-right foro-fotoPerfil" style="background-image: url('https://miel.unlam.edu.ar/data2/avatares/demo_teacher.jpg?2002');"></div>
         <div><strong>DOCENTE, UNO</strong></div>
         <div class="w3-text-gray"><i class="material-icons">school</i> Tutor/a (com 01-2900)</div>
         <div>Enviado el 20/11/2026 12:30:00</div>

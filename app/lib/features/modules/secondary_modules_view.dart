@@ -128,120 +128,104 @@ class EvaluacionView extends ConsumerWidget {
                         ),
                       ),
                       for (final ev in items)
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(color: palette.divider),
-                            ),
+                        MielHoverRow(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 11,
                           ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => openMielExternalUrl(webUrl),
-                              hoverColor: palette.cardHover.withValues(
-                                alpha: 0.45,
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 11,
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: isCompact ? 105 : 130,
+                                child: Text(
+                                  ev.type,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: palette.textPrimary,
+                                  ),
                                 ),
-                                child: Row(
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    SizedBox(
-                                      width: isCompact ? 105 : 130,
-                                      child: Text(
-                                        ev.type,
+                                    Text(
+                                      ev.title,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: palette.textPrimary,
+                                      ),
+                                    ),
+                                    if (isCompact && ev.status.isNotEmpty)
+                                      Text(
+                                        ev.status,
                                         style: TextStyle(
-                                          fontSize: 13,
-                                          color: palette.textPrimary,
+                                          fontSize: 12,
+                                          color: palette.textMuted,
                                         ),
                                       ),
-                                    ),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            ev.title,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: palette.textPrimary,
-                                            ),
-                                          ),
-                                          if (isCompact && ev.status.isNotEmpty)
-                                            Text(
-                                              ev.status,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: palette.textMuted,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (!isCompact)
-                                      SizedBox(
-                                        width: 115,
-                                        child: Center(
-                                          child: Tooltip(
-                                            message: ev.isEnabled
-                                                ? 'Habilitado para rendir'
-                                                : 'No habilitado',
-                                            child: Container(
-                                              width: 17,
-                                              height: 17,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: ev.isEnabled
-                                                    ? enabledGreen
-                                                    : palette.textMuted,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    SizedBox(
-                                      width: 40,
-                                      child: Tooltip(
-                                        message: ev.requiresPassword
-                                            ? 'Requiere clave'
-                                            : 'Abierto',
-                                        child: Icon(
-                                          ev.requiresPassword || !ev.isLockOpen
-                                              ? Icons.lock
-                                              : Icons.lock_open,
-                                          size: 20,
-                                          color: palette.textPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                    if (!isCompact)
-                                      SizedBox(
-                                        width: 110,
-                                        child: Text(
-                                          ev.status,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: palette.textPrimary,
-                                          ),
-                                        ),
-                                      ),
-                                    SizedBox(
-                                      width: 90,
-                                      child: Text(
-                                        '[Ingresar]',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: palette.linkAccent,
-                                        ),
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ),
-                            ),
+                              if (!isCompact)
+                                SizedBox(
+                                  width: 115,
+                                  child: Center(
+                                    child: Tooltip(
+                                      message: ev.isEnabled
+                                          ? 'Habilitado para rendir'
+                                          : 'No habilitado',
+                                      child: Container(
+                                        width: 17,
+                                        height: 17,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: ev.isEnabled
+                                              ? enabledGreen
+                                              : palette.textMuted,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              SizedBox(
+                                width: 40,
+                                child: Tooltip(
+                                  message: ev.requiresPassword
+                                      ? 'Requiere clave'
+                                      : 'Abierto',
+                                  child: Icon(
+                                    ev.requiresPassword || !ev.isLockOpen
+                                        ? Icons.lock
+                                        : Icons.lock_open,
+                                    size: 20,
+                                    color: palette.textPrimary,
+                                  ),
+                                ),
+                              ),
+                              if (!isCompact)
+                                SizedBox(
+                                  width: 110,
+                                  child: Text(
+                                    ev.status,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: palette.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              SizedBox(
+                                width: 90,
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: MielHoverLink(
+                                    text: '[Ingresar]',
+                                    fontSize: 13,
+                                    onTap: () => openMielExternalUrl(webUrl),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                     ],

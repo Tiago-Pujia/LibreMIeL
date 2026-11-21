@@ -25,16 +25,6 @@ List<MielModuleSection> mielSectionsForTool(MielToolKind tool) {
           label: 'Archivos',
           icon: Icons.folder,
         ),
-        MielModuleSection(
-          id: 'glosario',
-          label: 'Glosario',
-          icon: Icons.import_contacts,
-        ),
-        MielModuleSection(
-          id: 'faq',
-          label: 'Preguntas frecuentes',
-          icon: Icons.help,
-        ),
       ];
     case MielToolKind.portafolio:
       return const [
@@ -53,11 +43,6 @@ List<MielModuleSection> mielSectionsForTool(MielToolKind tool) {
           id: 'notas',
           label: 'Asistencia, notas y cert.',
           icon: Icons.spellcheck,
-        ),
-        MielModuleSection(
-          id: 'competencias',
-          label: 'Competencias',
-          icon: Icons.emoji_objects,
         ),
       ];
     case MielToolKind.mensajeria:

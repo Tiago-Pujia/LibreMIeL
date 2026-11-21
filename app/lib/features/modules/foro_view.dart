@@ -211,116 +211,107 @@ class _ForoViewState extends ConsumerState<ForoView> {
         ? 0
         : topic.unreadBadge;
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: palette.divider)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            _locallyReadTopicIds.add(topic.idTema);
-            widget.onSelectTopic(topic.idTema);
-          },
-          hoverColor: palette.cardHover.withValues(alpha: 0.45),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            child: Row(
+    void openTopic() {
+      _locallyReadTopicIds.add(topic.idTema);
+      widget.onSelectTopic(topic.idTema);
+    }
+
+    return MielHoverRow(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: openTopic,
+              child: SizedBox(
+                width: 50,
+                height: 40,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      topic.isClosed ? Icons.speaker_notes_off : Icons.message,
+                      size: 33,
+                      color: topic.isClosed
+                          ? palette.textMuted
+                          : palette.textSecondary,
+                    ),
+                    if (effectiveUnread > 0)
+                      Positioned(
+                        top: 18,
+                        left: 22,
+                        child: MielRedBadge(
+                          count: effectiveUnread,
+                          backgroundColor: palette.badgeRed,
+                          compact: true,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 50,
-                  height: 40,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Icon(
-                        topic.isClosed
-                            ? Icons.speaker_notes_off
-                            : Icons.message,
-                        size: 33,
-                        color: topic.isClosed
-                            ? palette.textMuted
-                            : palette.textSecondary,
-                      ),
-                      if (effectiveUnread > 0)
-                        Positioned(
-                          top: 18,
-                          left: 22,
-                          child: MielRedBadge(
-                            count: effectiveUnread,
-                            backgroundColor: palette.badgeRed,
-                            compact: true,
-                          ),
-                        ),
-                    ],
-                  ),
+                MielHoverLink(
+                  text: topic.title,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: palette.textPrimary,
+                  hoverColor: palette.linkAccent,
+                  onTap: openTopic,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        topic.title,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: palette.textPrimary,
-                        ),
+                if (topic.description.isNotEmpty || topic.isPublic) ...[
+                  const SizedBox(height: 4),
+                  RichText(
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        color: palette.textPrimary,
                       ),
-                      if (topic.description.isNotEmpty || topic.isPublic) ...[
-                        const SizedBox(height: 4),
-                        RichText(
-                          text: TextSpan(
-                            style: TextStyle(
-                              fontSize: 13,
-                              height: 1.4,
-                              color: palette.textPrimary,
+                      children: [
+                        if (topic.isPublic) ...[
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: Icon(
+                                Icons.group,
+                                size: 16,
+                                color: publicIndigo,
+                              ),
                             ),
-                            children: [
-                              if (topic.isPublic) ...[
-                                WidgetSpan(
-                                  alignment: PlaceholderAlignment.middle,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 4),
-                                    child: Icon(
-                                      Icons.group,
-                                      size: 16,
-                                      color: publicIndigo,
-                                    ),
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: 'Tema público - ',
-                                  style: TextStyle(
-                                    color: publicIndigo,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                              TextSpan(text: topic.description),
-                            ],
                           ),
-                        ),
+                          TextSpan(
+                            text: 'Tema público - ',
+                            style: TextStyle(
+                              color: publicIndigo,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        TextSpan(text: topic.description),
                       ],
-                      const SizedBox(height: 4),
-                      Text(
-                        topic.lastMessageDate.isNotEmpty
-                            ? '${topic.messageCount} ${topic.messageCount == 1 ? "mensaje" : "mensajes"} · Último mensaje ${topic.lastMessageDate}'
-                            : '${topic.messageCount} mensajes',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: palette.textMuted,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  topic.lastMessageDate.isNotEmpty
+                      ? '${topic.messageCount} ${topic.messageCount == 1 ? "mensaje" : "mensajes"} · Último mensaje ${topic.lastMessageDate}'
+                      : '${topic.messageCount} mensajes',
+                  style: TextStyle(fontSize: 12.5, color: palette.textMuted),
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -474,112 +465,60 @@ class _ForoViewState extends ConsumerState<ForoView> {
         const SizedBox(height: 16),
 
         // Barra de búsqueda local (#textoBuscar) + botón Invertir orden (#btnOrdenarPorFecha)
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 12,
-          runSpacing: 10,
-          children: [
-            SizedBox(
-              width: isCompact ? double.infinity : 540,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 36,
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (v) =>
-                            setState(() => _threadSearchQuery = v),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: palette.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          filled: true,
-                          fillColor: palette.inputBackground,
-                          hintText: 'Ingrese el texto buscado...',
-                          hintStyle: TextStyle(
-                            fontSize: 13,
-                            color: palette.textMuted,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 9,
-                          ),
-                          suffixIcon: _threadSearchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(
-                                    Icons.clear,
-                                    size: 16,
-                                    color: palette.textMuted,
-                                  ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _threadSearchQuery = '');
-                                  },
-                                )
-                              : null,
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: palette.inputBorder),
-                            borderRadius: const BorderRadius.horizontal(
-                              left: Radius.circular(2),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: palette.primary),
-                            borderRadius: const BorderRadius.horizontal(
-                              left: Radius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Material(
-                    color: const Color(0xFF616161),
-                    borderRadius: const BorderRadius.horizontal(
-                      right: Radius.circular(2),
-                    ),
-                    child: InkWell(
-                      onTap: () => setState(
-                        () => _threadSearchQuery = _searchController.text,
-                      ),
-                      borderRadius: const BorderRadius.horizontal(
-                        right: Radius.circular(2),
-                      ),
-                      child: const SizedBox(
-                        height: 36,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 14),
-                          child: Row(
-                            children: [
-                              Icon(Icons.search, size: 16, color: Colors.white),
-                              SizedBox(width: 5),
-                              Text(
-                                'Buscar',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+        if (isCompact)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              MielSearchBarField(
+                controller: _searchController,
+                query: _threadSearchQuery,
+                hintText: 'Ingrese el texto buscado...',
+                onChanged: (v) => setState(() => _threadSearchQuery = v),
+                onSubmitted: () =>
+                    setState(() => _threadSearchQuery = _searchController.text),
+                onCleared: () {
+                  _searchController.clear();
+                  setState(() => _threadSearchQuery = '');
+                },
               ),
-            ),
-            MielActionButton(
-              label: 'Invertir orden',
-              icon: Icons.import_export,
-              onPressed: () => setState(() => _reverseOrder = !_reverseOrder),
-            ),
-          ],
-        ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: MielActionButton(
+                  label: 'Invertir orden',
+                  icon: Icons.import_export,
+                  onPressed: () =>
+                      setState(() => _reverseOrder = !_reverseOrder),
+                ),
+              ),
+            ],
+          )
+        else
+          Row(
+            children: [
+              Expanded(
+                child: MielSearchBarField(
+                  controller: _searchController,
+                  query: _threadSearchQuery,
+                  hintText: 'Ingrese el texto buscado...',
+                  onChanged: (v) => setState(() => _threadSearchQuery = v),
+                  onSubmitted: () => setState(
+                    () => _threadSearchQuery = _searchController.text,
+                  ),
+                  onCleared: () {
+                    _searchController.clear();
+                    setState(() => _threadSearchQuery = '');
+                  },
+                ),
+              ),
+              const SizedBox(width: 14),
+              MielActionButton(
+                label: 'Invertir orden',
+                icon: Icons.import_export,
+                onPressed: () => setState(() => _reverseOrder = !_reverseOrder),
+              ),
+            ],
+          ),
         const SizedBox(height: 16),
 
         if (orderedGroups.isEmpty)
@@ -795,16 +734,13 @@ class _ForoViewState extends ConsumerState<ForoView> {
           : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
+                MielAvatar(
+                  avatarUrl: message.authorAvatarUrl,
                   radius: isReply ? 20 : 24,
-                  backgroundColor: message.isTeacher
+                  fallbackBackgroundColor: message.isTeacher
                       ? const Color(0xFF4F90C4)
                       : palette.textMuted.withValues(alpha: 0.45),
-                  child: Icon(
-                    Icons.person,
-                    size: isReply ? 22 : 26,
-                    color: Colors.white,
-                  ),
+                  fallbackIconSize: isReply ? 22 : 26,
                 ),
                 const SizedBox(width: 14),
                 SizedBox(
@@ -882,12 +818,13 @@ class _ForoViewState extends ConsumerState<ForoView> {
 
     return Row(
       children: [
-        CircleAvatar(
+        MielAvatar(
+          avatarUrl: message.authorAvatarUrl,
           radius: isReply ? 18 : 20,
-          backgroundColor: message.isTeacher
+          fallbackBackgroundColor: message.isTeacher
               ? const Color(0xFF4F90C4)
               : palette.textMuted.withValues(alpha: 0.45),
-          child: const Icon(Icons.person, size: 20, color: Colors.white),
+          fallbackIconSize: 20,
         ),
         const SizedBox(width: 10),
         Expanded(child: metadataColumn),
@@ -948,16 +885,14 @@ class _ForoViewState extends ConsumerState<ForoView> {
                     'Archivo adjunto:',
                     style: TextStyle(fontSize: 13, color: palette.textPrimary),
                   ),
-                  InkWell(
+                  MielHoverLink(
+                    text: file.fileName,
+                    fontSize: 13,
                     onTap: () => triggerMielFileDownload(
                       context,
                       ref,
                       url: file.downloadUrl,
                       fallbackFileName: file.fileName,
-                    ),
-                    child: Text(
-                      file.fileName,
-                      style: TextStyle(fontSize: 13, color: palette.linkAccent),
                     ),
                   ),
                 ],
@@ -972,16 +907,11 @@ class _ForoViewState extends ConsumerState<ForoView> {
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 4,
           children: [
-            InkWell(
+            MielHoverLink(
+              text: 'Responder',
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
               onTap: () => openMielExternalUrl(webUrl),
-              child: Text(
-                'Responder',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: palette.linkAccent,
-                ),
-              ),
             ),
             Text(
               '·',
