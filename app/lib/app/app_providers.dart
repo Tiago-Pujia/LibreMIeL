@@ -53,6 +53,20 @@ final mielInteractiveReaderProvider = FutureProvider<MielInteractiveReader>((
   return DioMielClient.createPersistent();
 });
 
+class SessionGenerationNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
+/// Contador monotónico que se incrementa en cada login/logout para invalidar
+/// cachés en memoria (por ejemplo, avatares e imágenes autenticadas) sin efectos secundarios.
+final sessionGenerationProvider =
+    NotifierProvider<SessionGenerationNotifier, int>(
+      SessionGenerationNotifier.new,
+    );
+
 class AppSessionState {
   const AppSessionState({
     this.isChecking = true,
@@ -133,6 +147,7 @@ class AppSessionController extends Notifier<AppSessionState> {
   Timer? _desktopCycle2Timer;
   DesktopTrayService? _trayService;
   MielCredentials? _memoryCredentials;
+  int _sessionGeneration = 0;
 
   @override
   AppSessionState build() {
@@ -162,16 +177,7 @@ class AppSessionController extends Notifier<AppSessionState> {
     final interval = await db.getSyncIntervalMinutes();
     final forumMode = await db.getForumSyncMode();
     final monitorEval = await db.getMonitorEvaluaciones();
-    final pausedReason = await db.getSetting(SettingKeys.accountPausedReason);
-    final studentName = (await db.getSetting(SettingKeys.studentName)) ?? '';
-    final studentAvatarUrl =
-        (await db.getSetting(SettingKeys.studentAvatarUrl)) ?? '';
     final themeRaw = await db.getSetting(SettingKeys.themeMode);
-    final globalNovRaw = await db.getSetting(SettingKeys.globalNovedadesBadge);
-    final lastCycle1Raw = await db.getSetting(SettingKeys.lastCycle1At);
-    final lastSyncAt = lastCycle1Raw != null
-        ? DateTime.tryParse(lastCycle1Raw)
-        : null;
     final autostartSupported = autostart.isSupported;
     final launchAtStartup = autostartSupported
         ? await autostart.isEnabled()
@@ -185,6 +191,27 @@ class AppSessionController extends Notifier<AppSessionState> {
     }
 
     final authenticated = savedCreds != null;
+    if (authenticated) {
+      final currentUser = savedCreds.username.trim().toLowerCase();
+      final storedUser = await db.getSetting(SettingKeys.accountUsername);
+      if (storedUser == null || storedUser.isEmpty) {
+        await db.setSetting(SettingKeys.accountUsername, currentUser);
+      } else if (storedUser != currentUser) {
+        await db.clearAccountData();
+        await db.setSetting(SettingKeys.accountUsername, currentUser);
+      }
+    }
+
+    final pausedReason = await db.getSetting(SettingKeys.accountPausedReason);
+    final studentName = (await db.getSetting(SettingKeys.studentName)) ?? '';
+    final studentAvatarUrl =
+        (await db.getSetting(SettingKeys.studentAvatarUrl)) ?? '';
+    final globalNovRaw = await db.getSetting(SettingKeys.globalNovedadesBadge);
+    final lastCycle1Raw = await db.getSetting(SettingKeys.lastCycle1At);
+    final lastSyncAt = lastCycle1Raw != null
+        ? DateTime.tryParse(lastCycle1Raw)
+        : null;
+
     state = state.copyWith(
       isChecking: false,
       isAuthenticated: authenticated,
@@ -203,7 +230,7 @@ class AppSessionController extends Notifier<AppSessionState> {
 
     if (authenticated) {
       await _startBackgroundSchedulers(interval);
-      if (studentAvatarUrl.isEmpty) {
+      if (pausedReason == null || pausedReason.isEmpty) {
         unawaited(syncNow(includeCycle2: false));
       }
     }
@@ -236,6 +263,15 @@ class AppSessionController extends Notifier<AppSessionState> {
       return result;
     }
 
+    final normalizedUser = username.trim().toLowerCase();
+    final previousUser = await db.getSetting(SettingKeys.accountUsername);
+    final isDifferentAccount =
+        previousUser == null || previousUser != normalizedUser;
+    if (isDifferentAccount) {
+      await db.clearAccountData();
+    }
+    await db.setSetting(SettingKeys.accountUsername, normalizedUser);
+
     final creds = MielCredentials(
       username: username.trim(),
       password: password,
@@ -243,14 +279,37 @@ class AppSessionController extends Notifier<AppSessionState> {
     _memoryCredentials = creds;
     if (saveCredentials) {
       await credsStore.save(creds);
+    } else {
+      await credsStore.clear();
     }
 
     await db.deleteSetting(SettingKeys.accountPausedReason);
 
-    state = state.copyWith(
+    final restoredName = isDifferentAccount
+        ? ''
+        : ((await db.getSetting(SettingKeys.studentName)) ?? '');
+    final restoredAvatar = isDifferentAccount
+        ? ''
+        : ((await db.getSetting(SettingKeys.studentAvatarUrl)) ?? '');
+
+    _sessionGeneration++;
+    ref.read(sessionGenerationProvider.notifier).bump();
+    state = AppSessionState(
+      isChecking: false,
       isAuthenticated: true,
-      clearAuthPausedReason: true,
+      isSyncing: false,
+      studentName: restoredName,
+      studentAvatarUrl: restoredAvatar,
+      authPausedReason: null,
       lastSyncMessage: 'Sesión iniciada. Sincronizando materias…',
+      lastSyncAt: isDifferentAccount ? null : state.lastSyncAt,
+      syncIntervalMinutes: state.syncIntervalMinutes,
+      forumSyncMode: state.forumSyncMode,
+      monitorEvaluaciones: state.monitorEvaluaciones,
+      themeMode: state.themeMode,
+      globalNovedadesBadge: isDifferentAccount ? 0 : state.globalNovedadesBadge,
+      launchAtStartup: state.launchAtStartup,
+      autostartSupported: state.autostartSupported,
     );
 
     await _startBackgroundSchedulers(state.syncIntervalMinutes);
@@ -263,6 +322,8 @@ class AppSessionController extends Notifier<AppSessionState> {
     bool ignoreAuthPause = false,
   }) async {
     if (state.isSyncing || !state.isAuthenticated) return;
+    final gen = _sessionGeneration;
+    bool isCancelled() => gen != _sessionGeneration;
     state = state.copyWith(isSyncing: true);
 
     try {
@@ -274,7 +335,9 @@ class AppSessionController extends Notifier<AppSessionState> {
       final summary1 = await engine.runCycle1(
         loadCredentials: loadActiveCredentials,
         ignoreAuthPause: ignoreAuthPause,
+        isCancelled: isCancelled,
       );
+      if (isCancelled()) return;
 
       final allNotifs = <DetectedNotification>[...summary1.notifications];
 
@@ -282,23 +345,27 @@ class AppSessionController extends Notifier<AppSessionState> {
         final summary2 = await engine.runCycle2(
           loadCredentials: loadActiveCredentials,
           ignoreAuthPause: ignoreAuthPause,
+          isCancelled: isCancelled,
         );
+        if (isCancelled()) return;
         allNotifs.addAll(summary2.notifications);
       }
 
       if (!summary1.isBaseline && allNotifs.isNotEmpty) {
         await notifService.showBatch(allNotifs);
       }
+      if (isCancelled()) return;
 
       final studentName =
           (await db.getSetting(SettingKeys.studentName)) ?? state.studentName;
       final studentAvatarUrl =
-          (await db.getSetting(SettingKeys.studentAvatarUrl)) ??
-          state.studentAvatarUrl;
+          (await db.getSetting(SettingKeys.studentAvatarUrl)) ?? '';
       final globalNovRaw = await db.getSetting(
         SettingKeys.globalNovedadesBadge,
       );
       final globalNov = int.tryParse(globalNovRaw ?? '') ?? 0;
+      if (isCancelled()) return;
+
       final msg = summary1.authPaused
           ? (summary1.authErrorMessage ??
                 'Sincronización pausada por error de cuenta.')
@@ -321,6 +388,7 @@ class AppSessionController extends Notifier<AppSessionState> {
         lastSyncAt: DateTime.now(),
       );
     } catch (e) {
+      if (isCancelled()) return;
       state = state.copyWith(
         isSyncing: false,
         lastSyncMessage: 'Error durante la sincronización: $e',
@@ -373,8 +441,26 @@ class AppSessionController extends Notifier<AppSessionState> {
   }
 
   Future<void> logout({bool wipeLocalData = false}) async {
+    _sessionGeneration++;
+    ref.read(sessionGenerationProvider.notifier).bump();
     _desktopCycle1Timer?.cancel();
     _desktopCycle2Timer?.cancel();
+    final db = ref.read(databaseProvider);
+    final credsStore = ref.read(credentialsStoreProvider);
+
+    if (!wipeLocalData) {
+      final existingOwner = await db.getSetting(SettingKeys.accountUsername);
+      if (existingOwner == null || existingOwner.isEmpty) {
+        final activeCreds = await loadActiveCredentials();
+        if (activeCreds != null && activeCreds.username.trim().isNotEmpty) {
+          await db.setSetting(
+            SettingKeys.accountUsername,
+            activeCreds.username.trim().toLowerCase(),
+          );
+        }
+      }
+    }
+
     _memoryCredentials = null;
     await _trayService?.dispose();
     _trayService = null;
@@ -384,14 +470,12 @@ class AppSessionController extends Notifier<AppSessionState> {
     final preservedAutostartSupported = state.autostartSupported;
     final client = await ref.read(mielClientProvider.future);
     await client.clearSession();
-    await ref.read(credentialsStoreProvider).clear();
+    await credsStore.clear();
     await AndroidBackgroundWorker.cancelAll();
 
     if (wipeLocalData) {
-      await ref.read(databaseProvider).clearAllLocalData();
-      await ref
-          .read(databaseProvider)
-          .setSetting(SettingKeys.themeMode, preservedTheme.name);
+      await db.clearAllLocalData();
+      await db.setSetting(SettingKeys.themeMode, preservedTheme.name);
     }
 
     state = AppSessionState(

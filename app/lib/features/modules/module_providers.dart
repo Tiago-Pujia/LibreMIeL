@@ -293,18 +293,28 @@ final autoguiaListProvider = FutureProvider.autoDispose
       return parseAutoguiaHtml(html, idComision);
     });
 
-// --- Caché en memoria para imágenes autenticadas de Foros ---
+// --- Caché en memoria para imágenes autenticadas de Foros y perfiles ---
 
+int _authenticatedImageCacheGeneration = -1;
 final Map<String, Uint8List> _authenticatedImageMemoryCache =
     <String, Uint8List>{};
 
 final authenticatedImageBytesProvider = FutureProvider.autoDispose
     .family<Uint8List, String>((ref, url) async {
+      final sessionGen = ref.watch(sessionGenerationProvider);
+      if (_authenticatedImageCacheGeneration != sessionGen) {
+        _authenticatedImageMemoryCache.clear();
+        _authenticatedImageCacheGeneration = sessionGen;
+      }
+
       final cached = _authenticatedImageMemoryCache[url];
       if (cached != null) return cached;
 
       final reader = await ref.read(mielInteractiveReaderProvider.future);
       final bytes = await reader.downloadAuthenticatedBytes(url);
+      if (_authenticatedImageCacheGeneration != sessionGen) {
+        return bytes;
+      }
       if (_authenticatedImageMemoryCache.length >= 64) {
         _authenticatedImageMemoryCache.remove(
           _authenticatedImageMemoryCache.keys.first,

@@ -224,12 +224,10 @@ class DioMielClient implements MielInteractiveReader {
   }) {
     return _enqueue(() async {
       try {
-        // 1. Obtener PHPSESSID y SESSID iniciales en /principal/home/
-        final homeUri = Uri.parse('$kMielBaseUrl/principal/home/');
-        final existingCookies = await _cookieJar.loadForRequest(homeUri);
-        if (existingCookies.isEmpty) {
-          await _requestWithBackoff(() => _dio.get<String>('/principal/home/'));
-        }
+        // 1. Limpiar cookies previas y obtener PHPSESSID/SESSID limpios en /principal/home/
+        //    para evitar arrastre de sesión al cambiar de cuenta.
+        await _cookieJar.deleteAll();
+        await _requestWithBackoff(() => _dio.get<String>('/principal/home/'));
 
         // 2. Enviar credenciales en application/x-www-form-urlencoded (sin CSRF/CAPTCHA)
         final payload = <String, dynamic>{

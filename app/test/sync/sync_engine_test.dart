@@ -190,5 +190,75 @@ void main() {
         verify(() => client.login('00000000', 'secret')).called(1);
       },
     );
+
+    test('Ciclo 1 poda materias residuales que ya no existen en /principal/interno/', () async {
+      // Simula materia residual de otra cuenta o cuatrimestre previo
+      await db.upsertSubjectFromInterno(
+        const MielSubjectBadgeSummary(
+          idComision: '888888',
+          name: 'MATERIA DE OTRA CUENTA',
+          commissionCode: '01-9999',
+          isHidden: false,
+        ),
+        fixedNow,
+      );
+      await db.replaceTeachersForSubject('888888', const [
+        CourseTeacher(
+          name: 'DOCENTE, VIEJO',
+          normalizedName: 'docente, viejo',
+          role: 'Tutor/a',
+        ),
+      ], fixedNow);
+
+      when(() => client.isLogged()).thenAnswer((_) async => true);
+      when(() => client.fetchInternoHtml())
+          .thenAnswer((_) async => fixtureInternoConBadges);
+      when(() => client.fetchMensajeriaEntradaHtml('117967'))
+          .thenAnswer((_) async => fixtureMensajeriaVacia);
+      when(() => client.fetchForoTemasHtml('117967'))
+          .thenAnswer((_) async => fixtureForoTemasInicial);
+      when(() => client.fetchPortafolioPracticasHtml('117967'))
+          .thenAnswer((_) async => fixturePortafolioInicial);
+      when(() => client.fetchEvaluacionesHtml('117967'))
+          .thenAnswer((_) async => fixtureEvaluaciones);
+
+      await engine.runCycle1(loadCredentials: fakeCreds);
+
+      final allSubjects = await db.getAllSubjects();
+      expect(allSubjects.map((s) => s.idComision), ['117967']);
+      expect(await db.getTeachersForSubject('888888'), isEmpty);
+    });
+
+    test('AppDatabase.clearAccountData limpia datos de la cuenta previa preservando preferencias globales', () async {
+      await db.setSetting(SettingKeys.themeMode, 'dark');
+      await db.setSetting(SettingKeys.syncIntervalMinutes, '30');
+      await db.setSetting(SettingKeys.accountUsername, 'cuenta_a');
+      await db.setSetting(SettingKeys.studentName, 'ALUMNO, A');
+      await db.setSetting(
+        SettingKeys.studentAvatarUrl,
+        'https://miel.unlam.edu.ar/data2/avatares/a.jpg',
+      );
+      await db.setSetting(SettingKeys.baselineCompleted, 'true');
+      await db.upsertSubjectFromInterno(
+        const MielSubjectBadgeSummary(
+          idComision: '777777',
+          name: 'MATERIA CUENTA A',
+          commissionCode: '01-1000',
+          isHidden: false,
+        ),
+        fixedNow,
+      );
+
+      await db.clearAccountData();
+
+      expect(await db.getAllSubjects(), isEmpty);
+      expect(await db.getSetting(SettingKeys.accountUsername), isNull);
+      expect(await db.getSetting(SettingKeys.studentName), isNull);
+      expect(await db.getSetting(SettingKeys.studentAvatarUrl), isNull);
+      expect(await db.isBaselineCompleted(), isFalse);
+      // Preferencias globales preservadas
+      expect(await db.getSetting(SettingKeys.themeMode), 'dark');
+      expect(await db.getSyncIntervalMinutes(), 30);
+    });
   });
 }

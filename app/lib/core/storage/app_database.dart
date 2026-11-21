@@ -101,6 +101,7 @@ class SettingKeys {
   static const String forumSyncMode = 'forum_sync_mode';
   static const String monitorEvaluaciones = 'monitor_evaluaciones';
   static const String accountPausedReason = 'account_paused_reason';
+  static const String accountUsername = 'account_username';
   static const String studentName = 'student_name';
   static const String studentAvatarUrl = 'student_avatar_url';
   static const String globalNovedadesBadge = 'global_novedades_badge';
@@ -495,6 +496,52 @@ class AppDatabase extends _$AppDatabase {
   Future<void> markAllNotificationsRead() async {
     await update(notificationLogs)
         .write(const NotificationLogsCompanion(isRead: Value(true)));
+  }
+
+  /// Elimina materias (junto con sus docentes y snapshots) que ya no existen
+  /// en `/principal/interno/` para evitar datos residuales entre cuentas o cuatrimestres.
+  Future<void> pruneSubjectsNotIn(Set<String> activeCommissionIds) async {
+    await transaction(() async {
+      if (activeCommissionIds.isEmpty) {
+        await delete(cachedTeachers).go();
+        await delete(snapshotEntries).go();
+        await delete(subjects).go();
+        return;
+      }
+      final ids = activeCommissionIds.toList();
+      await (delete(subjects)..where((t) => t.idComision.isNotIn(ids))).go();
+      await (delete(
+        cachedTeachers,
+      )..where((t) => t.idComision.isNotIn(ids))).go();
+      await (delete(
+        snapshotEntries,
+      )..where((t) => t.idComision.isNotIn(ids))).go();
+    });
+  }
+
+  /// Borra únicamente los datos asociados a la cuenta de MIeL (materias, snapshots,
+  /// docentes, notificaciones y estado de sesión), preservando preferencias globales
+  /// de la app (tema, intervalo de sync, inicio automático).
+  Future<void> clearAccountData() async {
+    await transaction(() async {
+      await delete(notificationLogs).go();
+      await delete(snapshotEntries).go();
+      await delete(cachedTeachers).go();
+      await delete(subjects).go();
+      await (delete(appSettings)..where(
+            (t) => t.key.isIn(const [
+              SettingKeys.accountUsername,
+              SettingKeys.studentName,
+              SettingKeys.studentAvatarUrl,
+              SettingKeys.globalNovedadesBadge,
+              SettingKeys.baselineCompleted,
+              SettingKeys.lastCycle1At,
+              SettingKeys.lastCycle2At,
+              SettingKeys.accountPausedReason,
+            ]),
+          ))
+          .go();
+    });
   }
 
   /// Borra todos los datos locales al cerrar sesión.

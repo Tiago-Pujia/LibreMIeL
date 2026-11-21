@@ -42,9 +42,19 @@ class SyncEngine {
   Future<SyncRunSummary> runCycle1({
     required CredentialsLoader loadCredentials,
     bool ignoreAuthPause = false,
+    bool Function()? isCancelled,
   }) async {
+    bool cancelled() => isCancelled?.call() ?? false;
     final now = _now();
     final warnings = <String>[];
+
+    if (cancelled()) {
+      return const SyncRunSummary(
+        cycle: 1,
+        isBaseline: false,
+        notifications: [],
+      );
+    }
 
     if (!ignoreAuthPause) {
       final pausedReason = await _db.getSetting(
@@ -62,11 +72,19 @@ class SyncEngine {
     }
 
     final authCheck = await _ensureAuthenticated(loadCredentials, now);
-    if (authCheck != null) {
-      return authCheck;
+    if (authCheck != null || cancelled()) {
+      return authCheck ??
+          const SyncRunSummary(cycle: 1, isBaseline: false, notifications: []);
     }
 
     final internoHtml = await _client.fetchInternoHtml();
+    if (cancelled()) {
+      return const SyncRunSummary(
+        cycle: 1,
+        isBaseline: false,
+        notifications: [],
+      );
+    }
     final overview = parseInternoHtml(internoHtml);
 
     if (overview.subjects.isEmpty && !internoHtml.contains('materia-bloque')) {
@@ -88,6 +106,8 @@ class SyncEngine {
         SettingKeys.studentAvatarUrl,
         overview.studentAvatarUrl,
       );
+    } else {
+      await _db.deleteSetting(SettingKeys.studentAvatarUrl);
     }
     final isBaseline = !(await _db.isBaselineCompleted());
     final forumMode = await _db.getForumSyncMode();
@@ -120,8 +140,23 @@ class SyncEngine {
       }
     }
 
-    // 2. Actualizar materias y procesar únicamente las que tienen badge > 0
+    // 2. Podar materias que ya no pertenecen al usuario/cuatrimestre actual en /principal/interno/
+    final activeCommissionIds = overview.subjects
+        .map((s) => s.idComision)
+        .toSet();
+    if (activeCommissionIds.isNotEmpty) {
+      await _db.pruneSubjectsNotIn(activeCommissionIds);
+    }
+
+    // 3. Actualizar materias y procesar únicamente las que tienen badge > 0
     for (final summary in overview.subjects) {
+      if (cancelled()) {
+        return const SyncRunSummary(
+          cycle: 1,
+          isBaseline: false,
+          notifications: [],
+        );
+      }
       final subject = await _db.upsertSubjectFromInterno(summary, now);
       if (subject.muted || subject.isHiddenInMiel) continue;
 
@@ -131,6 +166,14 @@ class SyncEngine {
           summary.contenidosBadge > 0) {
         final newContenidos = await _syncContenidos(subject, now);
         notifications.addAll(newContenidos);
+      }
+
+      if (cancelled()) {
+        return const SyncRunSummary(
+          cycle: 1,
+          isBaseline: false,
+          notifications: [],
+        );
       }
 
       // B) Mensajería: seguro de solo lectura (/entrada/comision/{id}, nunca verEntrada)
@@ -144,7 +187,8 @@ class SyncEngine {
         notifications.addAll(result.notifications);
 
         // Si llegó un mensaje automático de "Corrección" y no es baseline, actualizar Portafolio ya
-        if (!isBaseline &&
+        if (!cancelled() &&
+            !isBaseline &&
             result.triggeredPortfolioCorrection &&
             subject.notifyPortafolio) {
           final portNotifs = await _syncPortafolio(
@@ -154,6 +198,14 @@ class SyncEngine {
           );
           notifications.addAll(portNotifs);
         }
+      }
+
+      if (cancelled()) {
+        return const SyncRunSummary(
+          cycle: 1,
+          isBaseline: false,
+          notifications: [],
+        );
       }
 
       // C) Foros: listar temas es solo lectura (no altera badges)
@@ -167,15 +219,33 @@ class SyncEngine {
         notifications.addAll(foroNotifs);
       }
 
+      if (cancelled()) {
+        return const SyncRunSummary(
+          cycle: 1,
+          isBaseline: false,
+          notifications: [],
+        );
+      }
+
       // En baseline, capturar snapshot inicial de Portafolio y Evaluaciones silenciosamente
       if (isBaseline) {
         if (subject.hasPortafolio) {
           await _syncPortafolio(subject, isBaseline: true, now: now);
         }
-        if (subject.hasEvaluacion && await _db.getMonitorEvaluaciones()) {
+        if (!cancelled() &&
+            subject.hasEvaluacion &&
+            await _db.getMonitorEvaluaciones()) {
           await _syncEvaluaciones(subject, isBaseline: true, now: now);
         }
       }
+    }
+
+    if (cancelled()) {
+      return const SyncRunSummary(
+        cycle: 1,
+        isBaseline: false,
+        notifications: [],
+      );
     }
 
     if (isBaseline) {
@@ -196,8 +266,18 @@ class SyncEngine {
   Future<SyncRunSummary> runCycle2({
     required CredentialsLoader loadCredentials,
     bool ignoreAuthPause = false,
+    bool Function()? isCancelled,
   }) async {
+    bool cancelled() => isCancelled?.call() ?? false;
     final now = _now();
+    if (cancelled()) {
+      return const SyncRunSummary(
+        cycle: 2,
+        isBaseline: false,
+        notifications: [],
+      );
+    }
+
     if (!ignoreAuthPause) {
       final pausedReason = await _db.getSetting(
         SettingKeys.accountPausedReason,
@@ -218,12 +298,14 @@ class SyncEngine {
       return runCycle1(
         loadCredentials: loadCredentials,
         ignoreAuthPause: ignoreAuthPause,
+        isCancelled: isCancelled,
       );
     }
 
     final authCheck = await _ensureAuthenticated(loadCredentials, now);
-    if (authCheck != null) {
-      return authCheck;
+    if (authCheck != null || cancelled()) {
+      return authCheck ??
+          const SyncRunSummary(cycle: 2, isBaseline: false, notifications: []);
     }
 
     final subjects = await _db.getAllSubjects();
@@ -231,6 +313,13 @@ class SyncEngine {
     final notifications = <DetectedNotification>[];
 
     for (final subject in subjects) {
+      if (cancelled()) {
+        return const SyncRunSummary(
+          cycle: 2,
+          isBaseline: false,
+          notifications: [],
+        );
+      }
       if (subject.muted || subject.isHiddenInMiel) continue;
 
       if (subject.hasPortafolio && subject.notifyPortafolio) {
@@ -241,6 +330,13 @@ class SyncEngine {
         );
         notifications.addAll(portNotifs);
       }
+      if (cancelled()) {
+        return const SyncRunSummary(
+          cycle: 2,
+          isBaseline: false,
+          notifications: [],
+        );
+      }
       if (monitorEval && subject.hasEvaluacion && subject.notifyEvaluacion) {
         final evalNotifs = await _syncEvaluaciones(
           subject,
@@ -249,6 +345,14 @@ class SyncEngine {
         );
         notifications.addAll(evalNotifs);
       }
+    }
+
+    if (cancelled()) {
+      return const SyncRunSummary(
+        cycle: 2,
+        isBaseline: false,
+        notifications: [],
+      );
     }
 
     await _db.setSetting(SettingKeys.lastCycle2At, now.toIso8601String());
