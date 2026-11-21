@@ -50,15 +50,15 @@ Para que **LibreMIEL** sea confiable y sostenible como software libre sin costos
 
 ---
 
-## 3. Opciones Tecnológicas para Escritorio + Android (Superando CORS)
+## 3. Elección Tecnológica para Escritorio + Android (Superando CORS)
 
 Como MIEL **no envía cabeceras CORS** (`Access-Control-Allow-Origin` ausente) y bloquea iframes (`x-frame-options: SAMEORIGIN`), queda descartada una Web App / PWA pura en navegador. El cliente **debe ejecutar sus peticiones HTTP de forma nativa** fuera de las restricciones CORS de un browser.
 
-Principales alternativas viables para un proyecto open source:
+> **Decisión adoptada:** **LibreMIEL está implementado en Flutter (Dart)** (en `app/`), manteniendo la tabla comparativa debajo como registro de la decisión arquitectónica.
 
 | Opción | Plataformas | Ventajas | Consideraciones |
 | :--- | :--- | :--- | :--- |
-| **Flutter (Dart)** | Windows, macOS, Linux, Android | Un solo codebase UI + lógica; cliente HTTP nativo (`dio` + `cookie_jar`); parser DOM (`html`); `workmanager` en Android y notificaciones/tray en Desktop. | Requiere escribir la lógica en Dart (adaptando las ideas de [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)). |
+| **Flutter (Dart)** *(elegida)* | Windows, macOS, Linux, Android | Un solo codebase UI + lógica; cliente HTTP nativo (`dio` + `cookie_jar`); parser DOM (`html`); `workmanager` en Android y notificaciones/tray en Desktop. | Requiere escribir la lógica en Dart (adaptando las ideas de [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)). |
 | **Tauri / Electron (Desktop) + React Native / Capacitor (Android)** | Windows, macOS, Linux, Android | Permite compartir un core en TypeScript/JavaScript (muy alineado con [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)). | En Android requiere capa nativa (`WorkManager` en Kotlin) para notificaciones fiables con la app cerrada y mantener 2 shells UI/build. |
 | **Kotlin Multiplatform (KMP) + Compose Multiplatform** | Windows, macOS, Linux, Android | Excelente integración nativa en Android (`WorkManager`, Keystore), Ktor HTTP nativo y UI compartida con Compose. | Comunidad open source algo más chica en escritorio comparado con Flutter o JS/TS. |
 
@@ -73,9 +73,9 @@ Principales alternativas viables para un proyecto open source:
 
 ## 5. Estrategia de Mantenibilidad y Guía de Implementación para IAs
 
-Dado que la plataforma renderiza HTML server-side sin una API REST pública oficial, al desarrollar nuevas funcionalidades o módulos en **LibreMIEL** conviene seguir esta separación de capas:
+Dado que la plataforma renderiza HTML server-side sin una API REST pública oficial, la implementación de **LibreMIEL** sigue esta separación de capas:
 
-1. **Capa de red (`MielHttpClient`):** Manejo centralizado de `PHPSESSID` + `SESSID`, redirecciones, re-login transparente ante sesión vencida y control de tasa/backoff.
-2. **Capa de *Adapters / Parsers* (`MielParsers`):** Un módulo independiente por sección (`interno`, `contenidos`, `portafolio`, `mensajeria`, `forov2`, `evaluacion`), desacoplado de la interfaz y validado con pruebas unitarias sobre *fixtures* HTML anonimizados.
-3. **Capa de estado local y diff (`SyncEngine` / `LocalStore`):** Persistencia local (ej. SQLite) de snapshots por comisión, historial de notificaciones y configuración por materia (silenciar materias o elegir modo no invasivo vs. detallado en foros).
+1. **Capa de red desacoplada (`MielApiClient` y `MielInteractiveReader`):** Manejo centralizado de `PHPSESSID` + `SESSID`, reseteo limpio de `CookieJar` en cada login, redirecciones, re-login transparente ante sesión vencida y control de tasa/backoff. El polling de fondo (`SyncEngine`) solo consume `MielApiClient`, mientras que la lectura interactiva y descargas autenticadas de archivos/avatares pasan por `MielInteractiveReader`.
+2. **Capa de *Adapters / Parsers* (`MielParsers`):** Un módulo independiente por sección (`interno`, `contenidos`, `portafolio`, `mensajeria`, `forov2`, `evaluacion`, `encuestas`, `autoguia`), desacoplado de la interfaz y validado con pruebas unitarias sobre *fixtures* HTML anonimizados.
+3. **Capa de estado local, diff y aislamiento multi-cuenta (`SyncEngine` / `AppDatabase`):** Persistencia local SQLite (`Drift`) de snapshots por comisión, historial de notificaciones, configuración por materia, poda de comisiones inactivas (`pruneSubjectsNotIn`) y limpieza automática por cuenta (`clearAccountData` + `sessionGenerationProvider`) cuando cambia el usuario autenticado.
 4. **Detección defensiva de cambios en MIEL:** Si un parser espera estructuras conocidas (ej. `.materia-bloque` o `table.w3-table`) y recibe un HTML distinto tras una actualización de MIEL (`2025.2.0` → futuras versiones), emitir una alerta controlada de *"formato de MIEL modificado"* en lugar de corromper snapshots o disparar falsas notificaciones masivas.

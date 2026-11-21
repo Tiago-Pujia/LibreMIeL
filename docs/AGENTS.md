@@ -52,6 +52,11 @@ Antes de editar código, revisá únicamente el documento que corresponde a tu t
    - Nunca commitear `.env`, DNIs, contraseñas, `PHPSESSID`, datos personales reales ni archivos de firma (`.jks`, `.keystore`, `key.properties`).
    - No copiar CSS, JS, imágenes ni logotipos de MIEL/UNLaM.
    - Mantener la raíz del repositorio limpia: el proyecto Flutter completo vive en `app/` y toda la documentación/gestión en `docs/`, dejando únicamente `README.md` y `LICENSE` en la raíz.
+8. **Separación entre polling (`MielApiClient`) y lectura interactiva (`MielInteractiveReader`):**
+   - `SyncEngine` únicamente depende de `MielApiClient` (solo lectura segura). Toda lectura iniciada explícitamente por el usuario (abrir mensajes `verEntrada`, descargar archivos/imágenes autenticadas o explorar subsecciones de Fase 2) debe pasar por `MielInteractiveReader`.
+9. **Aislamiento multi-cuenta:**
+   - Al iniciar sesión con un usuario distinto al registrado en `account_username`, ejecutar siempre `clearAccountData()` antes de sincronizar, limpiar cookies (`CookieJar`) antes del login, incrementar `sessionGenerationProvider` (invalidando caché en memoria de avatares/imágenes) y cancelar cualquier sincronización en curso (`isCancelled`).
+   - En Ciclo 1, podar con `pruneSubjectsNotIn()` toda comisión local que ya no aparezca en `/principal/interno/`.
 
 ---
 

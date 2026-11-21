@@ -16,7 +16,7 @@ Este documento detalla la estructura HTTP y HTML/JSON de las cuatro áreas prior
   `GET https://miel.unlam.edu.ar/contenido/event/marcarElementoDescargadoAjax/comision/{idComision}?id={idElemento}`
 
 ### Estructura HTML y Metadatos
-- **100% HTML server-side.** Todo el árbol de módulos/carpetas viene incluido en la respuesta inicial dentro de `div.w3-accordion` con pares `div.desplegarModulo` + `div.w3-accordion-content > table.w3-table`. (Abrir una carpeta en la web solo alterna `.w3-show` sin peticiones de red).
+- **100% HTML server-side.** Todo el árbol de módulos/carpetas viene incluido en la respuesta inicial dentro de `div.w3-accordion` con pares `div.desplegarModulo` + `div.w3-accordion-content > table.w3-table` (o tablas planas con **múltiples pares alternados `<thead>` + `<tbody>`** dentro de un mismo `<table>`, uno por submódulo). Abrir una carpeta en la web solo alterna `.w3-show` sin peticiones de red.
 - Si no hay archivos cargados, muestra `<p>No se encontraron archivos en este curso.</p>`.
 - **Por cada fila `<tr>` (ítem):**
   - **Tipo de recurso:** clase CSS del ícono (`icon-file-pdf`, `icon-file-image`, `icon-file-text`, `icon-file-explore` para links externos, `.link-icon`, `.popup-video` para YouTube, `.popup-mp4` para videos locales).
@@ -63,6 +63,8 @@ Este documento detalla la estructura HTTP y HTML/JSON de las cuatro áreas prior
     - `Observaciones:`
     - `Corregido por:` (`APELLIDO, NOMBRE` del docente)
   - Campos dentro de `div.entrega`: `Fecha y hora:`, `Práctica enviada:` (enlace de descarga o aviso de descarga deshabilitada), `Entrega grupal:` (`NO` o `SÍ - GRUPO NºX` con integrantes) y `Mensaje:`.
+- **Asistencia en `/portafolio/notas/comision/{idComision}`:**
+  - Tarjetas `div.asistencia-alumno` con clases de estado oficial W3.CSS: `.w3-green` (`Presente`), `.w3-red` (`Ausente`) y `.w3-blue` (`Justificado`, `#2196F3` en modo claro / `#4F90C4` en modo oscuro), acompañadas por la modalidad (`Virtual` / `Presencial`).
 
 ### Relación con Mensajería y Detección de Cambios
 - Portafolio **no muestra badge** en `/principal/interno/`.

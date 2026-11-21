@@ -110,13 +110,13 @@ python3 -m unittest discover -s scripts -v
 
 El proyecto está organizado en capas independientes para facilitar contribuciones:
 
-- `app/lib/core/network/`: Cliente HTTP (`MielClient`), manejo de cookies (`PHPSESSID` + `SESSID`), sesión y reintentos.
+- `app/lib/core/network/`: Cliente HTTP (`MielApiClient` para sincronización segura y `MielInteractiveReader` para lectura/descarga interactiva), manejo de cookies (`PHPSESSID` + `SESSID`), sesión y reintentos.
 - `app/lib/core/parsers/`: Funciones **puras** (`String html -> Modelo`) separadas por módulo de MIEL. Siempre deben incluir tests en `app/test/parsers/` con fixtures anonimizados en `app/test/fixtures/`.
-- `app/lib/core/storage/`: Base de datos SQLite local (`Drift`) para snapshots, historial de notificaciones y preferencias.
+- `app/lib/core/storage/`: Base de datos SQLite local (`Drift`) para snapshots, historial de notificaciones, aislamiento de cuenta y preferencias.
 - `app/lib/core/sync/`: Motor de sincronización en dos ciclos (`SyncEngine`).
 - `app/lib/core/theme/`: Sistema visual fiel a MIeL (claro/oscuro) e identidad LibreMIEL.
-- `app/lib/platform/`: Integraciones nativas (almacén seguro de credenciales, notificaciones locales, bandeja de escritorio, inicio automático del sistema, worker de Android).
-- `app/lib/features/`: Pantallas de la interfaz (Login, Materias activas, Novedades, Ajustes y borradores de Fase 2).
+- `app/lib/platform/`: Integraciones nativas (almacén seguro de credenciales, notificaciones locales, descargas autenticadas, bandeja de escritorio, inicio automático del sistema, worker de Android).
+- `app/lib/features/`: Pantallas de la interfaz (Login, Materias activas, Novedades, Ajustes y lectores nativos de Fase 2 para Contenidos, Portafolio, Mensajería, Foros y módulos secundarios).
 - `packaging/` y `.github/workflows/`: Empaquetado para Windows, macOS, Linux (AppImage, `.deb`, `.rpm`, Arch `.pkg.tar.zst`, portable `.tar.gz`) y Android (`.apk`).
 
 ---

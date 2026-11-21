@@ -12,6 +12,7 @@ El HTML renderizado del servidor incluye todas las comisiones asociadas al estud
 - **Nombre de la materia:** `.materia-titulo` (ej. `<div class="w3-slarge materia-titulo">...</div>`).
 - **Código de comisión:** dentro del primer bloque `.w3-small` bajo el título (`Com: XX-XXXX`).
 - **Materias ocultas:** Permanecen en el DOM con clase `.materia-bloque-oculta` (y `w3-hide`, alternables en la web con `.btnMostrarOcultas` / `.btnOcultarOcultas`). El cliente debe distinguirlas para no consultar innecesariamente materias archivadas u ocultas por el estudiante.
+- **Foto de perfil del estudiante:** se expone en `.fotoPerfil` (frecuentemente vía estilo `background-image: url(...)` o `<img>`) y apunta a recursos autenticados que requieren las cookies de sesión (`PHPSESSID` + `SESSID`), al igual que `.fotoRemitente` en Mensajería y `.foro-fotoPerfil` en Foros.
 - **Anuncios / paneles globales descartables:** `/principal/interno/` admite paneles `.w3-panel` que pueden marcarse como leídos vía `POST /principal/event/marcarLeidaAjax/` (`idNotificacion`).
 
 ---

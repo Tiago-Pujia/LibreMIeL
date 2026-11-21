@@ -51,6 +51,8 @@ Formato recomendado de commits: `<tipo>(<alcance opcional>): <descripción breve
 
 ### 4) Verificar que todo pase antes de integrar a `main`
 ```bash
+# Desde app/
+cd app
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
@@ -75,11 +77,11 @@ flutter test
 
 El workflow `.github/workflows/release.yml` se dispara automáticamente cuando subís un **tag semántico** (`vMAJOR.MINOR.PATCH`) a GitHub:
 
-1. Actualizá la versión en `pubspec.yaml` (ej. `version: 0.1.0+1`) y mové los cambios de `[Unreleased]` a `[0.1.0] - AAAA-MM-DD` en [`docs/CHANGELOG.md`](CHANGELOG.md).
+1. Actualizá la versión en `app/pubspec.yaml` (ej. `version: 0.2.0+1`) y mové los cambios de `[Unreleased]` a `[0.2.0] - AAAA-MM-DD` en [`docs/CHANGELOG.md`](CHANGELOG.md).
 2. Hacé commit en `main`:
    ```bash
-   git add pubspec.yaml docs/CHANGELOG.md
-   git commit -m "chore(release): preparar v0.1.0"
+   git add app/pubspec.yaml docs/CHANGELOG.md
+   git commit -m "chore(release): preparar v0.2.0"
    ```
 3. Creá el tag anotado:
    ```bash
