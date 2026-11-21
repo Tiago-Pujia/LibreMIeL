@@ -192,7 +192,7 @@ class _PortafolioSubmissionCardState
   @override
   Widget build(BuildContext context) {
     final palette = MielPalette.of(context);
-    final tutors = widget.formMeta.tutors.isNotEmpty
+    final rawTutors = widget.formMeta.tutors.isNotEmpty
         ? widget.formMeta.tutors
         : const [
             PortfolioTutorOption(
@@ -200,6 +200,23 @@ class _PortafolioSubmissionCardState
               name: 'Todos los docentes de la comisión',
             ),
           ];
+
+    // Deduplicación estricta por id para evitar que DropdownButton tire aserción si MIeL repite valores
+    final uniqueTutors = <String, PortfolioTutorOption>{};
+    for (final t in rawTutors) {
+      final safeId = t.id.isEmpty ? '0' : t.id;
+      uniqueTutors.putIfAbsent(
+        safeId,
+        () => PortfolioTutorOption(id: safeId, name: t.name),
+      );
+    }
+    if (uniqueTutors.isEmpty) {
+      uniqueTutors['0'] = const PortfolioTutorOption(
+        id: '0',
+        name: 'Todos los docentes de la comisión',
+      );
+    }
+    final tutors = uniqueTutors.values.toList();
     final validTutorId = tutors.any((t) => t.id == _selectedTutorId)
         ? _selectedTutorId
         : tutors.first.id;

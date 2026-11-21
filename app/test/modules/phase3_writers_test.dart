@@ -145,5 +145,27 @@ void main() {
       expect(thread.messages.length, equals(1));
       expect(thread.messages.first.replyMentionName, equals('Nelson'));
     });
+
+    test('parsePortafolioEntregasDetalleHtml deduplica opciones vacías o repetidas de tutores', () {
+      const html = '''
+        <div class="practica-detalle">
+          <form id="formNuevaEntrega" method="post">
+            <select name="tutorDestinatario">
+              <option value="">Seleccione tutor destinatario</option>
+              <option value="0">Todos los docentes de la comisión</option>
+              <option value="12">Profesor A</option>
+              <option value="12">Profesor A (repetido)</option>
+            </select>
+            <input type="file" name="archivo">
+          </form>
+        </div>
+      ''';
+
+      final detail = parsePortafolioEntregasDetalleHtml(html, '119341', '100');
+      expect(detail.submissionForm.canSubmit, isTrue);
+      // Solo deben quedar '0' (deduplicado de '' y '0') y '12' (deduplicado de '12')
+      expect(detail.submissionForm.tutors.length, equals(2));
+      expect(detail.submissionForm.tutors.map((t) => t.id).toSet().length, equals(2));
+    });
   });
 }

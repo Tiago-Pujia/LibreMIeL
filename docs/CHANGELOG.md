@@ -57,6 +57,15 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 ### Changed
 - Eliminadas secciones secundarias poco usadas (`Glosario`, `Preguntas frecuentes` en Contenidos y `Competencias` en Portafolio) y botones redundantes (`Actualizar` / `Abrir en MIeL`) en el encabezado de Contenidos.
 - Alineado a la izquierda el nombre de la materia junto al botón de inicio en la barra superior, ajustado el badge rojo al ícono de herramienta y simplificado el placeholder del login a `DNI`.
+- **Barra superior:** retirada la campana de notificaciones de la barra verde para mantener una barra limpia; las notificaciones permanecen accesibles desde el menú lateral en *Funcionalidades* -> *Novedades*.
+- **Tarjetas de materias:** unificado el color de la campana de notificaciones a blanco (en modo oscuro) o gris secundario (en modo claro) para concordar con los demás íconos de la tarjeta.
+- **Footer del menú principal:** retirado el enlace "Abrir MIeL oficial en el navegador" debajo de la licencia MIT.
+- **Encabezados de Contenidos y Foros:** retirados los botones redundantes "Respaldo offline" y "Exportar foros"; el respaldo masivo permanece centralizado en el menú lateral.
+- **Respaldo offline:** eliminada la opción redundante de adjuntos (ahora siempre se descargan) e incorporado selector con lista de verificación interactiva y atajos (*Todas* / *Ninguna*) al seleccionar materias específicas.
+
+### Fixed
+- **Portafolio:** corregida la aserción de Flutter (`DropdownButton: There should be exactly one item with value: 0`) deduplicando las opciones de tutores en `parsePortafolioEntregasDetalleHtml` y sanitizando las opciones en `PortafolioSubmissionCard`.
+- **Notificaciones:** corregido el registro de mensajes y foros no leídos en `SyncEngine` (`_syncMensajeria` y `_syncForos`), garantizando que los avisos no leídos existentes se registren correctamente en el feed de Novedades sin depender exclusivamente de cambios de estado posteriores al baseline inicial.
 
 ### Fixed
 - **Aislamiento al cambiar de cuenta:** al cerrar sesión e iniciar con otro usuario se limpian automáticamente las materias, docentes, snapshots, notificaciones, perfil y caché de imágenes de la cuenta anterior (`clearAccountData` + `sessionGenerationProvider`), se resetea el `CookieJar` antes de cada login, se cancelan sincronizaciones en vuelo (`isCancelled`) y Ciclo 1 poda comisiones que ya no existan en `/principal/interno/` (`pruneSubjectsNotIn`).

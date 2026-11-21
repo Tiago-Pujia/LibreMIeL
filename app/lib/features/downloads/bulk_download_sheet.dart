@@ -76,7 +76,7 @@ class _BulkDownloadDialogContentState
   bool _exportMarkdown = true;
   bool _exportJson = true;
   bool _exportHtml = true;
-  bool _downloadForumAttachments = true;
+  static const bool _downloadForumAttachments = true;
   bool _incremental = true;
 
   bool _downloadAllSubjects = false;
@@ -325,7 +325,18 @@ class _BulkDownloadDialogContentState
           child: Column(
             children: [
               InkWell(
-                onTap: () => setState(() => _downloadAllSubjects = false),
+                onTap: () {
+                  setState(() {
+                    _downloadAllSubjects = false;
+                    if (_selectedCommissionIds.isEmpty) {
+                      if (widget.initialSubject != null) {
+                        _selectedCommissionIds.add(widget.initialSubject!.idComision);
+                      } else {
+                        _selectedCommissionIds.addAll(allSubjects.map((s) => s.idComision));
+                      }
+                    }
+                  });
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(
@@ -342,7 +353,7 @@ class _BulkDownloadDialogContentState
                         child: Text(
                           widget.initialSubject != null
                               ? 'Solo esta materia (${widget.initialSubject!.name})'
-                              : 'Materias seleccionadas',
+                              : 'Materias seleccionadas (${_selectedCommissionIds.length}/${allSubjects.length})',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -354,6 +365,95 @@ class _BulkDownloadDialogContentState
                   ),
                 ),
               ),
+              if (!_downloadAllSubjects) ...[
+                const Divider(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Elegí qué materias respaldar:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: palette.textSecondary,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          MielHoverLink(
+                            text: 'Todas',
+                            fontSize: 11.5,
+                            onTap: () {
+                              setState(() {
+                                _selectedCommissionIds
+                                  ..clear()
+                                  ..addAll(allSubjects.map((s) => s.idComision));
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 10),
+                          MielHoverLink(
+                            text: 'Ninguna',
+                            fontSize: 11.5,
+                            onTap: () {
+                              setState(() {
+                                _selectedCommissionIds.clear();
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 180),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: palette.cardBackground,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: palette.cardBorder),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: allSubjects.length,
+                      separatorBuilder: (_, _) =>
+                          Divider(height: 1, color: palette.divider),
+                      itemBuilder: (context, idx) {
+                        final subj = allSubjects[idx];
+                        final isChecked = _selectedCommissionIds.contains(
+                          subj.idComision,
+                        );
+                        return CheckboxListTile(
+                          value: isChecked,
+                          activeColor: palette.primary,
+                          dense: true,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 10),
+                          title: Text(
+                            subj.name,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: palette.textPrimary,
+                            ),
+                          ),
+                          onChanged: (val) {
+                            setState(() {
+                              if (val == true) {
+                                _selectedCommissionIds.add(subj.idComision);
+                              } else {
+                                _selectedCommissionIds.remove(subj.idComision);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
               const Divider(height: 12),
               InkWell(
                 onTap: () => setState(() => _downloadAllSubjects = true),
@@ -478,20 +578,6 @@ class _BulkDownloadDialogContentState
                       onSelected: (val) => setState(() => _exportHtml = val),
                     ),
                   ],
-                ),
-                const SizedBox(height: 6),
-                CheckboxListTile(
-                  value: _downloadForumAttachments,
-                  activeColor: palette.primary,
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    'Descargar imágenes y adjuntos binarios de los foros',
-                    style: TextStyle(fontSize: 12, color: palette.textPrimary),
-                  ),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _downloadForumAttachments = val);
-                  },
                 ),
               ],
             ),

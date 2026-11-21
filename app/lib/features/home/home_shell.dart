@@ -501,11 +501,6 @@ class _MielDoubleHeader extends StatelessWidget {
                   onTap: onSyncNow,
                 ),
 
-              _NavNotificationAction(
-                unreadCount: unreadAlertsCount,
-                onTap: onGoNovedades,
-              ),
-
               _NavIconAction(
                 tooltip: 'Cambiar modo claro / oscuro',
                 icon: Icons.brightness_4,
@@ -760,52 +755,6 @@ class _NavIconAction extends StatelessWidget {
   }
 }
 
-class _NavNotificationAction extends StatelessWidget {
-  const _NavNotificationAction({
-    required this.unreadCount,
-    required this.onTap,
-  });
-
-  final int unreadCount;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MielPalette.of(context);
-    return _HoverableGreenNavTile(
-      tooltip: unreadCount > 0
-          ? 'Novedades ($unreadCount sin leer)'
-          : 'Novedades',
-      onTap: onTap,
-      child: SizedBox(
-        height: 40,
-        width: 42,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(
-              unreadCount > 0
-                  ? Icons.notifications_active
-                  : Icons.notifications_none,
-              size: 21,
-              color: Colors.white,
-            ),
-            if (unreadCount > 0)
-              Positioned(
-                top: 4,
-                right: 3,
-                child: MielRedBadge(
-                  count: unreadCount,
-                  backgroundColor: palette.badgeRed,
-                  compact: true,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _NavTextAction extends StatelessWidget {
   const _NavTextAction({required this.label, required this.onTap});

@@ -1,10 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import '../../app/app_providers.dart';
 import '../../core/models/miel_models.dart';
-import '../../core/network/miel_client.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/libremiel_brand.dart';
 import '../../core/theme/miel_theme.dart';
@@ -28,10 +25,6 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
   bool _organizeMode = false;
   bool _showHidden = false;
 
-  Future<void> _openMielWeb() async {
-    final uri = Uri.parse('$kMielBaseUrl/principal/interno/');
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
 
   /// Uso oficial de los 3 puntitos (⋮) en MIeL: ver detalle de comisión y docentes (`cursoDetalles`).
   void _openCourseDetail(Subject subject) {
@@ -381,23 +374,6 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13.5, color: palette.textMuted),
                 ),
-                const SizedBox(height: 6),
-                Center(
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      onTap: _openMielWeb,
-                      child: Text(
-                        'Abrir MIeL oficial en el navegador',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w500,
-                          color: palette.linkAccent,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -684,6 +660,10 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
       );
     }
 
+    final iconColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : palette.textSecondary;
+
     // Modo normal: campana de notificaciones de LibreMIeL al lado de los 3 puntitos (Ver detalle de MIeL)
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -695,13 +675,13 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
           icon: widget.subject.muted
               ? Icons.notifications_off_outlined
               : Icons.notifications_active,
-          color: widget.subject.muted ? palette.textMuted : palette.linkAccent,
+          color: widget.subject.muted ? palette.textMuted : iconColor,
           onTap: widget.onOpenAlerts,
         ),
         _CompactCardIcon(
           tooltip: 'Ver detalle',
           icon: Icons.more_vert,
-          color: palette.textSecondary,
+          color: iconColor,
           onTap: widget.onOpenCourseDetail,
         ),
       ],

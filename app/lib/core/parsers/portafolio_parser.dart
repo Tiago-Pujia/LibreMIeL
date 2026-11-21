@@ -266,13 +266,17 @@ PortfolioPracticeDetail parsePortafolioEntregasDetalleHtml(
       const PortfolioSubmissionFormMeta();
   if (formEl != null) {
     final tutors = <PortfolioTutorOption>[];
+    final seenIds = <String>{};
     for (final opt in formEl.querySelectorAll(
       'select[name="tutorDestinatario"] option',
     )) {
-      final id = (opt.attributes['value'] ?? '').trim();
+      final rawId = (opt.attributes['value'] ?? '').trim();
       final name = cleanWhitespace(opt.text);
-      if (name.isNotEmpty) {
-        tutors.add(PortfolioTutorOption(id: id.isEmpty ? '0' : id, name: name));
+      if (name.isEmpty) continue;
+      // Normalizar id vacío o "0" para representar a todos los docentes
+      final id = (rawId.isEmpty || rawId == '0') ? '0' : rawId;
+      if (seenIds.add(id)) {
+        tutors.add(PortfolioTutorOption(id: id, name: name));
       }
     }
     if (tutors.isEmpty) {

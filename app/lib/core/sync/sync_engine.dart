@@ -178,7 +178,9 @@ class SyncEngine {
 
       // B) Mensajería: seguro de solo lectura (/entrada/comision/{id}, nunca verEntrada)
       if (subject.notifyMensajeria &&
-          (summary.mensajesBadge > 0 || isBaseline)) {
+          (summary.mensajesBadge > 0 ||
+              subject.lastMensajesBadge > 0 ||
+              isBaseline)) {
         final result = await _syncMensajeria(
           subject,
           isBaseline: isBaseline,
@@ -209,7 +211,10 @@ class SyncEngine {
       }
 
       // C) Foros: listar temas es solo lectura (no altera badges)
-      if (subject.notifyForos && (summary.foroBadge > 0 || isBaseline)) {
+      if (subject.notifyForos &&
+          (summary.foroBadge > 0 ||
+              subject.lastForoBadge > 0 ||
+              isBaseline)) {
         final foroNotifs = await _syncForos(
           subject,
           mode: forumMode,
@@ -505,7 +510,7 @@ class SyncEngine {
 
     for (final msg in messages) {
       final isNew = !prevSnapshots.containsKey(msg.idMensaje);
-      if (!isBaseline && msg.isUnread && isNew) {
+      if (msg.isUnread) {
         teacherNames ??= await _getOrRefreshTeachers(subject.idComision, now);
         final fromTeacher = isSenderTeacher(msg.senderName, teacherNames);
         final isCorrection = isPortfolioCorrectionMessage(msg);
@@ -531,7 +536,9 @@ class SyncEngine {
           detectedAt: now,
         );
         if (await _db.insertNotificationIfNew(n)) {
-          notifications.add(n);
+          if (!isBaseline && isNew) {
+            notifications.add(n);
+          }
         }
       }
 
@@ -690,7 +697,7 @@ class SyncEngine {
       final prev = prevTopics[topic.idTema];
       final changed = prev == null || prev.fingerprint != topic.fingerprint;
 
-      if (!isBaseline && changed && topic.unreadBadge > 0) {
+      if (topic.unreadBadge > 0) {
         if (mode == ForumSyncMode.nonInvasive) {
           final n = DetectedNotification(
             dedupeKey:
@@ -708,7 +715,9 @@ class SyncEngine {
             detectedAt: now,
           );
           if (await _db.insertNotificationIfNew(n)) {
-            notifications.add(n);
+            if (!isBaseline && changed) {
+              notifications.add(n);
+            }
           }
         } else {
           // Modo detallado: inspeccionar hilo para detectar respuestas de Tutor/a al usuario
@@ -729,7 +738,7 @@ class SyncEngine {
           for (final msg in thread.messages) {
             final msgKey = '${topic.idTema}:${msg.id}';
             final isNewMsg = !prevMsgs.containsKey(msgKey);
-            if (isNewMsg && isTeacherReplyToCurrentUser(msg, thread)) {
+            if (isTeacherReplyToCurrentUser(msg, thread)) {
               final preview = msg.bodyText.length > 140
                   ? '${msg.bodyText.substring(0, 140)}…'
                   : msg.bodyText;
@@ -747,7 +756,9 @@ class SyncEngine {
                 detectedAt: now,
               );
               if (await _db.insertNotificationIfNew(n)) {
-                notifications.add(n);
+                if (!isBaseline && isNewMsg) {
+                  notifications.add(n);
+                }
               }
             }
 
