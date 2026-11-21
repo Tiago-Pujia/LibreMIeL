@@ -294,10 +294,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               textInputAction: TextInputAction.next,
               cursorColor: Colors.white,
               style: const TextStyle(color: Colors.white, fontSize: 16),
-              decoration: _mielInputDecoration(hint: 'DNI o usuario MIeL'),
+              decoration: _mielInputDecoration(hint: 'DNI'),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return 'Ingresá tu usuario o DNI de MIeL';
+                  return 'Ingresá tu DNI';
                 }
                 return null;
               },
