@@ -62,6 +62,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - **Footer del menú principal:** retirado el enlace "Abrir MIeL oficial en el navegador" debajo de la licencia MIT.
 - **Encabezados de Contenidos y Foros:** retirados los botones redundantes "Respaldo offline" y "Exportar foros"; el respaldo masivo permanece centralizado en el menú lateral.
 - **Respaldo offline:** eliminada la opción redundante de adjuntos (ahora siempre se descargan) e incorporado selector con lista de verificación interactiva y atajos (*Todas* / *Ninguna*) al seleccionar materias específicas.
+- **Foros y Portafolio:** retirados los botones "Abrir en MIeL" de las barras superiores de los módulos, conservando solo las acciones esenciales (`Actualizar` y `Marcar todos leídos`).
 
 ### Fixed
 - **Portafolio:** corregida la aserción de Flutter (`DropdownButton: There should be exactly one item with value: 0`) deduplicando las opciones de tutores en `parsePortafolioEntregasDetalleHtml` y sanitizando las opciones en `PortafolioSubmissionCard`.

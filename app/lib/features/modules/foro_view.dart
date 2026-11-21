@@ -373,11 +373,6 @@ class _ForoViewState extends ConsumerState<ForoView> {
                 icon: Icons.refresh,
                 onPressed: () => ref.invalidate(foroTemasProvider(idComision)),
               ),
-              MielActionButton(
-                label: 'Abrir en MIeL',
-                icon: Icons.open_in_new,
-                onPressed: () => openMielExternalUrl(webUrl),
-              ),
             ],
           ),
         ),
@@ -560,11 +555,6 @@ class _ForoViewState extends ConsumerState<ForoView> {
                     () => _showNewMessageComposer = !_showNewMessageComposer,
                   ),
                 ),
-              MielActionButton(
-                label: 'Abrir en MIeL',
-                icon: Icons.open_in_new,
-                onPressed: () => openMielExternalUrl(webUrl),
-              ),
             ],
           ),
         ),

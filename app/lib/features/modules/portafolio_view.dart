@@ -82,22 +82,11 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
       children: [
         MielModuleHeader(
           title: 'Prácticas',
-          trailing: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              MielActionButton(
-                label: 'Actualizar',
-                icon: Icons.refresh,
-                onPressed: () =>
-                    ref.invalidate(portafolioPracticasProvider(idComision)),
-              ),
-              MielActionButton(
-                label: 'Abrir en MIeL',
-                icon: Icons.open_in_new,
-                onPressed: () => openMielExternalUrl(webUrl),
-              ),
-            ],
+          trailing: MielActionButton(
+            label: 'Actualizar',
+            icon: Icons.refresh,
+            onPressed: () =>
+                ref.invalidate(portafolioPracticasProvider(idComision)),
           ),
         ),
         const SizedBox(height: 16),
@@ -833,13 +822,8 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        MielModuleHeader(
+        const MielModuleHeader(
           title: 'Prácticas: Archivos enviados',
-          trailing: MielActionButton(
-            label: 'Abrir en MIeL',
-            icon: Icons.open_in_new,
-            onPressed: () => openMielExternalUrl(webUrl),
-          ),
         ),
         const SizedBox(height: 16),
         filesAsync.when(
@@ -1049,13 +1033,8 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        MielModuleHeader(
+        const MielModuleHeader(
           title: 'Mis grupos',
-          trailing: MielActionButton(
-            label: 'Abrir en MIeL',
-            icon: Icons.open_in_new,
-            onPressed: () => openMielExternalUrl(webUrl),
-          ),
         ),
         const SizedBox(height: 16),
         groupsAsync.when(
@@ -1243,13 +1222,8 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        MielModuleHeader(
+        const MielModuleHeader(
           title: 'Asistencia, notas y certificados',
-          trailing: MielActionButton(
-            label: 'Abrir en MIeL',
-            icon: Icons.open_in_new,
-            onPressed: () => openMielExternalUrl(webUrl),
-          ),
         ),
         const SizedBox(height: 18),
         notasAsync.when(
