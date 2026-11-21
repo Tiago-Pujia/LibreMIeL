@@ -71,23 +71,6 @@ class _ContenidosViewState extends ConsumerState<ContenidosView> {
         MielModuleHeader(
           title: 'Archivos',
           badgeCount: widget.subject.lastContenidosBadge,
-          trailing: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              MielActionButton(
-                label: 'Actualizar',
-                icon: Icons.refresh,
-                onPressed: () =>
-                    ref.invalidate(contenidosPageProvider(idComision)),
-              ),
-              MielActionButton(
-                label: 'Abrir en MIeL',
-                icon: Icons.open_in_new,
-                onPressed: () => openMielExternalUrl(webUrl),
-              ),
-            ],
-          ),
         ),
         const SizedBox(height: 14),
 

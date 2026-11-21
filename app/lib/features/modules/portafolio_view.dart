@@ -17,10 +17,12 @@ class PortafolioView extends ConsumerStatefulWidget {
     super.key,
     required this.subject,
     required this.sectionIndex,
+    this.sectionResetTick = 0,
   });
 
   final Subject subject;
   final int sectionIndex;
+  final int sectionResetTick;
 
   @override
   ConsumerState<PortafolioView> createState() => _PortafolioViewState();
@@ -33,6 +35,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
   void didUpdateWidget(covariant PortafolioView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.sectionIndex != widget.sectionIndex ||
+        oldWidget.sectionResetTick != widget.sectionResetTick ||
         oldWidget.subject.idComision != widget.subject.idComision) {
       _selectedPractice = null;
     }
@@ -1211,6 +1214,9 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
     final presentColor = isDark
         ? const Color(0xFF59A15B)
         : const Color(0xFF4CAF50);
+    final justifiedColor = isDark
+        ? const Color(0xFF4F90C4)
+        : const Color(0xFF2196F3);
     final absentColor = isDark
         ? const Color(0xFFEA4A3E)
         : const Color(0xFFF44336);
@@ -1273,7 +1279,11 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(vertical: 4),
                               decoration: BoxDecoration(
-                                color: a.isPresent ? presentColor : absentColor,
+                                color: a.isPresent
+                                    ? presentColor
+                                    : (a.isJustified
+                                          ? justifiedColor
+                                          : absentColor),
                                 borderRadius: BorderRadius.circular(2),
                               ),
                               alignment: Alignment.center,

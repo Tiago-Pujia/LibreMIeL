@@ -18,11 +18,13 @@ class ModuleReaderHost extends StatelessWidget {
     required this.sectionIndex,
     required this.selectedForoTopicId,
     required this.onSelectForoTopic,
+    this.sectionResetTick = 0,
   });
 
   final Subject subject;
   final MielToolKind tool;
   final int sectionIndex;
+  final int sectionResetTick;
   final String? selectedForoTopicId;
   final ValueChanged<String?> onSelectForoTopic;
 
@@ -32,9 +34,17 @@ class ModuleReaderHost extends StatelessWidget {
       case MielToolKind.contenidos:
         return ContenidosView(subject: subject, sectionIndex: sectionIndex);
       case MielToolKind.portafolio:
-        return PortafolioView(subject: subject, sectionIndex: sectionIndex);
+        return PortafolioView(
+          subject: subject,
+          sectionIndex: sectionIndex,
+          sectionResetTick: sectionResetTick,
+        );
       case MielToolKind.mensajeria:
-        return MensajeriaView(subject: subject, sectionIndex: sectionIndex);
+        return MensajeriaView(
+          subject: subject,
+          sectionIndex: sectionIndex,
+          sectionResetTick: sectionResetTick,
+        );
       case MielToolKind.foro:
         return ForoView(
           subject: subject,

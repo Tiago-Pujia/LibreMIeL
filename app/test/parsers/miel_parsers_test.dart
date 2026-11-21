@@ -177,11 +177,17 @@ void main() {
       expect(detail.deliveries.first.message, 'Adjuntamos entrega final');
 
       final notas = parsePortafolioNotasHtml(fixturePortafolioNotasAsistencia);
-      expect(notas.attendance, hasLength(2));
+      expect(notas.attendance, hasLength(3));
       expect(notas.attendance[0].date, '18/08/2026');
       expect(notas.attendance[0].isPresent, isTrue);
+      expect(notas.attendance[0].isJustified, isFalse);
       expect(notas.attendance[0].modality, 'Virtual');
+      expect(notas.attendance[1].date, '25/08/2026');
+      expect(notas.attendance[1].status, 'Justificado');
       expect(notas.attendance[1].isPresent, isFalse);
+      expect(notas.attendance[1].isJustified, isTrue);
+      expect(notas.attendance[2].isPresent, isFalse);
+      expect(notas.attendance[2].isJustified, isFalse);
     });
 
     test('parseMensajeriaBandejaHtml y parseMensajeriaDetalleHtml extraen paginación, favoritos, respuesta y adjuntos', () {

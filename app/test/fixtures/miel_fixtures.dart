@@ -297,6 +297,11 @@ const String fixturePortafolioNotasAsistencia = '''
     <div class="w3-text-gray">Virtual</div>
   </div>
   <div class="asistencia-alumno w3-center">
+    <div>25/08/2026</div>
+    <div class="w3-blue w3-round-small w3-padding-4">Justificado</div>
+    <div class="w3-text-gray"></div>
+  </div>
+  <div class="asistencia-alumno w3-center">
     <div>20/10/2026</div>
     <div class="w3-red w3-round-small w3-padding-4">Ausente</div>
     <div class="w3-text-gray"></div>

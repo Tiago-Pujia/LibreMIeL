@@ -383,9 +383,14 @@ PortfolioGradesData parsePortafolioNotasHtml(String rawHtml) {
       final date = cleanWhitespace(childDivs[0].text);
       final statusEl = childDivs[1];
       final status = cleanWhitespace(statusEl.text);
+      final normalizedStatus = normalizeText(status);
       final isPresent =
           statusEl.classes.contains('w3-green') ||
-          normalizeText(status).contains('presente');
+          normalizedStatus.contains('presente');
+      final isJustified =
+          !isPresent &&
+          (statusEl.classes.contains('w3-blue') ||
+              normalizedStatus.contains('justific'));
       final modality = childDivs.length >= 3
           ? cleanWhitespace(childDivs[2].text)
           : '';
@@ -394,9 +399,12 @@ PortfolioGradesData parsePortafolioNotasHtml(String rawHtml) {
           AttendanceEntry(
             date: date,
             status: status.isEmpty
-                ? (isPresent ? 'Presente' : 'Ausente')
+                ? (isPresent
+                      ? 'Presente'
+                      : (isJustified ? 'Justificado' : 'Ausente'))
                 : status,
             isPresent: isPresent,
+            isJustified: isJustified,
             modality: modality,
           ),
         );

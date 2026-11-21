@@ -36,6 +36,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   String? _activeSubjectId;
   MielToolKind _activeTool = MielToolKind.contenidos;
   int _activeModuleSectionIndex = 0;
+  int _moduleSectionNavTick = 0;
   String? _activeForoTopicId;
 
   void _goHome() {
@@ -89,6 +90,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       _activeSubjectId = subject.idComision;
       _activeTool = tool;
       _activeModuleSectionIndex = defaultSectionIndexForTool(tool);
+      _moduleSectionNavTick++;
       _activeForoTopicId = null;
     });
     _closeDrawerIfOpen();
@@ -154,6 +156,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       onSelectModuleSection: (idx) {
         setState(() {
           _activeModuleSectionIndex = idx;
+          _moduleSectionNavTick++;
           _activeForoTopicId = null;
         });
         _closeDrawerIfOpen();
@@ -179,6 +182,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         subject: activeSubject!,
         tool: _activeTool,
         sectionIndex: _activeModuleSectionIndex,
+        sectionResetTick: _moduleSectionNavTick,
         selectedForoTopicId: _activeForoTopicId,
         onSelectForoTopic: (topicId) {
           setState(() => _activeForoTopicId = topicId);
@@ -869,25 +873,37 @@ class _SubjectBreadcrumbDropdown extends StatelessWidget {
               ),
             ),
         ],
-        child: Container(
-          height: 40,
+        child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  activeSubject.breadcrumbLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
-                ),
+          child: SizedBox(
+            height: 40,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      activeSubject.breadcrumbLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.left,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(
+                    Icons.arrow_drop_down,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ],
               ),
-              const SizedBox(width: 2),
-              const Icon(Icons.arrow_drop_down, size: 20, color: Colors.white),
-            ],
+            ),
           ),
         ),
       ),

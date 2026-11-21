@@ -20,10 +20,12 @@ class MensajeriaView extends ConsumerStatefulWidget {
     super.key,
     required this.subject,
     required this.sectionIndex,
+    this.sectionResetTick = 0,
   });
 
   final Subject subject;
   final int sectionIndex;
+  final int sectionResetTick;
 
   @override
   ConsumerState<MensajeriaView> createState() => _MensajeriaViewState();
@@ -46,9 +48,11 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   void didUpdateWidget(covariant MensajeriaView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.sectionIndex != widget.sectionIndex ||
+        oldWidget.sectionResetTick != widget.sectionResetTick ||
         oldWidget.subject.idComision != widget.subject.idComision) {
       _selectedMessage = null;
       _currentPage = 1;
+      _showFilters = false;
       if (widget.sectionIndex != 1) {
         _unifiedCrossSubjectMode = false;
       }

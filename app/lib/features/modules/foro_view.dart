@@ -211,108 +211,15 @@ class _ForoViewState extends ConsumerState<ForoView> {
         ? 0
         : topic.unreadBadge;
 
-    void openTopic() {
-      _locallyReadTopicIds.add(topic.idTema);
-      widget.onSelectTopic(topic.idTema);
-    }
-
-    return MielHoverRow(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: openTopic,
-              child: SizedBox(
-                width: 50,
-                height: 40,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(
-                      topic.isClosed ? Icons.speaker_notes_off : Icons.message,
-                      size: 33,
-                      color: topic.isClosed
-                          ? palette.textMuted
-                          : palette.textSecondary,
-                    ),
-                    if (effectiveUnread > 0)
-                      Positioned(
-                        top: 18,
-                        left: 22,
-                        child: MielRedBadge(
-                          count: effectiveUnread,
-                          backgroundColor: palette.badgeRed,
-                          compact: true,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                MielHoverLink(
-                  text: topic.title,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: palette.textPrimary,
-                  hoverColor: palette.linkAccent,
-                  onTap: openTopic,
-                ),
-                if (topic.description.isNotEmpty || topic.isPublic) ...[
-                  const SizedBox(height: 4),
-                  RichText(
-                    text: TextSpan(
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.4,
-                        color: palette.textPrimary,
-                      ),
-                      children: [
-                        if (topic.isPublic) ...[
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 4),
-                              child: Icon(
-                                Icons.group,
-                                size: 16,
-                                color: publicIndigo,
-                              ),
-                            ),
-                          ),
-                          TextSpan(
-                            text: 'Tema público - ',
-                            style: TextStyle(
-                              color: publicIndigo,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                        TextSpan(text: topic.description),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 4),
-                Text(
-                  topic.lastMessageDate.isNotEmpty
-                      ? '${topic.messageCount} ${topic.messageCount == 1 ? "mensaje" : "mensajes"} · Último mensaje ${topic.lastMessageDate}'
-                      : '${topic.messageCount} mensajes',
-                  style: TextStyle(fontSize: 12.5, color: palette.textMuted),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return _ForumTopicTile(
+      palette: palette,
+      topic: topic,
+      effectiveUnread: effectiveUnread,
+      publicIndigo: publicIndigo,
+      onTap: () {
+        _locallyReadTopicIds.add(topic.idTema);
+        widget.onSelectTopic(topic.idTema);
+      },
     );
   }
 
@@ -951,4 +858,151 @@ class _ForumThreadGroup {
     root,
     ...replies,
   ];
+}
+
+/// Fila interactiva de tema de foro: clickeable en toda su superficie,
+/// con cursor `SystemMouseCursors.click`, resaltado de fondo y subrayado del título en hover.
+class _ForumTopicTile extends StatefulWidget {
+  const _ForumTopicTile({
+    required this.palette,
+    required this.topic,
+    required this.effectiveUnread,
+    required this.publicIndigo,
+    required this.onTap,
+  });
+
+  final MielPalette palette;
+  final ForumTopicSummary topic;
+  final int effectiveUnread;
+  final Color publicIndigo;
+  final VoidCallback onTap;
+
+  @override
+  State<_ForumTopicTile> createState() => _ForumTopicTileState();
+}
+
+class _ForumTopicTileState extends State<_ForumTopicTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = widget.palette;
+    final topic = widget.topic;
+    final titleColor = _hovered ? palette.linkAccent : palette.textPrimary;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? palette.cardHover.withValues(alpha: 0.45)
+                : Colors.transparent,
+            border: Border(bottom: BorderSide(color: palette.divider)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 50,
+                height: 40,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      topic.isClosed ? Icons.speaker_notes_off : Icons.message,
+                      size: 33,
+                      color: topic.isClosed
+                          ? palette.textMuted
+                          : palette.textSecondary,
+                    ),
+                    if (widget.effectiveUnread > 0)
+                      Positioned(
+                        top: 18,
+                        left: 22,
+                        child: MielRedBadge(
+                          count: widget.effectiveUnread,
+                          backgroundColor: palette.badgeRed,
+                          compact: true,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      topic.title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: titleColor,
+                        decoration: _hovered
+                            ? TextDecoration.underline
+                            : TextDecoration.none,
+                        decorationColor: titleColor,
+                      ),
+                    ),
+                    if (topic.description.isNotEmpty || topic.isPublic) ...[
+                      const SizedBox(height: 4),
+                      RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.4,
+                            color: palette.textPrimary,
+                          ),
+                          children: [
+                            if (topic.isPublic) ...[
+                              WidgetSpan(
+                                alignment: PlaceholderAlignment.middle,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: Icon(
+                                    Icons.group,
+                                    size: 16,
+                                    color: widget.publicIndigo,
+                                  ),
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'Tema público - ',
+                                style: TextStyle(
+                                  color: widget.publicIndigo,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                            TextSpan(text: topic.description),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      topic.lastMessageDate.isNotEmpty
+                          ? '${topic.messageCount} ${topic.messageCount == 1 ? "mensaje" : "mensajes"} · Último mensaje ${topic.lastMessageDate}'
+                          : '${topic.messageCount} mensajes',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: palette.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

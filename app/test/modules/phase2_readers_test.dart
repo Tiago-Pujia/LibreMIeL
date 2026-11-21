@@ -251,6 +251,8 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Encuesta Alumnos'), findsOneWidget);
+      expect(find.text('Actualizar'), findsNothing);
+      expect(find.text('Abrir en MIeL'), findsNothing);
 
       // Expandir carpeta .desplegarModulo
       await tester.tap(find.text('Presentaciones de Clase'));
@@ -275,7 +277,7 @@ void main() {
   );
 
   testWidgets(
-    'PortafolioView renderiza tabla de Prácticas, Archivos enviados con cabecera, Entrega de prácticas y Asistencia',
+    'PortafolioView renderiza tabla de Prácticas, reinicia al re-clickear sección, muestra Archivos enviados y Justificado azul',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 840);
       tester.view.devicePixelRatio = 1.0;
@@ -284,6 +286,7 @@ void main() {
       final (db, subject) = await createTestSubject();
       final fakeReader = _FakeInteractiveReader();
       var activeTab = 0;
+      var resetTick = 0;
 
       await tester.pumpWidget(
         ProviderScope(
@@ -298,16 +301,33 @@ void main() {
                 appBar: AppBar(
                   actions: [
                     TextButton(
-                      onPressed: () => setHostState(() => activeTab = 1),
+                      onPressed: () => setHostState(() {
+                        activeTab = 0;
+                        resetTick++;
+                      }),
+                      child: const Text('Re-click Prácticas'),
+                    ),
+                    TextButton(
+                      onPressed: () => setHostState(() {
+                        activeTab = 1;
+                        resetTick++;
+                      }),
                       child: const Text('Ir a Enviados'),
                     ),
                     TextButton(
-                      onPressed: () => setHostState(() => activeTab = 3),
+                      onPressed: () => setHostState(() {
+                        activeTab = 3;
+                        resetTick++;
+                      }),
                       child: const Text('Ir a Notas'),
                     ),
                   ],
                 ),
-                body: PortafolioView(subject: subject, sectionIndex: activeTab),
+                body: PortafolioView(
+                  subject: subject,
+                  sectionIndex: activeTab,
+                  sectionResetTick: resetTick,
+                ),
               ),
             ),
           ),
@@ -328,6 +348,12 @@ void main() {
       expect(find.text('1º ENTREGA'), findsOneWidget);
       expect(find.text('Entrega-Grupo-Demo.pdf'), findsOneWidget);
 
+      // Re-clickear Prácticas en la barra lateral vuelve al listado principal
+      await tester.tap(find.text('Re-click Prácticas'));
+      await tester.pumpAndSettle();
+      expect(find.text('[ENTREGAR / VER]'), findsOneWidget);
+      expect(find.text('Entrega de prácticas'), findsNothing);
+
       // Cambiar a pestaña 1: Archivos enviados con cabecera de tabla oficial
       await tester.tap(find.text('Ir a Enviados'));
       await tester.pumpAndSettle();
@@ -347,14 +373,29 @@ void main() {
       expect(find.text('Asistencia, notas y certificados'), findsOneWidget);
       expect(find.text('18/08/2026'), findsOneWidget);
       expect(find.text('Presente'), findsOneWidget);
+      expect(find.text('Justificado'), findsOneWidget);
       expect(find.text('Ausente'), findsOneWidget);
+
+      // Verificar color azul oficial MIeL dark (.w3-blue = #4F90C4) en Justificado
+      final justifiedContainer = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.text('Justificado'),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(
+        (justifiedContainer.decoration as BoxDecoration).color,
+        const Color(0xFF4F90C4),
+      );
 
       await cleanUpTestWidgetAndDb(tester, db);
     },
   );
 
   testWidgets(
-    'MensajeriaView renderiza Bandeja de Entrada, abre lector verEntrada con adjuntos y descuenta badge',
+    'MensajeriaView renderiza Bandeja de Entrada, abre lector verEntrada, descuenta badge y vuelve al re-clickear bandeja',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 840);
       tester.view.devicePixelRatio = 1.0;
@@ -362,6 +403,7 @@ void main() {
 
       final (db, subject) = await createTestSubject();
       final fakeReader = _FakeInteractiveReader();
+      var resetTick = 0;
 
       await tester.pumpWidget(
         ProviderScope(
@@ -369,10 +411,24 @@ void main() {
             databaseProvider.overrideWithValue(db),
             mielInteractiveReaderProvider.overrideWith((_) async => fakeReader),
           ],
-          child: MaterialApp(
-            theme: buildMielLightTheme(),
-            home: Scaffold(
-              body: MensajeriaView(subject: subject, sectionIndex: 1),
+          child: StatefulBuilder(
+            builder: (context, setHostState) => MaterialApp(
+              theme: buildMielLightTheme(),
+              home: Scaffold(
+                appBar: AppBar(
+                  actions: [
+                    TextButton(
+                      onPressed: () => setHostState(() => resetTick++),
+                      child: const Text('Re-click Entrada'),
+                    ),
+                  ],
+                ),
+                body: MensajeriaView(
+                  subject: subject,
+                  sectionIndex: 1,
+                  sectionResetTick: resetTick,
+                ),
+              ),
             ),
           ),
         ),
@@ -396,12 +452,18 @@ void main() {
       final updated = await db.getSubject('117967');
       expect(updated!.lastMensajesBadge, 0);
 
+      // Re-clickear Bandeja de entrada en la barra lateral vuelve al listado de mensajes
+      await tester.tap(find.text('Re-click Entrada'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bandeja de Entrada'), findsOneWidget);
+      expect(find.text('Ejercicio de bondad de ajuste'), findsNothing);
+
       await cleanUpTestWidgetAndDb(tester, db);
     },
   );
 
   testWidgets(
-    'ForoView renderiza Temas abiertos y abre hilo completo con imágenes, PDFs, Tutor/a e Invertir orden',
+    'ForoView renderiza Temas abiertos y abre hilo al hacer click en cualquier parte del foro',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 840);
       tester.view.devicePixelRatio = 1.0;
@@ -437,8 +499,8 @@ void main() {
       expect(find.text('Temas abiertos'), findsOneWidget);
       expect(find.text('Consultas Parcial 2'), findsOneWidget);
 
-      // Abrir el tema
-      await tester.tap(find.text('Consultas Parcial 2'));
+      // Abrir el tema haciendo click en la línea de cantidad de mensajes (no solo el ícono/título)
+      await tester.tap(find.textContaining('8 mensajes'));
       await tester.pumpAndSettle();
 
       expect(find.text('Tema: Consultas Parcial 2'), findsOneWidget);

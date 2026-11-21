@@ -500,12 +500,14 @@ class AttendanceEntry {
     required this.date,
     required this.status,
     required this.isPresent,
+    this.isJustified = false,
     this.modality = '',
   });
 
   final String date;
   final String status;
   final bool isPresent;
+  final bool isJustified;
   final String modality;
 }
 
