@@ -96,11 +96,19 @@ String htmlToCleanMarkdown(String rawHtml) {
 
   // Formato de texto básico
   md = md.replaceAllMapped(
-    RegExp(r'<(?:strong|b)[^>]*>(.*?)</(?:strong|b)>', caseSensitive: false, dotAll: true),
+    RegExp(
+      r'<(?:strong|b)[^>]*>(.*?)</(?:strong|b)>',
+      caseSensitive: false,
+      dotAll: true,
+    ),
     (m) => '**${m.group(1)}**',
   );
   md = md.replaceAllMapped(
-    RegExp(r'<(?:em|i)[^>]*>(.*?)</(?:em|i)>', caseSensitive: false, dotAll: true),
+    RegExp(
+      r'<(?:em|i)[^>]*>(.*?)</(?:em|i)>',
+      caseSensitive: false,
+      dotAll: true,
+    ),
     (m) => '*${m.group(1)}*',
   );
   md = md.replaceAllMapped(
@@ -110,7 +118,11 @@ String htmlToCleanMarkdown(String rawHtml) {
 
   // Menciones nativas de MIeL (.tagUsuario)
   md = md.replaceAllMapped(
-    RegExp(r'<strong[^>]*class="[^"]*tagUsuario[^"]*"[^>]*>(.*?)</strong>', caseSensitive: false, dotAll: true),
+    RegExp(
+      r'<strong[^>]*class="[^"]*tagUsuario[^"]*"[^>]*>(.*?)</strong>',
+      caseSensitive: false,
+      dotAll: true,
+    ),
     (m) => m.group(1)?.trim() ?? '',
   );
 
@@ -123,7 +135,11 @@ String htmlToCleanMarkdown(String rawHtml) {
 
   // Enlaces
   md = md.replaceAllMapped(
-    RegExp(r'<a[^>]+href="([^"]*)"[^>]*>(.*?)</a>', caseSensitive: false, dotAll: true),
+    RegExp(
+      r'<a[^>]+href="([^"]*)"[^>]*>(.*?)</a>',
+      caseSensitive: false,
+      dotAll: true,
+    ),
     (m) {
       final href = m.group(1) ?? '';
       var text = (m.group(2) ?? '').replaceAll(RegExp(r'<[^>]+>'), '').trim();
@@ -146,7 +162,10 @@ String htmlToCleanMarkdown(String rawHtml) {
 /// Prefija cada línea con `> ` para formatear citas en Markdown.
 String _citeMarkdown(String text) {
   if (text.isEmpty) return '';
-  return text.split('\n').map((l) => l.trim().isNotEmpty ? '> $l' : '>').join('\n');
+  return text
+      .split('\n')
+      .map((l) => l.trim().isNotEmpty ? '> $l' : '>')
+      .join('\n');
 }
 
 /// Genera el contenido Markdown de un hilo completo de foro.
@@ -161,7 +180,9 @@ String generateForumMarkdown(
 
   lines.add('# Tema: ${thread.title}');
   lines.add('');
-  final codDisplay = commissionCode.isNotEmpty ? commissionCode : 'Comisión ${thread.idComision}';
+  final codDisplay = commissionCode.isNotEmpty
+      ? commissionCode
+      : 'Comisión ${thread.idComision}';
   lines.add('- **Materia:** $subjectName ($codDisplay)');
   lines.add('- **Comisión ID:** ${thread.idComision}');
   lines.add('- **Tema ID:** ${thread.idTema}');
@@ -182,17 +203,22 @@ String generateForumMarkdown(
     var attachmentsMd = '';
     if (allAttachments.isNotEmpty) {
       final links = allAttachments.map((a) {
-        final ref = hasLocalAttachments ? 'adjuntos/${a.fileName}' : a.downloadUrl;
+        final ref = hasLocalAttachments
+            ? 'adjuntos/${a.fileName}'
+            : a.downloadUrl;
         return '- [${a.fileName}]($ref)';
       });
       attachmentsMd = '\n\n**Adjuntos:**\n${links.join('\n')}';
     }
 
-    final bodyMd = htmlToCleanMarkdown(m.bodyHtml.isNotEmpty ? m.bodyHtml : m.bodyText);
+    final bodyMd = htmlToCleanMarkdown(
+      m.bodyHtml.isNotEmpty ? m.bodyHtml : m.bodyText,
+    );
     final fullMessageText = (bodyMd + attachmentsMd).trim();
 
     if (m.isReply) {
-      final header = '> #### [Respuesta #${m.id} a #${m.parentId}] ${m.authorName}$roleText\n'
+      final header =
+          '> #### [Respuesta #${m.id} a #${m.parentId}] ${m.authorName}$roleText\n'
           '${dateText.isNotEmpty ? '> $dateText\n>' : '>'}';
       final citedBody = _citeMarkdown(fullMessageText);
       lines.add(header);
@@ -239,13 +265,19 @@ Map<String, dynamic> generateForumJson(
         'fecha': m.date,
         'meGusta': m.likesCount,
         'contenidoHtml': m.bodyHtml,
-        'contenidoMarkdown': htmlToCleanMarkdown(m.bodyHtml.isNotEmpty ? m.bodyHtml : m.bodyText),
-        'adjuntos': allAttachments.map((a) => {
-          'tipo': a.isImage ? 'imagen' : a.fileType,
-          'nombreArchivo': a.fileName,
-          'urlOriginal': a.downloadUrl,
-          'rutaLocal': 'adjuntos/${a.fileName}',
-        }).toList(),
+        'contenidoMarkdown': htmlToCleanMarkdown(
+          m.bodyHtml.isNotEmpty ? m.bodyHtml : m.bodyText,
+        ),
+        'adjuntos': allAttachments
+            .map(
+              (a) => {
+                'tipo': a.isImage ? 'imagen' : a.fileType,
+                'nombreArchivo': a.fileName,
+                'urlOriginal': a.downloadUrl,
+                'rutaLocal': 'adjuntos/${a.fileName}',
+              },
+            )
+            .toList(),
       };
     }).toList(),
   };
@@ -260,14 +292,20 @@ String generateForumHtml(
 }) {
   final buffer = StringBuffer();
   final dateFormatted = DateTime.now().toLocal().toString().split('.').first;
-  final codDisplay = commissionCode.isNotEmpty ? commissionCode : 'Comisión ${thread.idComision}';
+  final codDisplay = commissionCode.isNotEmpty
+      ? commissionCode
+      : 'Comisión ${thread.idComision}';
 
   buffer.writeln('<!DOCTYPE html>');
   buffer.writeln('<html lang="es">');
   buffer.writeln('<head>');
   buffer.writeln('  <meta charset="UTF-8">');
-  buffer.writeln('  <meta name="viewport" content="width=device-width, initial-scale=1.0">');
-  buffer.writeln('  <title>${htmlEscape.convert(thread.title)} — LibreMIeL</title>');
+  buffer.writeln(
+    '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+  );
+  buffer.writeln(
+    '  <title>${htmlEscape.convert(thread.title)} — LibreMIeL</title>',
+  );
   buffer.writeln('  <style>');
   buffer.writeln('''
     :root {
@@ -421,13 +459,25 @@ String generateForumHtml(
   buffer.writeln('    <div class="header-card">');
   buffer.writeln('      <h1>${htmlEscape.convert(thread.title)}</h1>');
   buffer.writeln('      <div class="meta-grid">');
-  buffer.writeln('        <div><strong>Materia:</strong> ${htmlEscape.convert(subjectName)} (${htmlEscape.convert(codDisplay)})</div>');
-  buffer.writeln('        <div><strong>Comisión ID:</strong> ${htmlEscape.convert(thread.idComision)}</div>');
-  buffer.writeln('        <div><strong>Tema ID:</strong> ${htmlEscape.convert(thread.idTema)}</div>');
-  buffer.writeln('        <div><strong>Mensajes:</strong> ${thread.messages.length}</div>');
-  buffer.writeln('        <div><strong>Respaldo:</strong> $dateFormatted</div>');
+  buffer.writeln(
+    '        <div><strong>Materia:</strong> ${htmlEscape.convert(subjectName)} (${htmlEscape.convert(codDisplay)})</div>',
+  );
+  buffer.writeln(
+    '        <div><strong>Comisión ID:</strong> ${htmlEscape.convert(thread.idComision)}</div>',
+  );
+  buffer.writeln(
+    '        <div><strong>Tema ID:</strong> ${htmlEscape.convert(thread.idTema)}</div>',
+  );
+  buffer.writeln(
+    '        <div><strong>Mensajes:</strong> ${thread.messages.length}</div>',
+  );
+  buffer.writeln(
+    '        <div><strong>Respaldo:</strong> $dateFormatted</div>',
+  );
   if (thread.description.isNotEmpty) {
-    buffer.writeln('        <div style="grid-column: 1 / -1;"><strong>Descripción:</strong> ${htmlEscape.convert(thread.description)}</div>');
+    buffer.writeln(
+      '        <div style="grid-column: 1 / -1;"><strong>Descripción:</strong> ${htmlEscape.convert(thread.description)}</div>',
+    );
   }
   buffer.writeln('      </div>');
   buffer.writeln('    </div>');
@@ -441,16 +491,24 @@ String generateForumHtml(
     buffer.writeln('    <div class="message-item $replyCls" id="m-${m.id}">');
     buffer.writeln('      <div class="message-header">');
     buffer.writeln('        <div class="author-info">');
-    buffer.writeln('          <span class="author-name">${htmlEscape.convert(m.authorName)}</span>');
+    buffer.writeln(
+      '          <span class="author-name">${htmlEscape.convert(m.authorName)}</span>',
+    );
     if (m.role.isNotEmpty) {
-      buffer.writeln('          <span class="role-badge $roleCls">${htmlEscape.convert(m.role)}</span>');
+      buffer.writeln(
+        '          <span class="role-badge $roleCls">${htmlEscape.convert(m.role)}</span>',
+      );
     }
     if (m.isReply && m.parentId != m.id) {
-      buffer.writeln('          <span style="font-size: 0.75rem; color: var(--text-muted);">(en respuesta a #${m.parentId})</span>');
+      buffer.writeln(
+        '          <span style="font-size: 0.75rem; color: var(--text-muted);">(en respuesta a #${m.parentId})</span>',
+      );
     }
     buffer.writeln('        </div>');
     if (m.date.isNotEmpty) {
-      buffer.writeln('        <span class="message-date">${htmlEscape.convert(m.date)}</span>');
+      buffer.writeln(
+        '        <span class="message-date">${htmlEscape.convert(m.date)}</span>',
+      );
     }
     buffer.writeln('      </div>');
 
@@ -459,7 +517,9 @@ String generateForumHtml(
     if (m.bodyHtml.isNotEmpty) {
       buffer.writeln(m.bodyHtml);
     } else {
-      buffer.writeln('<p>${htmlEscape.convert(m.bodyText).replaceAll('\n', '<br>')}</p>');
+      buffer.writeln(
+        '<p>${htmlEscape.convert(m.bodyText).replaceAll('\n', '<br>')}</p>',
+      );
     }
     buffer.writeln('      </div>');
 
@@ -469,8 +529,12 @@ String generateForumHtml(
       buffer.writeln('      <div class="attachments-box">');
       buffer.writeln('        <strong>Adjuntos:</strong><br>');
       for (final a in allAttachments) {
-        final ref = hasLocalAttachments ? 'adjuntos/${a.fileName}' : a.downloadUrl;
-        buffer.writeln('        <a class="attachment-pill" href="${htmlEscape.convert(ref)}" target="_blank">📎 ${htmlEscape.convert(a.fileName)}</a>');
+        final ref = hasLocalAttachments
+            ? 'adjuntos/${a.fileName}'
+            : a.downloadUrl;
+        buffer.writeln(
+          '        <a class="attachment-pill" href="${htmlEscape.convert(ref)}" target="_blank">📎 ${htmlEscape.convert(a.fileName)}</a>',
+        );
       }
       buffer.writeln('      </div>');
     }
@@ -479,7 +543,9 @@ String generateForumHtml(
   }
 
   buffer.writeln('    <div class="footer">');
-  buffer.writeln('      Generado localmente por <strong>LibreMIeL</strong> — Cliente alternativo para MIeL (UNLaM).');
+  buffer.writeln(
+    '      Generado localmente por <strong>LibreMIeL</strong> — Cliente alternativo para MIeL (UNLaM).',
+  );
   buffer.writeln('    </div>');
   buffer.writeln('  </div>');
   buffer.writeln('</body>');

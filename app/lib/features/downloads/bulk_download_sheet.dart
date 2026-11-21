@@ -126,8 +126,8 @@ class _BulkDownloadDialogContentState
     final subjectsToBackup = _downloadAllSubjects
         ? allSubjects
         : allSubjects
-            .where((s) => _selectedCommissionIds.contains(s.idComision))
-            .toList();
+              .where((s) => _selectedCommissionIds.contains(s.idComision))
+              .toList();
 
     if (subjectsToBackup.isEmpty) {
       showMielStatusToast(
@@ -257,10 +257,7 @@ class _BulkDownloadDialogContentState
                 const SizedBox(height: 2),
                 Text(
                   'Descarga organizada de contenidos y foros completos de MIeL.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: palette.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: palette.textSecondary),
                 ),
               ],
             ),
@@ -330,9 +327,13 @@ class _BulkDownloadDialogContentState
                     _downloadAllSubjects = false;
                     if (_selectedCommissionIds.isEmpty) {
                       if (widget.initialSubject != null) {
-                        _selectedCommissionIds.add(widget.initialSubject!.idComision);
+                        _selectedCommissionIds.add(
+                          widget.initialSubject!.idComision,
+                        );
                       } else {
-                        _selectedCommissionIds.addAll(allSubjects.map((s) => s.idComision));
+                        _selectedCommissionIds.addAll(
+                          allSubjects.map((s) => s.idComision),
+                        );
                       }
                     }
                   });
@@ -345,7 +346,9 @@ class _BulkDownloadDialogContentState
                         !_downloadAllSubjects
                             ? Icons.radio_button_checked
                             : Icons.radio_button_unchecked,
-                        color: !_downloadAllSubjects ? palette.primary : palette.textSecondary,
+                        color: !_downloadAllSubjects
+                            ? palette.primary
+                            : palette.textSecondary,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
@@ -389,7 +392,9 @@ class _BulkDownloadDialogContentState
                               setState(() {
                                 _selectedCommissionIds
                                   ..clear()
-                                  ..addAll(allSubjects.map((s) => s.idComision));
+                                  ..addAll(
+                                    allSubjects.map((s) => s.idComision),
+                                  );
                               });
                             },
                           ),
@@ -430,8 +435,9 @@ class _BulkDownloadDialogContentState
                           value: isChecked,
                           activeColor: palette.primary,
                           dense: true,
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                          ),
                           title: Text(
                             subj.name,
                             style: TextStyle(
@@ -465,7 +471,9 @@ class _BulkDownloadDialogContentState
                         _downloadAllSubjects
                             ? Icons.radio_button_checked
                             : Icons.radio_button_unchecked,
-                        color: _downloadAllSubjects ? palette.primary : palette.textSecondary,
+                        color: _downloadAllSubjects
+                            ? palette.primary
+                            : palette.textSecondary,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
@@ -549,11 +557,14 @@ class _BulkDownloadDialogContentState
                       label: const Text('Markdown (.md)'),
                       labelStyle: TextStyle(
                         fontSize: 12,
-                        color: _exportMarkdown ? Colors.white : palette.textPrimary,
+                        color: _exportMarkdown
+                            ? Colors.white
+                            : palette.textPrimary,
                       ),
                       selectedColor: palette.primary,
                       checkmarkColor: Colors.white,
-                      onSelected: (val) => setState(() => _exportMarkdown = val),
+                      onSelected: (val) =>
+                          setState(() => _exportMarkdown = val),
                     ),
                     FilterChip(
                       selected: _exportJson,
@@ -637,7 +648,9 @@ class _BulkDownloadDialogContentState
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  _destinationPath.isNotEmpty ? _destinationPath : 'Cargando carpeta...',
+                  _destinationPath.isNotEmpty
+                      ? _destinationPath
+                      : 'Cargando carpeta...',
                   style: TextStyle(fontSize: 12, color: palette.textPrimary),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -650,7 +663,10 @@ class _BulkDownloadDialogContentState
                 style: OutlinedButton.styleFrom(
                   foregroundColor: palette.primary,
                   side: BorderSide(color: palette.primary),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                 ),
                 onPressed: _pickDestinationFolder,
               ),
@@ -664,7 +680,9 @@ class _BulkDownloadDialogContentState
   Widget _buildProgressView(MielPalette palette, bool isDark) {
     final frac = _progress.progressFraction;
     final pct = (frac * 100).toInt();
-    final mb = (_progress.totalBytesDownloaded / (1024 * 1024)).toStringAsFixed(1);
+    final mb = (_progress.totalBytesDownloaded / (1024 * 1024)).toStringAsFixed(
+      1,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -679,7 +697,11 @@ class _BulkDownloadDialogContentState
             ),
             child: Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: palette.primary, size: 32),
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: palette.primary,
+                  size: 32,
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -696,7 +718,10 @@ class _BulkDownloadDialogContentState
                       const SizedBox(height: 2),
                       Text(
                         'Todos los archivos y foros fueron organizados en la carpeta de destino.',
-                        style: TextStyle(fontSize: 12, color: palette.textSecondary),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: palette.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -715,8 +740,8 @@ class _BulkDownloadDialogContentState
               _progress.isFinished
                   ? 'Resumen del respaldo'
                   : _progress.isPaused
-                      ? 'Respaldo pausado'
-                      : 'Descargando...',
+                  ? 'Respaldo pausado'
+                  : 'Descargando...',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -764,7 +789,9 @@ class _BulkDownloadDialogContentState
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        palette.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -900,7 +927,10 @@ class _BulkDownloadDialogContentState
             ),
             const SizedBox(width: 10),
             ElevatedButton.icon(
-              icon: Icon(_progress.isPaused ? Icons.play_arrow : Icons.pause, size: 18),
+              icon: Icon(
+                _progress.isPaused ? Icons.play_arrow : Icons.pause,
+                size: 18,
+              ),
               label: Text(_progress.isPaused ? 'Reanudar' : 'Pausar'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: palette.primary,

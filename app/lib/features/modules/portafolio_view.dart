@@ -534,8 +534,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                 const SizedBox(height: 22),
                 if (detail.corrections.isEmpty && detail.deliveries.isEmpty)
                   const MielModuleEmptyView(
-                    message:
-                        'Aún no se registran entregas ni correcciones para esta práctica.',
+                    message: 'Aún no se registran entregas ni correcciones para esta práctica.',
                     icon: Icons.history,
                   )
                 else ...[
@@ -822,9 +821,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const MielModuleHeader(
-          title: 'Prácticas: Archivos enviados',
-        ),
+        const MielModuleHeader(title: 'Prácticas: Archivos enviados'),
         const SizedBox(height: 16),
         filesAsync.when(
           loading: () => const MielModuleLoadingView(
@@ -1033,9 +1030,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const MielModuleHeader(
-          title: 'Mis grupos',
-        ),
+        const MielModuleHeader(title: 'Mis grupos'),
         const SizedBox(height: 16),
         groupsAsync.when(
           loading: () =>
@@ -1222,9 +1217,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const MielModuleHeader(
-          title: 'Asistencia, notas y certificados',
-        ),
+        const MielModuleHeader(title: 'Asistencia, notas y certificados'),
         const SizedBox(height: 18),
         notasAsync.when(
           loading: () => const MielModuleLoadingView(

@@ -947,7 +947,8 @@ class DioMielClient implements MielInteractiveReader, MielWriter {
   }) {
     return _enqueue(() async {
       final hasLink = externalLink != null && externalLink.trim().isNotEmpty;
-      final hasFile = attachmentPath != null && attachmentPath.trim().isNotEmpty;
+      final hasFile =
+          attachmentPath != null && attachmentPath.trim().isNotEmpty;
       if (!hasFile && !hasLink) {
         throw ArgumentError('Adjuntá un archivo o ingresá un enlace.');
       }

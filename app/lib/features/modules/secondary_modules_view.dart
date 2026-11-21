@@ -340,8 +340,7 @@ class EvaluacionView extends ConsumerWidget {
                         if (context.mounted) {
                           showMielStatusToast(
                             context,
-                            message:
-                                'Clave enviada a MIeL. Podés continuar la evaluación en tu navegador.',
+                            message: 'Clave enviada a MIeL. Podés continuar la evaluación en tu navegador.',
                           );
                         }
                         await openMielExternalUrl(webUrl);

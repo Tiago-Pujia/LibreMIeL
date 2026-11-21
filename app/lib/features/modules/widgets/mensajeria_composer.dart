@@ -11,11 +11,7 @@ import 'module_state_views.dart';
 
 /// Compositor nativo de **Nuevo mensaje / Borrador** (`POST /mensajeria/event/enviarMensaje/comision/{id}`).
 class MensajeriaComposePanel extends ConsumerStatefulWidget {
-  const MensajeriaComposePanel({
-    super.key,
-    required this.subject,
-    this.onSent,
-  });
+  const MensajeriaComposePanel({super.key, required this.subject, this.onSent});
 
   final Subject subject;
   final VoidCallback? onSent;

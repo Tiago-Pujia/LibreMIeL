@@ -353,7 +353,9 @@ ComposeMessageFormData parseMensajeriaRedactarHtml(
   final doc = html_parser.parse(rawHtml);
   final recipients = _extractComposeRecipients(doc);
   final initialSubject =
-      (doc.querySelector('input#asunto, input[name="asunto"]')?.attributes['value'] ??
+      (doc
+                  .querySelector('input#asunto, input[name="asunto"]')
+                  ?.attributes['value'] ??
               '')
           .trim();
   final rawBody = doc.querySelector('textarea#texto')?.text ?? '';

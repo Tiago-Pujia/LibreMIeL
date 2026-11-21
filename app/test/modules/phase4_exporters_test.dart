@@ -5,16 +5,22 @@ import 'package:libremiel/core/models/miel_models.dart';
 
 void main() {
   group('Fase 4 — Sanitización y Exporters (Foros y Contenidos)', () {
-    test('sanitizeFileName limpia caracteres ilegales en Windows/Linux/macOS', () {
-      expect(sanitizeFileName('  TP N°1: Algoritmos / C++ ? * <hola> |  '), equals('TP N°1_ Algoritmos _ C++ _ _ _hola_ _'));
-      expect(sanitizeFileName('...archivo.pdf...'), equals('archivo.pdf'));
-      expect(sanitizeFileName('   '), equals('sin_nombre'));
-      expect(sanitizeFileName(''), equals('sin_nombre'));
+    test(
+      'sanitizeFileName limpia caracteres ilegales en Windows/Linux/macOS',
+      () {
+        expect(
+          sanitizeFileName('  TP N°1: Algoritmos / C++ ? * <hola> |  '),
+          equals('TP N°1_ Algoritmos _ C++ _ _ _hola_ _'),
+        );
+        expect(sanitizeFileName('...archivo.pdf...'), equals('archivo.pdf'));
+        expect(sanitizeFileName('   '), equals('sin_nombre'));
+        expect(sanitizeFileName(''), equals('sin_nombre'));
 
-      final longName = 'A' * 200;
-      final sanitizedLong = sanitizeFileName(longName, maxLength: 50);
-      expect(sanitizedLong.length, equals(50));
-    });
+        final longName = 'A' * 200;
+        final sanitizedLong = sanitizeFileName(longName, maxLength: 50);
+        expect(sanitizedLong.length, equals(50));
+      },
+    );
 
     test('htmlToCleanMarkdown convierte HTML de MIeL a Markdown legible y preserva menciones', () {
       const html = '''
@@ -53,12 +59,14 @@ void main() {
             role: 'Alumno/a',
             isTeacher: false,
             date: '10/05/2026 14:30',
-            bodyText: 'Buenas tardes, ¿en el ejercicio 3 se puede usar recursión?',
+            bodyText:
+                'Buenas tardes, ¿en el ejercicio 3 se puede usar recursión?',
             bodyHtml: '<p>Buenas tardes, ¿en el ejercicio 3 se puede usar recursión?</p>',
             fileAttachments: [
               MielAttachment(
                 fileName: 'ejercicio3_codigo.cpp',
-                downloadUrl: 'https://miel.unlam.edu.ar/forov2/event/descargar/...',
+                downloadUrl:
+                    'https://miel.unlam.edu.ar/forov2/event/descargar/...',
                 fileType: 'cpp',
               ),
             ],
@@ -86,10 +94,21 @@ void main() {
       );
 
       expect(md, contains('# Tema: Dudas sobre el Trabajo Práctico N° 2'));
-      expect(md, contains('- **Materia:** Programación Avanzada (Comisión 119341)'));
+      expect(
+        md,
+        contains('- **Materia:** Programación Avanzada (Comisión 119341)'),
+      );
       expect(md, contains('### [Mensaje #101] Martín Gómez (Alumno/a)'));
-      expect(md, contains('[ejercicio3_codigo.cpp](adjuntos/ejercicio3_codigo.cpp)'));
-      expect(md, contains('> #### [Respuesta #102 a #101] Lic. Laura Fernández (Tutor/a)'));
+      expect(
+        md,
+        contains('[ejercicio3_codigo.cpp](adjuntos/ejercicio3_codigo.cpp)'),
+      );
+      expect(
+        md,
+        contains(
+          '> #### [Respuesta #102 a #101] Lic. Laura Fernández (Tutor/a)',
+        ),
+      );
       expect(md, contains('> Hola Martín. Sí, es válido usar recursión'));
     });
 
@@ -220,7 +239,10 @@ void main() {
         commissionCode: 'Comisión 119341',
       );
 
-      expect(summaryMd, contains('# Índice de Contenidos — Sistemas Operativos'));
+      expect(
+        summaryMd,
+        contains('# Índice de Contenidos — Sistemas Operativos'),
+      );
       expect(summaryMd, contains('Unidad 1 — Introducción'));
       expect(summaryMd, contains('Apunte Teórico N° 1.pdf'));
       expect(summaryMd, contains('3.4 MB'));

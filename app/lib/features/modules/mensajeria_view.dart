@@ -438,9 +438,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
         ),
       );
       if (currentUnread) {
-        await ref
-            .read(databaseProvider)
-            .decrementMensajesBadge(msg.idComision);
+        await ref.read(databaseProvider).decrementMensajesBadge(msg.idComision);
       }
     } catch (e) {
       if (!mounted) return;
@@ -1055,7 +1053,9 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                               child: Icon(
                                 isFavorite ? Icons.star : Icons.star_border,
                                 size: 19,
-                                color: isFavorite ? starBlue : palette.textMuted,
+                                color: isFavorite
+                                    ? starBlue
+                                    : palette.textMuted,
                               ),
                             ),
                           ),
@@ -1167,7 +1167,10 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                 borderRadius: BorderRadius.circular(12),
                 onTap: () => _handleDeleteDraft(msg),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
                   child: Icon(
                     Icons.delete_outline,
                     size: 17,
@@ -1180,7 +1183,10 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                 borderRadius: BorderRadius.circular(12),
                 onTap: () => _toggleFavorite(msg, isFavorite),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
                   child: Icon(
                     isFavorite ? Icons.star : Icons.star_border,
                     size: 17,
@@ -1192,7 +1198,10 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                 borderRadius: BorderRadius.circular(12),
                 onTap: () => _toggleRead(msg, isUnread),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
                   child: Icon(
                     isUnread ? Icons.markunread : Icons.drafts,
                     size: 17,

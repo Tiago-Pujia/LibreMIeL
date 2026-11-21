@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+
 import '../../app/app_providers.dart';
 import '../../core/models/miel_models.dart';
 import '../../core/storage/app_database.dart';
@@ -24,7 +25,6 @@ class MielHomeView extends ConsumerStatefulWidget {
 class _MielHomeViewState extends ConsumerState<MielHomeView> {
   bool _organizeMode = false;
   bool _showHidden = false;
-
 
   /// Uso oficial de los 3 puntitos (⋮) en MIeL: ver detalle de comisión y docentes (`cursoDetalles`).
   void _openCourseDetail(Subject subject) {

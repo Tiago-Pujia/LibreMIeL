@@ -163,11 +163,13 @@ class BulkDownloadManager {
       _pauseCompleter?.complete();
       _pauseCompleter = null;
     }
-    _emit(_currentProgress.copyWith(
-      isRunning: false,
-      isCancelled: true,
-      currentItemLabel: 'Cancelado por el usuario',
-    ));
+    _emit(
+      _currentProgress.copyWith(
+        isRunning: false,
+        isCancelled: true,
+        currentItemLabel: 'Cancelado por el usuario',
+      ),
+    );
   }
 
   void _emit(BulkDownloadProgress progress) {
@@ -214,10 +216,12 @@ class BulkDownloadManager {
     _isPaused = false;
     _pauseCompleter = null;
 
-    _emit(const BulkDownloadProgress(
-      isRunning: true,
-      currentItemLabel: 'Preparando descarga masiva...',
-    ));
+    _emit(
+      const BulkDownloadProgress(
+        isRunning: true,
+        currentItemLabel: 'Preparando descarga masiva...',
+      ),
+    );
 
     final baseDir = Directory(options.baseDirectory);
     if (!await baseDir.exists()) {
@@ -237,10 +241,12 @@ class BulkDownloadManager {
           await subjectDir.create(recursive: true);
         }
 
-        _emit(_currentProgress.copyWith(
-          currentSubjectName: subject.name,
-          currentItemLabel: 'Consultando módulos de ${subject.name}...',
-        ));
+        _emit(
+          _currentProgress.copyWith(
+            currentSubjectName: subject.name,
+            currentItemLabel: 'Consultando módulos de ${subject.name}...',
+          ),
+        );
 
         // 1. Descarga de Contenidos
         if (options.includeContenidos && subject.hasContenidos) {
@@ -253,23 +259,29 @@ class BulkDownloadManager {
         }
       }
 
-      _emit(_currentProgress.copyWith(
-        isRunning: false,
-        isFinished: true,
-        currentItemLabel: 'Respaldo completado con éxito',
-      ));
+      _emit(
+        _currentProgress.copyWith(
+          isRunning: false,
+          isFinished: true,
+          currentItemLabel: 'Respaldo completado con éxito',
+        ),
+      );
     } on BulkDownloadCancelledException {
-      _emit(_currentProgress.copyWith(
-        isRunning: false,
-        isCancelled: true,
-        currentItemLabel: 'Respaldo cancelado',
-      ));
+      _emit(
+        _currentProgress.copyWith(
+          isRunning: false,
+          isCancelled: true,
+          currentItemLabel: 'Respaldo cancelado',
+        ),
+      );
     } catch (e) {
-      _emit(_currentProgress.copyWith(
-        isRunning: false,
-        error: e.toString(),
-        currentItemLabel: 'Error durante el respaldo: $e',
-      ));
+      _emit(
+        _currentProgress.copyWith(
+          isRunning: false,
+          error: e.toString(),
+          currentItemLabel: 'Error durante el respaldo: $e',
+        ),
+      );
     }
 
     return _currentProgress;
@@ -301,11 +313,8 @@ class BulkDownloadManager {
     );
 
     // Recopilar todos los archivos binarios descargables
-    final itemsToDownload = <({
-      ContentItem item,
-      String sectionTitle,
-      String submoduleTitle,
-    })>[];
+    final itemsToDownload =
+        <({ContentItem item, String sectionTitle, String submoduleTitle})>[];
 
     for (final sec in pageData.sections) {
       for (final sub in sec.submodules) {
@@ -321,9 +330,11 @@ class BulkDownloadManager {
       }
     }
 
-    _emit(_currentProgress.copyWith(
-      totalItems: _currentProgress.totalItems + itemsToDownload.length,
-    ));
+    _emit(
+      _currentProgress.copyWith(
+        totalItems: _currentProgress.totalItems + itemsToDownload.length,
+      ),
+    );
 
     for (final entry in itemsToDownload) {
       await _checkPauseAndCancel();
@@ -351,24 +362,30 @@ class BulkDownloadManager {
           resourceId: item.idElemento,
         );
         if (existingRecord != null && await targetFile.exists()) {
-          _emit(_currentProgress.copyWith(
-            skippedItems: _currentProgress.skippedItems + 1,
-            currentItemLabel: 'Omitido (ya descargado): $cleanName',
-          ));
+          _emit(
+            _currentProgress.copyWith(
+              skippedItems: _currentProgress.skippedItems + 1,
+              currentItemLabel: 'Omitido (ya descargado): $cleanName',
+            ),
+          );
           continue;
         }
         if (await targetFile.exists() && await targetFile.length() > 0) {
-          _emit(_currentProgress.copyWith(
-            skippedItems: _currentProgress.skippedItems + 1,
-            currentItemLabel: 'Omitido (existe en disco): $cleanName',
-          ));
+          _emit(
+            _currentProgress.copyWith(
+              skippedItems: _currentProgress.skippedItems + 1,
+              currentItemLabel: 'Omitido (existe en disco): $cleanName',
+            ),
+          );
           continue;
         }
       }
 
-      _emit(_currentProgress.copyWith(
-        currentItemLabel: 'Descargando: ${subject.name} > $cleanName',
-      ));
+      _emit(
+        _currentProgress.copyWith(
+          currentItemLabel: 'Descargando: ${subject.name} > $cleanName',
+        ),
+      );
 
       await _politeDelay(options.delayBetweenRequests);
 
@@ -402,16 +419,20 @@ class BulkDownloadManager {
           );
         } catch (_) {}
 
-        _emit(_currentProgress.copyWith(
-          completedItems: _currentProgress.completedItems + 1,
-          totalBytesDownloaded:
-              _currentProgress.totalBytesDownloaded + bytes.length,
-        ));
+        _emit(
+          _currentProgress.copyWith(
+            completedItems: _currentProgress.completedItems + 1,
+            totalBytesDownloaded:
+                _currentProgress.totalBytesDownloaded + bytes.length,
+          ),
+        );
       } catch (err) {
-        _emit(_currentProgress.copyWith(
-          failedItems: _currentProgress.failedItems + 1,
-          currentItemLabel: 'Error al descargar $cleanName ($err)',
-        ));
+        _emit(
+          _currentProgress.copyWith(
+            failedItems: _currentProgress.failedItems + 1,
+            currentItemLabel: 'Error al descargar $cleanName ($err)',
+          ),
+        );
       }
     }
   }
@@ -433,9 +454,11 @@ class BulkDownloadManager {
       await forosDir.create(recursive: true);
     }
 
-    _emit(_currentProgress.copyWith(
-      totalItems: _currentProgress.totalItems + topics.length,
-    ));
+    _emit(
+      _currentProgress.copyWith(
+        totalItems: _currentProgress.totalItems + topics.length,
+      ),
+    );
 
     for (final topicSummary in topics) {
       await _checkPauseAndCancel();
@@ -452,17 +475,22 @@ class BulkDownloadManager {
           resourceId: topicSummary.idTema,
         );
         if (isRecorded && await topicDir.exists()) {
-          _emit(_currentProgress.copyWith(
-            skippedItems: _currentProgress.skippedItems + 1,
-            currentItemLabel: 'Omitido (foro ya exportado): ${topicSummary.title}',
-          ));
+          _emit(
+            _currentProgress.copyWith(
+              skippedItems: _currentProgress.skippedItems + 1,
+              currentItemLabel:
+                  'Omitido (foro ya exportado): ${topicSummary.title}',
+            ),
+          );
           continue;
         }
       }
 
-      _emit(_currentProgress.copyWith(
-        currentItemLabel: 'Exportando foro: ${topicSummary.title}',
-      ));
+      _emit(
+        _currentProgress.copyWith(
+          currentItemLabel: 'Exportando foro: ${topicSummary.title}',
+        ),
+      );
 
       await _politeDelay(options.delayBetweenRequests);
 
@@ -541,16 +569,21 @@ class BulkDownloadManager {
           fileSize: BigInt.from(totalTopicBytes),
         );
 
-        _emit(_currentProgress.copyWith(
-          completedItems: _currentProgress.completedItems + 1,
-          totalBytesDownloaded:
-              _currentProgress.totalBytesDownloaded + totalTopicBytes,
-        ));
+        _emit(
+          _currentProgress.copyWith(
+            completedItems: _currentProgress.completedItems + 1,
+            totalBytesDownloaded:
+                _currentProgress.totalBytesDownloaded + totalTopicBytes,
+          ),
+        );
       } catch (err) {
-        _emit(_currentProgress.copyWith(
-          failedItems: _currentProgress.failedItems + 1,
-          currentItemLabel: 'Error al exportar foro ${topicSummary.title} ($err)',
-        ));
+        _emit(
+          _currentProgress.copyWith(
+            failedItems: _currentProgress.failedItems + 1,
+            currentItemLabel:
+                'Error al exportar foro ${topicSummary.title} ($err)',
+          ),
+        );
       }
     }
   }

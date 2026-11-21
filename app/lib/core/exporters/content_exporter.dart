@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../models/miel_models.dart';
+
 /// Genera un índice en Markdown con todos los enlaces externos y recursos web
 /// de la materia (videos, Google Drive, enlaces a sitios) agrupados por sección y módulo.
 String generateExternalLinksIndexMarkdown(
@@ -13,7 +14,9 @@ String generateExternalLinksIndexMarkdown(
 }) {
   final lines = <String>[];
   final dateFormatted = DateTime.now().toLocal().toString().split('.').first;
-  final codDisplay = commissionCode.isNotEmpty ? commissionCode : 'Comisión ${content.idComision}';
+  final codDisplay = commissionCode.isNotEmpty
+      ? commissionCode
+      : 'Comisión ${content.idComision}';
 
   lines.add('# Enlaces Externos y Recursos Web');
   lines.add('');
@@ -21,7 +24,9 @@ String generateExternalLinksIndexMarkdown(
   lines.add('- **Comisión ID:** ${content.idComision}');
   lines.add('- **Fecha de Respaldo:** $dateFormatted');
   lines.add('');
-  lines.add('Este documento recopila todos los enlaces externos, videos, carpetas en la nube y recursos web que no son archivos descargables directos en MIeL.');
+  lines.add(
+    'Este documento recopila todos los enlaces externos, videos, carpetas en la nube y recursos web que no son archivos descargables directos en MIeL.',
+  );
   lines.add('');
   lines.add('---');
   lines.add('');
@@ -37,10 +42,14 @@ String generateExternalLinksIndexMarkdown(
       if (externalItems.isNotEmpty) {
         sectionHasLinks = true;
         foundAny = true;
-        sectionBuffer.add('### ${sub.title.isNotEmpty ? sub.title : "Recursos"}');
+        sectionBuffer.add(
+          '### ${sub.title.isNotEmpty ? sub.title : "Recursos"}',
+        );
         sectionBuffer.add('');
         for (final item in externalItems) {
-          final desc = item.description.isNotEmpty ? ' — *${item.description}*' : '';
+          final desc = item.description.isNotEmpty
+              ? ' — *${item.description}*'
+              : '';
           sectionBuffer.add('- [${item.title}](${item.url})$desc');
         }
         sectionBuffer.add('');
@@ -55,7 +64,9 @@ String generateExternalLinksIndexMarkdown(
   }
 
   if (!foundAny) {
-    lines.add('*No se encontraron enlaces externos en esta materia. Todos los elementos son archivos directos.*');
+    lines.add(
+      '*No se encontraron enlaces externos en esta materia. Todos los elementos son archivos directos.*',
+    );
     lines.add('');
   }
 
@@ -71,7 +82,9 @@ String generateContentsSummaryMarkdown(
 }) {
   final lines = <String>[];
   final dateFormatted = DateTime.now().toLocal().toString().split('.').first;
-  final codDisplay = commissionCode.isNotEmpty ? commissionCode : 'Comisión ${content.idComision}';
+  final codDisplay = commissionCode.isNotEmpty
+      ? commissionCode
+      : 'Comisión ${content.idComision}';
 
   lines.add('# Índice de Contenidos — $subjectName');
   lines.add('');
@@ -106,7 +119,9 @@ String generateContentsSummaryMarkdown(
         final pathOrUrl = item.isExternal
             ? '[Abrir enlace](${item.url})'
             : item.title;
-        lines.add('| $icon ${item.title} | ${item.fileType} | $sizeText | $pathOrUrl |');
+        lines.add(
+          '| $icon ${item.title} | ${item.fileType} | $sizeText | $pathOrUrl |',
+        );
       }
       lines.add('');
     }

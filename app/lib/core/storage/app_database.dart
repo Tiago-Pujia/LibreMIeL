@@ -572,15 +572,19 @@ class AppDatabase extends _$AppDatabase {
     required BigInt fileSize,
     String? sha256,
   }) async {
-    final existing = await (select(downloadedResources)
-          ..where((t) =>
-              t.idComision.equals(idComision) &
-              t.module.equals(module) &
-              t.resourceId.equals(resourceId)))
-        .getSingleOrNull();
+    final existing =
+        await (select(downloadedResources)..where(
+              (t) =>
+                  t.idComision.equals(idComision) &
+                  t.module.equals(module) &
+                  t.resourceId.equals(resourceId),
+            ))
+            .getSingleOrNull();
 
     if (existing != null) {
-      await (update(downloadedResources)..where((t) => t.id.equals(existing.id))).write(
+      await (update(
+        downloadedResources,
+      )..where((t) => t.id.equals(existing.id))).write(
         DownloadedResourcesCompanion(
           title: Value(title),
           localPath: Value(localPath),
@@ -611,11 +615,12 @@ class AppDatabase extends _$AppDatabase {
     required String module,
     required String resourceId,
   }) {
-    return (select(downloadedResources)
-          ..where((t) =>
+    return (select(downloadedResources)..where(
+          (t) =>
               t.idComision.equals(idComision) &
               t.module.equals(module) &
-              t.resourceId.equals(resourceId)))
+              t.resourceId.equals(resourceId),
+        ))
         .getSingleOrNull();
   }
 
@@ -623,7 +628,8 @@ class AppDatabase extends _$AppDatabase {
     String idComision, {
     String? module,
   }) {
-    final query = select(downloadedResources)..where((t) => t.idComision.equals(idComision));
+    final query = select(downloadedResources)
+      ..where((t) => t.idComision.equals(idComision));
     if (module != null) {
       query.where((t) => t.module.equals(module));
     }
@@ -635,20 +641,23 @@ class AppDatabase extends _$AppDatabase {
     required String module,
     required String resourceId,
   }) async {
-    final count = await (selectOnly(downloadedResources)
-          ..addColumns([downloadedResources.id.count()])
-          ..where(
-            downloadedResources.idComision.equals(idComision) &
-                downloadedResources.module.equals(module) &
-                downloadedResources.resourceId.equals(resourceId),
-          ))
-        .getSingle();
+    final count =
+        await (selectOnly(downloadedResources)
+              ..addColumns([downloadedResources.id.count()])
+              ..where(
+                downloadedResources.idComision.equals(idComision) &
+                    downloadedResources.module.equals(module) &
+                    downloadedResources.resourceId.equals(resourceId),
+              ))
+            .getSingle();
     final total = count.read(downloadedResources.id.count()) ?? 0;
     return total > 0;
   }
 
   Future<void> clearDownloadedResourcesForSubject(String idComision) async {
-    await (delete(downloadedResources)..where((t) => t.idComision.equals(idComision))).go();
+    await (delete(
+      downloadedResources,
+    )..where((t) => t.idComision.equals(idComision))).go();
   }
 
   /// Borra todos los datos locales al cerrar sesión.

@@ -212,9 +212,7 @@ class SyncEngine {
 
       // C) Foros: listar temas es solo lectura (no altera badges)
       if (subject.notifyForos &&
-          (summary.foroBadge > 0 ||
-              subject.lastForoBadge > 0 ||
-              isBaseline)) {
+          (summary.foroBadge > 0 || subject.lastForoBadge > 0 || isBaseline)) {
         final foroNotifs = await _syncForos(
           subject,
           mode: forumMode,

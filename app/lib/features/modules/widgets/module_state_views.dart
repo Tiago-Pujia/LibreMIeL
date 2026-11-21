@@ -831,9 +831,7 @@ void showMielStatusToast(
         size: 19,
         color: isError ? const Color(0xFFEF5350) : const Color(0xFF4DB6AC),
       ),
-      borderColor: isError
-          ? const Color(0xFFEF5350)
-          : const Color(0xFF009688),
+      borderColor: isError ? const Color(0xFFEF5350) : const Color(0xFF009688),
       message: message,
       onClose: messenger.clearSnackBars,
       duration: duration,

@@ -31,7 +31,9 @@ void main() {
       );
       expect(
         htmlWithMention,
-        contains('class="tagUsuario" data-idUsuario="4321" data-idMensaje="9876">@Gómez Martín</strong>&nbsp;'),
+        contains(
+          'class="tagUsuario" data-idUsuario="4321" data-idMensaje="9876">@Gómez Martín</strong>&nbsp;',
+        ),
       );
     });
 
@@ -39,14 +41,19 @@ void main() {
       final tempDir = Directory.systemTemp.createTempSync('miel_test_');
       addTearDown(() => tempDir.deleteSync(recursive: true));
 
-      final phpFile = File('${tempDir.path}/script.php')..writeAsStringSync('dummy');
+      final phpFile = File('${tempDir.path}/script.php')
+        ..writeAsStringSync('dummy');
       expect(
         validateMielUploadFile(filePath: phpFile.path, maxSizeMb: 40),
         contains('Tipo de archivo no permitido por MIeL (.php)'),
       );
 
-      final validPdf = File('${tempDir.path}/informe.pdf')..writeAsStringSync('contenido de prueba');
-      expect(validateMielUploadFile(filePath: validPdf.path, maxSizeMb: 40), isNull);
+      final validPdf = File('${tempDir.path}/informe.pdf')
+        ..writeAsStringSync('contenido de prueba');
+      expect(
+        validateMielUploadFile(filePath: validPdf.path, maxSizeMb: 40),
+        isNull,
+      );
 
       // Simular archivo mayor a 5 MB para foros
       expect(
@@ -79,9 +86,15 @@ void main() {
 
       final formData = parseMensajeriaRedactarHtml(html, '119341');
       expect(formData.recipients.length, equals(3));
-      expect(formData.recipients.first.displayName, equals('Prof. Juan Pérez (Tutor)'));
+      expect(
+        formData.recipients.first.displayName,
+        equals('Prof. Juan Pérez (Tutor)'),
+      );
       expect(formData.recipients.first.contactType, equals('tutores'));
-      expect(formData.recipients[1].displayName, equals('María González (Compañera)'));
+      expect(
+        formData.recipients[1].displayName,
+        equals('María González (Compañera)'),
+      );
       expect(formData.recipients[1].contactType, equals('alumnos'));
     });
 
@@ -114,7 +127,10 @@ void main() {
       expect(detail.submissionForm.canSubmit, isTrue);
       expect(detail.submissionForm.tutors.length, equals(2));
       expect(detail.submissionForm.tutors.first.id, equals('12'));
-      expect(detail.submissionForm.tutors.first.name, equals('Docente Titular'));
+      expect(
+        detail.submissionForm.tutors.first.name,
+        equals('Docente Titular'),
+      );
     });
 
     test('parseForoMensajesHtml extrae flags de canPostMessage y mención nativa de respuesta', () {
@@ -135,11 +151,7 @@ void main() {
         </div>
       ''';
 
-      final thread = parseForoMensajesHtml(
-        html,
-        '119341',
-        '10',
-      );
+      final thread = parseForoMensajesHtml(html, '119341', '10');
 
       expect(thread.canPostMessage, isTrue);
       expect(thread.messages.length, equals(1));
@@ -165,7 +177,10 @@ void main() {
       expect(detail.submissionForm.canSubmit, isTrue);
       // Solo deben quedar '0' (deduplicado de '' y '0') y '12' (deduplicado de '12')
       expect(detail.submissionForm.tutors.length, equals(2));
-      expect(detail.submissionForm.tutors.map((t) => t.id).toSet().length, equals(2));
+      expect(
+        detail.submissionForm.tutors.map((t) => t.id).toSet().length,
+        equals(2),
+      );
     });
   });
 }

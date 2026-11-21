@@ -48,15 +48,13 @@ void main() {
 
       when(() => client.fetchContenidosHtml('119341'))
           .thenAnswer((_) async => contenidosHtml);
-      when(() => client.downloadAuthenticatedBytes(any()))
-          .thenAnswer((_) async => Uint8List.fromList(utf8.encode('PDF DUMMY DATA 12345')));
+      when(() => client.downloadAuthenticatedBytes(any())).thenAnswer(
+        (_) async => Uint8List.fromList(utf8.encode('PDF DUMMY DATA 12345')),
+      );
       when(() => client.markExternalContentDownloaded(any(), any()))
           .thenAnswer((_) async {});
 
-      final manager = BulkDownloadManager(
-        client: client,
-        database: db,
-      );
+      final manager = BulkDownloadManager(client: client, database: db);
 
       final subject = Subject(
         idComision: '119341',
@@ -111,9 +109,17 @@ void main() {
       expect(File(recorded.localPath).existsSync(), isTrue);
 
       // Verificar que se generó indice_contenidos.md y enlaces_externos.md
-      final contentsDir = Directory('${tempDir.path}/Algoritmos y Estructuras de Datos - COM-119/Contenidos');
-      expect(File('${contentsDir.path}/indice_contenidos.md').existsSync(), isTrue);
-      expect(File('${contentsDir.path}/enlaces_externos.md').existsSync(), isTrue);
+      final contentsDir = Directory(
+        '${tempDir.path}/Algoritmos y Estructuras de Datos - COM-119/Contenidos',
+      );
+      expect(
+        File('${contentsDir.path}/indice_contenidos.md').existsSync(),
+        isTrue,
+      );
+      expect(
+        File('${contentsDir.path}/enlaces_externos.md').existsSync(),
+        isTrue,
+      );
 
       // Segunda pasada en modo incremental: debe omitir y contar como skipped
       final secondProgress = await manager.start(options);
@@ -126,10 +132,7 @@ void main() {
       when(() => client.fetchContenidosHtml(any()))
           .thenAnswer((_) async => '<div class="desplegarModulo"></div>');
 
-      final manager = BulkDownloadManager(
-        client: client,
-        database: db,
-      );
+      final manager = BulkDownloadManager(client: client, database: db);
 
       final subject = Subject(
         idComision: '119341',

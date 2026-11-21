@@ -170,11 +170,10 @@ class _ForoViewState extends ConsumerState<ForoView> {
 
   Future<void> _handleToggleLike(ForumMessageItem message) async {
     if (_likeInFlightIds.contains(message.id)) return;
-    final current = _localLikes[message.id] ??
-        (count: message.likesCount, liked: false);
+    final current =
+        _localLikes[message.id] ?? (count: message.likesCount, liked: false);
     final nextLiked = !current.liked;
-    final nextCount =
-        (current.count + (nextLiked ? 1 : -1)).clamp(0, 99999);
+    final nextCount = (current.count + (nextLiked ? 1 : -1)).clamp(0, 99999);
 
     setState(() {
       _likeInFlightIds.add(message.id);
@@ -282,8 +281,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
           idTema: idTema,
           rootParentMessageId: rootId,
           bodyPlainText: text,
-          mentionUserId:
-              target.authorId.isNotEmpty ? target.authorId : null,
+          mentionUserId: target.authorId.isNotEmpty ? target.authorId : null,
           mentionMessageId: target.id,
           mentionUserName: target.replyMentionName.isNotEmpty
               ? target.replyMentionName
@@ -786,9 +784,9 @@ class _ForoViewState extends ConsumerState<ForoView> {
                                 ? 'Ocultar comentarios anteriores'
                                 : 'Ver comentarios anteriores ($hiddenCount)',
                             style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: palette.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: palette.textPrimary,
                             ),
                           ),
                         ],
@@ -979,8 +977,9 @@ class _ForoViewState extends ConsumerState<ForoView> {
   }) {
     final likeData =
         _localLikes[message.id] ?? (count: message.likesCount, liked: false);
-    final likeText =
-        likeData.count > 0 ? 'Me gusta (${likeData.count})' : 'Me gusta';
+    final likeText = likeData.count > 0
+        ? 'Me gusta (${likeData.count})'
+        : 'Me gusta';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1081,20 +1080,16 @@ class _ForoViewState extends ConsumerState<ForoView> {
                 child: Icon(
                   Icons.thumb_up_alt_outlined,
                   size: 15,
-                  color: likeData.liked ? palette.linkAccent : palette.textMuted,
+                  color: likeData.liked
+                      ? palette.linkAccent
+                      : palette.textMuted,
                 ),
               ),
           ],
         ),
         if (_replyTargetMessage?.id == message.id) ...[
           const SizedBox(height: 10),
-          _buildInlineReplyComposer(
-            context,
-            palette,
-            message,
-            rootId,
-            idTema,
-          ),
+          _buildInlineReplyComposer(context, palette, message, rootId, idTema),
         ],
       ],
     );
@@ -1172,9 +1167,9 @@ class _ForoViewState extends ConsumerState<ForoView> {
                   onDeleted: _postingNewMessage
                       ? null
                       : () => setState(() {
-                            _newMessageAttachmentPath = null;
-                            _newMessageAttachmentName = null;
-                          }),
+                          _newMessageAttachmentPath = null;
+                          _newMessageAttachmentName = null;
+                        }),
                 ),
               ],
             ),
@@ -1276,8 +1271,8 @@ class _ForoViewState extends ConsumerState<ForoView> {
                 onPressed: _postingReply
                     ? null
                     : () => setState(() {
-                          _replyTargetMessage = null;
-                        }),
+                        _replyTargetMessage = null;
+                      }),
               ),
             ],
           ),
@@ -1309,15 +1304,18 @@ class _ForoViewState extends ConsumerState<ForoView> {
                   avatar: const Icon(Icons.attach_file, size: 14),
                   label: Text(
                     _replyAttachmentName!,
-                    style: TextStyle(fontSize: 11.5, color: palette.textPrimary),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: palette.textPrimary,
+                    ),
                   ),
                   deleteIcon: const Icon(Icons.close, size: 14),
                   onDeleted: _postingReply
                       ? null
                       : () => setState(() {
-                            _replyAttachmentPath = null;
-                            _replyAttachmentName = null;
-                          }),
+                          _replyAttachmentPath = null;
+                          _replyAttachmentName = null;
+                        }),
                 ),
               ],
             ),
@@ -1348,8 +1346,8 @@ class _ForoViewState extends ConsumerState<ForoView> {
                 onPressed: _postingReply
                     ? null
                     : () => setState(() {
-                          _replyTargetMessage = null;
-                        }),
+                        _replyTargetMessage = null;
+                      }),
                 child: const Text('Cancelar'),
               ),
               const SizedBox(width: 6),
@@ -1372,10 +1370,10 @@ class _ForoViewState extends ConsumerState<ForoView> {
                 onPressed: _postingReply
                     ? null
                     : () => _handlePostReply(
-                          idTema: idTema,
-                          rootId: rootId,
-                          target: target,
-                        ),
+                        idTema: idTema,
+                        rootId: rootId,
+                        target: target,
+                      ),
               ),
             ],
           ),

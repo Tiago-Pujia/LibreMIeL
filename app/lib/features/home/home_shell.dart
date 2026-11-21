@@ -755,7 +755,6 @@ class _NavIconAction extends StatelessWidget {
   }
 }
 
-
 class _NavTextAction extends StatelessWidget {
   const _NavTextAction({required this.label, required this.onTap});
 
