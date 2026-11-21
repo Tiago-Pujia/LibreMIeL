@@ -10,7 +10,7 @@ description: |
   Notifica novedades en Contenidos, Portafolio, Mensajería y Foros.
 vendor: "LibreMIeL Contributors"
 homepage: "https://github.com/Tiago-Pujia/LibreMIeL"
-license: "MIT"
+license: "GPL-3.0"
 
 overrides:
   deb:

@@ -11,7 +11,7 @@ Este tablero resume el avance de **LibreMIeL** por fase y componente.
 | Fase / Módulo | Componente | Estado | Detalle |
 | :--- | :--- | :---: | :--- |
 | **Investigación** | Relevamiento técnico de MIeL (`2025.2.0`) | ✅ Completado | Login, cookies, CORS, badges, efectos colaterales, avatares autenticados y endpoints documentados en `docs/` |
-| **Gobernanza** | Licencia MIT, `CONTRIBUTING.md`, `AGENTS.md`, `GIT_WORKFLOW.md`, `CHANGELOG.md` | ✅ Completado | Documentación centralizada en `docs/` y raíz limpia con `README.md` |
+| **Gobernanza** | Licencia GPL-3.0, `CONTRIBUTING.md`, `AGENTS.md`, `GIT_WORKFLOW.md`, `CHANGELOG.md` | ✅ Completado | Documentación centralizada en `docs/` y raíz limpia con `README.md` |
 | **Gobernanza** | Script anonimizador de HTML (`scripts/anonymize_html.py`) + tests | ✅ Completado | Python 3 sin dependencias externas, testeado con `unittest` |
 | **Fase 0 — Core** | Scaffolding Flutter (`android`, `linux`, `windows`, `macos`) | ✅ Completado | Configurado en `app/` con `io.github.tiago_pujia.libremiel`, entitlements macOS y permisos Android |
 | **Fase 0 — Core** | Cliente HTTP y sesión (`MielClient` + `MielInteractiveReader` + `PersistCookieJar`) | ✅ Completado | Login limpio (reseteo de cookies previo), `isLogged`, `recargarSesion`, cola secuencial, backoff, corte ante `estado != 0` y descargas autenticadas |

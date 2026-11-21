@@ -7,7 +7,7 @@ Este archivo concentra el contexto operativo, las invariantes técnicas y las re
 ## 1. Contexto del Proyecto
 
 - **Nombre:** LibreMIeL
-- **Propósito:** Cliente alternativo, gratuito, *local-first* y de código abierto (Licencia MIT) para la plataforma **MIeL (UNLaM)** (`https://miel.unlam.edu.ar/`).
+- **Propósito:** Cliente alternativo, gratuito, *local-first* y de código abierto (Licencia GPL-3.0) para la plataforma **MIeL (UNLaM)** (`https://miel.unlam.edu.ar/`).
 - **Plataformas objetivo:** Windows, macOS, Linux (`AppImage`, `.deb`, `.rpm`, Arch `.pkg.tar.zst`, portable `.tar.gz`) y Android (`.apk`).
 - **Identificador de aplicación:** `io.github.tiago_pujia.libremiel`
 - **Stack:** Flutter (Dart), `dio` + `cookie_jar`, `html` (DOM parser), `drift` (SQLite), `flutter_riverpod`, `flutter_secure_storage`, `flutter_local_notifications`, `workmanager`, `tray_manager`, `window_manager`.

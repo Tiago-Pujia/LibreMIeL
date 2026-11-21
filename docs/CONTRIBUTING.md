@@ -1,7 +1,7 @@
 # Guía de Contribución — LibreMIeL
 
 ¡Gracias por tu interés en mejorar **LibreMIeL**!  
-Este proyecto es gratuito, independiente y de código abierto bajo licencia [MIT](../LICENSE). Toda ayuda es bienvenida: desde reportar si MIeL cambió alguna pantalla hasta sumar nuevas funciones o corregir errores.
+Este proyecto es gratuito, independiente y de código abierto bajo licencia [GPL-3.0](../LICENSE). Toda ayuda es bienvenida: desde reportar si MIeL cambió alguna pantalla hasta sumar nuevas funciones o corregir errores.
 
 ---
 

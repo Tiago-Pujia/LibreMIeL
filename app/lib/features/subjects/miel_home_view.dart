@@ -370,7 +370,7 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                 Divider(color: palette.divider, height: 1),
                 const SizedBox(height: 16),
                 Text(
-                  'LibreMIeL · Cliente libre y no oficial (Licencia MIT) para MIeL UNLaM',
+                  'LibreMIeL · Cliente libre y no oficial (Licencia GPLv3) para MIeL UNLaM',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13.5, color: palette.textMuted),
                 ),

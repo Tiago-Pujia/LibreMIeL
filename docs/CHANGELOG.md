@@ -9,7 +9,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Added
 - Documentación técnica completa de la plataforma MIeL (`2025.2.0`) en `docs/`.
-- Licencia **MIT** (`LICENSE`) y documentación de gobernanza en `docs/` (`CONTRIBUTING.md`, `AGENTS.md`, `STATUS.md`, `GIT_WORKFLOW.md`, `CHANGELOG.md`).
+- Licencia **GPL-3.0** (`LICENSE`) y documentación de gobernanza en `docs/` (`CONTRIBUTING.md`, `AGENTS.md`, `STATUS.md`, `GIT_WORKFLOW.md`, `CHANGELOG.md`).
 - Script anonimizador de capturas HTML de MIeL (`scripts/anonymize_html.py`) con tests automatizados (`scripts/test_anonymize_html.py`).
 - Estructura inicial de la aplicación **Flutter** multiplataforma (`android`, `linux`, `windows`, `macos`) bajo el identificador `io.github.tiago_pujia.libremiel`.
 - Core de MIeL:
@@ -59,12 +59,13 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - Alineado a la izquierda el nombre de la materia junto al botón de inicio en la barra superior, ajustado el badge rojo al ícono de herramienta y simplificado el placeholder del login a `DNI`.
 - **Barra superior:** retirada la campana de notificaciones de la barra verde para mantener una barra limpia; las notificaciones permanecen accesibles desde el menú lateral en *Funcionalidades* -> *Novedades*.
 - **Tarjetas de materias:** unificado el color de la campana de notificaciones a blanco (en modo oscuro) o gris secundario (en modo claro) para concordar con los demás íconos de la tarjeta.
-- **Footer del menú principal:** retirado el enlace "Abrir MIeL oficial en el navegador" debajo de la licencia MIT.
+- **Footer del menú principal:** retirado el enlace "Abrir MIeL oficial en el navegador" debajo de la leyenda de licencia.
 - **Encabezados de Contenidos y Foros:** retirados los botones redundantes "Respaldo offline" y "Exportar foros"; el respaldo masivo permanece centralizado en el menú lateral.
 - **Respaldo offline:** eliminada la opción redundante de adjuntos (ahora siempre se descargan) e incorporado selector con lista de verificación interactiva y atajos (*Todas* / *Ninguna*) al seleccionar materias específicas.
 - **Foros y Portafolio:** retirados los botones "Abrir en MIeL" de las barras superiores de los módulos, conservando solo las acciones esenciales (`Actualizar` y `Marcar todos leídos`).
 - **Bandeja del sistema (*system tray*):** agregado indicador visual de notificación no leída (`tray_icon_unread.png` / `.ico` con insignia roja) que se actualiza reactivamente cuando llegan novedades y vuelve al ícono normal al marcarlas como leídas, junto con conteo en el menú contextual.
 - **Feed de Novedades:** eliminado el botón externo "Abrir en MIeL" de cada tarjeta de notificación; al hacer click sobre cualquier notificación se marca como leída y abre directamente el módulo correspondiente dentro de LibreMIeL.
+- **Licencia del proyecto:** relicenciado todo el proyecto a **GNU General Public License v3.0 (GPL-3.0)**.
 
 ### Fixed
 - **Portafolio:** corregida la aserción de Flutter (`DropdownButton: There should be exactly one item with value: 0`) deduplicando las opciones de tutores en `parsePortafolioEntregasDetalleHtml` y sanitizando las opciones en `PortafolioSubmissionCard`.
