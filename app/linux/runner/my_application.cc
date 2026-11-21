@@ -19,6 +19,7 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
+  g_set_prgname(APPLICATION_ID);
 
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
@@ -34,6 +35,27 @@ static void my_application_activate(GApplication* application) {
   // gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
 
   gtk_window_set_title(window, "LibreMIeL");
+  gtk_window_set_default_icon_name(APPLICATION_ID);
+
+  // Load bundled circular icon directly so KDE Plasma / Kubuntu and X11/Wayland
+  // taskbars always display the window icon even before icon-theme cache refresh.
+  g_autofree gchar* exe_path = g_file_read_link("/proc/self/exe", nullptr);
+  if (exe_path != nullptr) {
+    g_autofree gchar* exe_dir = g_path_get_dirname(exe_path);
+    g_autofree gchar* bundled_icon = g_build_filename(
+        exe_dir, "data", "flutter_assets", "assets", "icons", "libremiel.png",
+        nullptr);
+    if (g_file_test(bundled_icon, G_FILE_TEST_EXISTS)) {
+      gtk_window_set_icon_from_file(window, bundled_icon, nullptr);
+      gtk_window_set_default_icon_from_file(bundled_icon, nullptr);
+    } else if (g_file_test("/usr/share/pixmaps/libremiel.png",
+                           G_FILE_TEST_EXISTS)) {
+      gtk_window_set_icon_from_file(window, "/usr/share/pixmaps/libremiel.png",
+                                    nullptr);
+      gtk_window_set_default_icon_from_file("/usr/share/pixmaps/libremiel.png",
+                                            nullptr);
+    }
+  }
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
@@ -82,11 +104,10 @@ static gboolean my_application_local_command_line(GApplication* application,
 
 // Implements GApplication::startup.
 static void my_application_startup(GApplication* application) {
-  // MyApplication* self = MY_APPLICATION(object);
-
-  // Perform any actions required at application startup.
-
   G_APPLICATION_CLASS(my_application_parent_class)->startup(application);
+  // gtk_init() inside parent startup resets prgname to argv[0] ("libremiel");
+  // restore APPLICATION_ID so Wayland xdg_toplevel app_id matches the .desktop file.
+  g_set_prgname(APPLICATION_ID);
 }
 
 // Implements GApplication::shutdown.
