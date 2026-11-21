@@ -3084,6 +3084,561 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   }
 }
 
+class $DownloadedResourcesTable extends DownloadedResources
+    with TableInfo<$DownloadedResourcesTable, DownloadedResource> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DownloadedResourcesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _idComisionMeta = const VerificationMeta(
+    'idComision',
+  );
+  @override
+  late final GeneratedColumn<String> idComision = GeneratedColumn<String>(
+    'id_comision',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _moduleMeta = const VerificationMeta('module');
+  @override
+  late final GeneratedColumn<String> module = GeneratedColumn<String>(
+    'module',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resourceIdMeta = const VerificationMeta(
+    'resourceId',
+  );
+  @override
+  late final GeneratedColumn<String> resourceId = GeneratedColumn<String>(
+    'resource_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localPathMeta = const VerificationMeta(
+    'localPath',
+  );
+  @override
+  late final GeneratedColumn<String> localPath = GeneratedColumn<String>(
+    'local_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fileSizeMeta = const VerificationMeta(
+    'fileSize',
+  );
+  @override
+  late final GeneratedColumn<BigInt> fileSize = GeneratedColumn<BigInt>(
+    'file_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.bigInt,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  @override
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+    'sha256',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _downloadedAtMeta = const VerificationMeta(
+    'downloadedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> downloadedAt = GeneratedColumn<DateTime>(
+    'downloaded_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    idComision,
+    module,
+    resourceId,
+    title,
+    localPath,
+    fileSize,
+    sha256,
+    downloadedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'downloaded_resources';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DownloadedResource> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('id_comision')) {
+      context.handle(
+        _idComisionMeta,
+        idComision.isAcceptableOrUnknown(data['id_comision']!, _idComisionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_idComisionMeta);
+    }
+    if (data.containsKey('module')) {
+      context.handle(
+        _moduleMeta,
+        module.isAcceptableOrUnknown(data['module']!, _moduleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_moduleMeta);
+    }
+    if (data.containsKey('resource_id')) {
+      context.handle(
+        _resourceIdMeta,
+        resourceId.isAcceptableOrUnknown(data['resource_id']!, _resourceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_resourceIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('local_path')) {
+      context.handle(
+        _localPathMeta,
+        localPath.isAcceptableOrUnknown(data['local_path']!, _localPathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localPathMeta);
+    }
+    if (data.containsKey('file_size')) {
+      context.handle(
+        _fileSizeMeta,
+        fileSize.isAcceptableOrUnknown(data['file_size']!, _fileSizeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fileSizeMeta);
+    }
+    if (data.containsKey('sha256')) {
+      context.handle(
+        _sha256Meta,
+        sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta),
+      );
+    }
+    if (data.containsKey('downloaded_at')) {
+      context.handle(
+        _downloadedAtMeta,
+        downloadedAt.isAcceptableOrUnknown(
+          data['downloaded_at']!,
+          _downloadedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_downloadedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DownloadedResource map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DownloadedResource(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      idComision: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id_comision'],
+      )!,
+      module: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}module'],
+      )!,
+      resourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}resource_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      localPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_path'],
+      )!,
+      fileSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.bigInt,
+        data['${effectivePrefix}file_size'],
+      )!,
+      sha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sha256'],
+      ),
+      downloadedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}downloaded_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DownloadedResourcesTable createAlias(String alias) {
+    return $DownloadedResourcesTable(attachedDatabase, alias);
+  }
+}
+
+class DownloadedResource extends DataClass
+    implements Insertable<DownloadedResource> {
+  final int id;
+  final String idComision;
+  final String module;
+  final String resourceId;
+  final String title;
+  final String localPath;
+  final BigInt fileSize;
+  final String? sha256;
+  final DateTime downloadedAt;
+  const DownloadedResource({
+    required this.id,
+    required this.idComision,
+    required this.module,
+    required this.resourceId,
+    required this.title,
+    required this.localPath,
+    required this.fileSize,
+    this.sha256,
+    required this.downloadedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['id_comision'] = Variable<String>(idComision);
+    map['module'] = Variable<String>(module);
+    map['resource_id'] = Variable<String>(resourceId);
+    map['title'] = Variable<String>(title);
+    map['local_path'] = Variable<String>(localPath);
+    map['file_size'] = Variable<BigInt>(fileSize);
+    if (!nullToAbsent || sha256 != null) {
+      map['sha256'] = Variable<String>(sha256);
+    }
+    map['downloaded_at'] = Variable<DateTime>(downloadedAt);
+    return map;
+  }
+
+  DownloadedResourcesCompanion toCompanion(bool nullToAbsent) {
+    return DownloadedResourcesCompanion(
+      id: Value(id),
+      idComision: Value(idComision),
+      module: Value(module),
+      resourceId: Value(resourceId),
+      title: Value(title),
+      localPath: Value(localPath),
+      fileSize: Value(fileSize),
+      sha256: sha256 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sha256),
+      downloadedAt: Value(downloadedAt),
+    );
+  }
+
+  factory DownloadedResource.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DownloadedResource(
+      id: serializer.fromJson<int>(json['id']),
+      idComision: serializer.fromJson<String>(json['idComision']),
+      module: serializer.fromJson<String>(json['module']),
+      resourceId: serializer.fromJson<String>(json['resourceId']),
+      title: serializer.fromJson<String>(json['title']),
+      localPath: serializer.fromJson<String>(json['localPath']),
+      fileSize: serializer.fromJson<BigInt>(json['fileSize']),
+      sha256: serializer.fromJson<String?>(json['sha256']),
+      downloadedAt: serializer.fromJson<DateTime>(json['downloadedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'idComision': serializer.toJson<String>(idComision),
+      'module': serializer.toJson<String>(module),
+      'resourceId': serializer.toJson<String>(resourceId),
+      'title': serializer.toJson<String>(title),
+      'localPath': serializer.toJson<String>(localPath),
+      'fileSize': serializer.toJson<BigInt>(fileSize),
+      'sha256': serializer.toJson<String?>(sha256),
+      'downloadedAt': serializer.toJson<DateTime>(downloadedAt),
+    };
+  }
+
+  DownloadedResource copyWith({
+    int? id,
+    String? idComision,
+    String? module,
+    String? resourceId,
+    String? title,
+    String? localPath,
+    BigInt? fileSize,
+    Value<String?> sha256 = const Value.absent(),
+    DateTime? downloadedAt,
+  }) => DownloadedResource(
+    id: id ?? this.id,
+    idComision: idComision ?? this.idComision,
+    module: module ?? this.module,
+    resourceId: resourceId ?? this.resourceId,
+    title: title ?? this.title,
+    localPath: localPath ?? this.localPath,
+    fileSize: fileSize ?? this.fileSize,
+    sha256: sha256.present ? sha256.value : this.sha256,
+    downloadedAt: downloadedAt ?? this.downloadedAt,
+  );
+  DownloadedResource copyWithCompanion(DownloadedResourcesCompanion data) {
+    return DownloadedResource(
+      id: data.id.present ? data.id.value : this.id,
+      idComision: data.idComision.present
+          ? data.idComision.value
+          : this.idComision,
+      module: data.module.present ? data.module.value : this.module,
+      resourceId: data.resourceId.present
+          ? data.resourceId.value
+          : this.resourceId,
+      title: data.title.present ? data.title.value : this.title,
+      localPath: data.localPath.present ? data.localPath.value : this.localPath,
+      fileSize: data.fileSize.present ? data.fileSize.value : this.fileSize,
+      sha256: data.sha256.present ? data.sha256.value : this.sha256,
+      downloadedAt: data.downloadedAt.present
+          ? data.downloadedAt.value
+          : this.downloadedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DownloadedResource(')
+          ..write('id: $id, ')
+          ..write('idComision: $idComision, ')
+          ..write('module: $module, ')
+          ..write('resourceId: $resourceId, ')
+          ..write('title: $title, ')
+          ..write('localPath: $localPath, ')
+          ..write('fileSize: $fileSize, ')
+          ..write('sha256: $sha256, ')
+          ..write('downloadedAt: $downloadedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    idComision,
+    module,
+    resourceId,
+    title,
+    localPath,
+    fileSize,
+    sha256,
+    downloadedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DownloadedResource &&
+          other.id == this.id &&
+          other.idComision == this.idComision &&
+          other.module == this.module &&
+          other.resourceId == this.resourceId &&
+          other.title == this.title &&
+          other.localPath == this.localPath &&
+          other.fileSize == this.fileSize &&
+          other.sha256 == this.sha256 &&
+          other.downloadedAt == this.downloadedAt);
+}
+
+class DownloadedResourcesCompanion extends UpdateCompanion<DownloadedResource> {
+  final Value<int> id;
+  final Value<String> idComision;
+  final Value<String> module;
+  final Value<String> resourceId;
+  final Value<String> title;
+  final Value<String> localPath;
+  final Value<BigInt> fileSize;
+  final Value<String?> sha256;
+  final Value<DateTime> downloadedAt;
+  const DownloadedResourcesCompanion({
+    this.id = const Value.absent(),
+    this.idComision = const Value.absent(),
+    this.module = const Value.absent(),
+    this.resourceId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.localPath = const Value.absent(),
+    this.fileSize = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.downloadedAt = const Value.absent(),
+  });
+  DownloadedResourcesCompanion.insert({
+    this.id = const Value.absent(),
+    required String idComision,
+    required String module,
+    required String resourceId,
+    required String title,
+    required String localPath,
+    required BigInt fileSize,
+    this.sha256 = const Value.absent(),
+    required DateTime downloadedAt,
+  }) : idComision = Value(idComision),
+       module = Value(module),
+       resourceId = Value(resourceId),
+       title = Value(title),
+       localPath = Value(localPath),
+       fileSize = Value(fileSize),
+       downloadedAt = Value(downloadedAt);
+  static Insertable<DownloadedResource> custom({
+    Expression<int>? id,
+    Expression<String>? idComision,
+    Expression<String>? module,
+    Expression<String>? resourceId,
+    Expression<String>? title,
+    Expression<String>? localPath,
+    Expression<BigInt>? fileSize,
+    Expression<String>? sha256,
+    Expression<DateTime>? downloadedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (idComision != null) 'id_comision': idComision,
+      if (module != null) 'module': module,
+      if (resourceId != null) 'resource_id': resourceId,
+      if (title != null) 'title': title,
+      if (localPath != null) 'local_path': localPath,
+      if (fileSize != null) 'file_size': fileSize,
+      if (sha256 != null) 'sha256': sha256,
+      if (downloadedAt != null) 'downloaded_at': downloadedAt,
+    });
+  }
+
+  DownloadedResourcesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? idComision,
+    Value<String>? module,
+    Value<String>? resourceId,
+    Value<String>? title,
+    Value<String>? localPath,
+    Value<BigInt>? fileSize,
+    Value<String?>? sha256,
+    Value<DateTime>? downloadedAt,
+  }) {
+    return DownloadedResourcesCompanion(
+      id: id ?? this.id,
+      idComision: idComision ?? this.idComision,
+      module: module ?? this.module,
+      resourceId: resourceId ?? this.resourceId,
+      title: title ?? this.title,
+      localPath: localPath ?? this.localPath,
+      fileSize: fileSize ?? this.fileSize,
+      sha256: sha256 ?? this.sha256,
+      downloadedAt: downloadedAt ?? this.downloadedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (idComision.present) {
+      map['id_comision'] = Variable<String>(idComision.value);
+    }
+    if (module.present) {
+      map['module'] = Variable<String>(module.value);
+    }
+    if (resourceId.present) {
+      map['resource_id'] = Variable<String>(resourceId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (localPath.present) {
+      map['local_path'] = Variable<String>(localPath.value);
+    }
+    if (fileSize.present) {
+      map['file_size'] = Variable<BigInt>(fileSize.value);
+    }
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (downloadedAt.present) {
+      map['downloaded_at'] = Variable<DateTime>(downloadedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DownloadedResourcesCompanion(')
+          ..write('id: $id, ')
+          ..write('idComision: $idComision, ')
+          ..write('module: $module, ')
+          ..write('resourceId: $resourceId, ')
+          ..write('title: $title, ')
+          ..write('localPath: $localPath, ')
+          ..write('fileSize: $fileSize, ')
+          ..write('sha256: $sha256, ')
+          ..write('downloadedAt: $downloadedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3096,6 +3651,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
+  late final $DownloadedResourcesTable downloadedResources =
+      $DownloadedResourcesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3106,6 +3663,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     snapshotEntries,
     notificationLogs,
     appSettings,
+    downloadedResources,
   ];
 }
 
@@ -4655,6 +5213,309 @@ typedef $$AppSettingsTableProcessedTableManager =
       AppSetting,
       PrefetchHooks Function()
     >;
+typedef $$DownloadedResourcesTableCreateCompanionBuilder =
+    DownloadedResourcesCompanion Function({
+      Value<int> id,
+      required String idComision,
+      required String module,
+      required String resourceId,
+      required String title,
+      required String localPath,
+      required BigInt fileSize,
+      Value<String?> sha256,
+      required DateTime downloadedAt,
+    });
+typedef $$DownloadedResourcesTableUpdateCompanionBuilder =
+    DownloadedResourcesCompanion Function({
+      Value<int> id,
+      Value<String> idComision,
+      Value<String> module,
+      Value<String> resourceId,
+      Value<String> title,
+      Value<String> localPath,
+      Value<BigInt> fileSize,
+      Value<String?> sha256,
+      Value<DateTime> downloadedAt,
+    });
+
+class $$DownloadedResourcesTableFilterComposer
+    extends Composer<_$AppDatabase, $DownloadedResourcesTable> {
+  $$DownloadedResourcesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get idComision => $composableBuilder(
+    column: $table.idComision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get module => $composableBuilder(
+    column: $table.module,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resourceId => $composableBuilder(
+    column: $table.resourceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localPath => $composableBuilder(
+    column: $table.localPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<BigInt> get fileSize => $composableBuilder(
+    column: $table.fileSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get downloadedAt => $composableBuilder(
+    column: $table.downloadedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DownloadedResourcesTableOrderingComposer
+    extends Composer<_$AppDatabase, $DownloadedResourcesTable> {
+  $$DownloadedResourcesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get idComision => $composableBuilder(
+    column: $table.idComision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get module => $composableBuilder(
+    column: $table.module,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resourceId => $composableBuilder(
+    column: $table.resourceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localPath => $composableBuilder(
+    column: $table.localPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<BigInt> get fileSize => $composableBuilder(
+    column: $table.fileSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get downloadedAt => $composableBuilder(
+    column: $table.downloadedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DownloadedResourcesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DownloadedResourcesTable> {
+  $$DownloadedResourcesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get idComision => $composableBuilder(
+    column: $table.idComision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get module =>
+      $composableBuilder(column: $table.module, builder: (column) => column);
+
+  GeneratedColumn<String> get resourceId => $composableBuilder(
+    column: $table.resourceId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get localPath =>
+      $composableBuilder(column: $table.localPath, builder: (column) => column);
+
+  GeneratedColumn<BigInt> get fileSize =>
+      $composableBuilder(column: $table.fileSize, builder: (column) => column);
+
+  GeneratedColumn<String> get sha256 =>
+      $composableBuilder(column: $table.sha256, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get downloadedAt => $composableBuilder(
+    column: $table.downloadedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$DownloadedResourcesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DownloadedResourcesTable,
+          DownloadedResource,
+          $$DownloadedResourcesTableFilterComposer,
+          $$DownloadedResourcesTableOrderingComposer,
+          $$DownloadedResourcesTableAnnotationComposer,
+          $$DownloadedResourcesTableCreateCompanionBuilder,
+          $$DownloadedResourcesTableUpdateCompanionBuilder,
+          (
+            DownloadedResource,
+            BaseReferences<
+              _$AppDatabase,
+              $DownloadedResourcesTable,
+              DownloadedResource
+            >,
+          ),
+          DownloadedResource,
+          PrefetchHooks Function()
+        > {
+  $$DownloadedResourcesTableTableManager(
+    _$AppDatabase db,
+    $DownloadedResourcesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DownloadedResourcesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DownloadedResourcesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$DownloadedResourcesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> idComision = const Value.absent(),
+                Value<String> module = const Value.absent(),
+                Value<String> resourceId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> localPath = const Value.absent(),
+                Value<BigInt> fileSize = const Value.absent(),
+                Value<String?> sha256 = const Value.absent(),
+                Value<DateTime> downloadedAt = const Value.absent(),
+              }) => DownloadedResourcesCompanion(
+                id: id,
+                idComision: idComision,
+                module: module,
+                resourceId: resourceId,
+                title: title,
+                localPath: localPath,
+                fileSize: fileSize,
+                sha256: sha256,
+                downloadedAt: downloadedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String idComision,
+                required String module,
+                required String resourceId,
+                required String title,
+                required String localPath,
+                required BigInt fileSize,
+                Value<String?> sha256 = const Value.absent(),
+                required DateTime downloadedAt,
+              }) => DownloadedResourcesCompanion.insert(
+                id: id,
+                idComision: idComision,
+                module: module,
+                resourceId: resourceId,
+                title: title,
+                localPath: localPath,
+                fileSize: fileSize,
+                sha256: sha256,
+                downloadedAt: downloadedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$DownloadedResourcesTable, DownloadedResource>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $DownloadedResourcesTable,
+                    DownloadedResource
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DownloadedResourcesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DownloadedResourcesTable,
+      DownloadedResource,
+      $$DownloadedResourcesTableFilterComposer,
+      $$DownloadedResourcesTableOrderingComposer,
+      $$DownloadedResourcesTableAnnotationComposer,
+      $$DownloadedResourcesTableCreateCompanionBuilder,
+      $$DownloadedResourcesTableUpdateCompanionBuilder,
+      (
+        DownloadedResource,
+        BaseReferences<
+          _$AppDatabase,
+          $DownloadedResourcesTable,
+          DownloadedResource
+        >,
+      ),
+      DownloadedResource,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4669,4 +5530,6 @@ class $AppDatabaseManager {
       $$NotificationLogsTableTableManager(_db, _db.notificationLogs);
   $$AppSettingsTableTableManager get appSettings =>
       $$AppSettingsTableTableManager(_db, _db.appSettings);
+  $$DownloadedResourcesTableTableManager get downloadedResources =>
+      $$DownloadedResourcesTableTableManager(_db, _db.downloadedResources);
 }

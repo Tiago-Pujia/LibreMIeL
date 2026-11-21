@@ -10,15 +10,16 @@ Alternativa **gratuita, libre y open source** para usar **MIeL** desde tus dispo
 
 Mejorar la experiencia diaria de cursada incorporando poco a poco funciones útiles que hoy faltan en la plataforma oficial.
 
-**Notificaciones:**  
-Enterarte a tiempo cuando un docente sube material en **Contenidos**, publica o corrige algo en **Portafolio**, envía un aviso por **Mensajería** o responde en los **Foros**, sin tener que entrar manualmente materia por materia.
+**Funcionalidades principales:**
+- **Notificaciones en tiempo real:** enterarte al instante de novedades en Contenidos, Portafolio, Mensajería, Foros o Evaluaciones.
+- **Lectura nativa y completa:** explorar archivos, notas, asistencias, hilos de foros y bandejas de mensajería con la estética oficial de MIeL.
+- **Escritura y envío nativo:** redactar y responder en **Mensajería**, subir entregas en **Portafolio** con adjuntos y participar en **Foros** con menciones.
+- **Respaldo offline masivo:** descargar y respaldar **foros completos** (en Markdown, JSON y HTML offline) y **contenidos organizados** por carpeta con modo incremental.
+- **Sesión permanente:** inicio de sesión automático y reconexión silenciosa continua, cerrando sesión solo cuando vos lo decidas.
 
 **Próximamente:**
-- **Enviar contenido desde LibreMIeL:** redactar y responder en **Mensajería**, subir entregas en **Portafolio** y participar en **Foros**.
-- Descargar **foros** completos por materia (basado en [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)) y **contenidos** organizados por carpeta.
-- **Sesión permanente:** iniciar sesión una vez y reconectarse automáticamente siempre, cerrando sesión solo cuando vos lo pidas.
-- **Buscador global offline** para encontrar archivos, mensajes, foros y entregas en todas tus materias sin conexión.
-- **Integración con IA** para resumir apuntes, consultar dudas sobre el material de la cátedra y organizar el estudio.
+- **Buscador global offline (Fase 6)** para encontrar archivos, mensajes, foros y entregas en todas tus materias sin conexión.
+- **Integración con IA (Fase 7)** para resumir apuntes, consultar dudas sobre el material de la cátedra y organizar el estudio.
 
 ---
 

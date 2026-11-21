@@ -14,6 +14,7 @@ import 'module_providers.dart';
 import 'widgets/miel_file_icon.dart';
 import 'widgets/miel_rich_text.dart';
 import 'widgets/module_state_views.dart';
+import '../downloads/bulk_download_sheet.dart';
 
 /// Vista nativa de lectura y participación del módulo **Foros (`forov2`)**
 /// (`Temas abiertos`, publicar nuevos hilos, respuestas anidadas con `@menciones`,
@@ -368,6 +369,14 @@ class _ForoViewState extends ConsumerState<ForoView> {
                       ? null
                       : () => _handleMarkAllTopicsRead(idComision),
                 ),
+              MielActionButton(
+                label: 'Exportar foros',
+                icon: Icons.download_for_offline_outlined,
+                onPressed: () => showBulkDownloadDialog(
+                  context,
+                  initialSubject: widget.subject,
+                ),
+              ),
               MielActionButton(
                 label: 'Actualizar',
                 icon: Icons.refresh,

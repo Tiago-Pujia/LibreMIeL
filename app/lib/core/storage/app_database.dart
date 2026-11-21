@@ -86,6 +86,19 @@ class NotificationLogs extends Table {
   DateTimeColumn get createdAt => dateTime()();
 }
 
+/// Registro local de archivos y foros descargados / respaldados.
+class DownloadedResources extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get idComision => text()();
+  TextColumn get module => text()(); // 'contenidos', 'forov2'
+  TextColumn get resourceId => text()(); // idElemento o idTema
+  TextColumn get title => text()();
+  TextColumn get localPath => text()();
+  Int64Column get fileSize => int64()();
+  TextColumn get sha256 => text().nullable()();
+  DateTimeColumn get downloadedAt => dateTime()();
+}
+
 /// Configuración clave-valor persistida localmente (intervalo, modo de foros, baseline, etc.).
 class AppSettings extends Table {
   TextColumn get key => text()();
@@ -118,6 +131,7 @@ class SettingKeys {
     SnapshotEntries,
     NotificationLogs,
     AppSettings,
+    DownloadedResources,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -125,7 +139,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'libremiel'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -144,6 +158,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 3) {
         await m.addColumn(subjects, subjects.sortOrder);
         await m.addColumn(subjects, subjects.localVisibilityOverride);
+      }
+      if (from < 4) {
+        await m.createTable(downloadedResources);
       }
     },
   );
@@ -544,9 +561,100 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  // --- Downloaded Resources (Fase 4) ---
+
+  Future<int> recordDownloadedResource({
+    required String idComision,
+    required String module,
+    required String resourceId,
+    required String title,
+    required String localPath,
+    required BigInt fileSize,
+    String? sha256,
+  }) async {
+    final existing = await (select(downloadedResources)
+          ..where((t) =>
+              t.idComision.equals(idComision) &
+              t.module.equals(module) &
+              t.resourceId.equals(resourceId)))
+        .getSingleOrNull();
+
+    if (existing != null) {
+      await (update(downloadedResources)..where((t) => t.id.equals(existing.id))).write(
+        DownloadedResourcesCompanion(
+          title: Value(title),
+          localPath: Value(localPath),
+          fileSize: Value(fileSize),
+          sha256: Value(sha256),
+          downloadedAt: Value(DateTime.now()),
+        ),
+      );
+      return existing.id;
+    } else {
+      return into(downloadedResources).insert(
+        DownloadedResourcesCompanion.insert(
+          idComision: idComision,
+          module: module,
+          resourceId: resourceId,
+          title: title,
+          localPath: localPath,
+          fileSize: fileSize,
+          sha256: Value(sha256),
+          downloadedAt: DateTime.now(),
+        ),
+      );
+    }
+  }
+
+  Future<DownloadedResource?> getDownloadedResource({
+    required String idComision,
+    required String module,
+    required String resourceId,
+  }) {
+    return (select(downloadedResources)
+          ..where((t) =>
+              t.idComision.equals(idComision) &
+              t.module.equals(module) &
+              t.resourceId.equals(resourceId)))
+        .getSingleOrNull();
+  }
+
+  Future<List<DownloadedResource>> getDownloadedResourcesForSubject(
+    String idComision, {
+    String? module,
+  }) {
+    final query = select(downloadedResources)..where((t) => t.idComision.equals(idComision));
+    if (module != null) {
+      query.where((t) => t.module.equals(module));
+    }
+    return query.get();
+  }
+
+  Future<bool> isResourceDownloaded({
+    required String idComision,
+    required String module,
+    required String resourceId,
+  }) async {
+    final count = await (selectOnly(downloadedResources)
+          ..addColumns([downloadedResources.id.count()])
+          ..where(
+            downloadedResources.idComision.equals(idComision) &
+                downloadedResources.module.equals(module) &
+                downloadedResources.resourceId.equals(resourceId),
+          ))
+        .getSingle();
+    final total = count.read(downloadedResources.id.count()) ?? 0;
+    return total > 0;
+  }
+
+  Future<void> clearDownloadedResourcesForSubject(String idComision) async {
+    await (delete(downloadedResources)..where((t) => t.idComision.equals(idComision))).go();
+  }
+
   /// Borra todos los datos locales al cerrar sesión.
   Future<void> clearAllLocalData() async {
     await transaction(() async {
+      await delete(downloadedResources).go();
       await delete(notificationLogs).go();
       await delete(snapshotEntries).go();
       await delete(cachedTeachers).go();

@@ -15,6 +15,7 @@ import '../modules/module_sections.dart';
 import '../modules/widgets/module_state_views.dart';
 import '../settings/settings_screen.dart';
 import '../subjects/miel_home_view.dart';
+import '../downloads/bulk_download_sheet.dart';
 
 enum _ShellSection { home, novedades, ajustes, moduleDraft }
 
@@ -164,6 +165,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       onSelectForoTopic: (topicId) {
         setState(() => _activeForoTopicId = topicId);
         _closeDrawerIfOpen();
+      },
+      onOpenBulkDownload: () {
+        _closeDrawerIfOpen();
+        showBulkDownloadDialog(context, initialSubject: activeSubject);
       },
       onOpenExternal: _openExternal,
     );
@@ -990,6 +995,7 @@ class _MielSidebar extends ConsumerWidget {
     required this.onSelectAjustes,
     required this.onSelectModuleSection,
     required this.onSelectForoTopic,
+    required this.onOpenBulkDownload,
     required this.onOpenExternal,
   });
 
@@ -1002,6 +1008,7 @@ class _MielSidebar extends ConsumerWidget {
   final VoidCallback onSelectHome;
   final VoidCallback onSelectNovedades;
   final VoidCallback onSelectAjustes;
+  final VoidCallback onOpenBulkDownload;
   final ValueChanged<int> onSelectModuleSection;
   final ValueChanged<String?> onSelectForoTopic;
   final ValueChanged<String> onOpenExternal;
@@ -1078,6 +1085,12 @@ class _MielSidebar extends ConsumerWidget {
                 ),
                 const SizedBox(height: 10),
                 _SidebarItem(
+                  icon: Icons.download_for_offline_outlined,
+                  label: 'Respaldo offline',
+                  selected: false,
+                  onTap: onOpenBulkDownload,
+                ),
+                _SidebarItem(
                   icon: Icons.arrow_back,
                   label: 'Materias Activas',
                   selected: false,
@@ -1093,7 +1106,7 @@ class _MielSidebar extends ConsumerWidget {
     }
 
     // Menú lateral personalizado de LibreMIeL:
-    // Utilidades (Materias Activas) + Funcionalidades (Ajustes, Notificaciones) + enlaces externos abajo
+    // Utilidades (Materias Activas) + Funcionalidades (Ajustes, Notificaciones, Respaldo offline) + enlaces externos abajo
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1124,6 +1137,12 @@ class _MielSidebar extends ConsumerWidget {
                 selected: section == _ShellSection.novedades,
                 badgeCount: unreadAlertsCount,
                 onTap: onSelectNovedades,
+              ),
+              _SidebarItem(
+                icon: Icons.download_for_offline_outlined,
+                label: 'Respaldo offline',
+                selected: false,
+                onTap: onOpenBulkDownload,
               ),
             ],
           ),

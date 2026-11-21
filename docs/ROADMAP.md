@@ -13,9 +13,9 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 | **Fase 0** | Core y Parsers | ✅ Completado | Cliente HTTP, cookies, parsers puros, SQLite (`Drift`) y `SyncEngine` en 2 ciclos |
 | **Fase 1** | MVP y Notificaciones | ✅ Completado | UI fiel a MIeL, alertas nativas, tray, autostart, Android Worker y CI/releases |
 | **Fase 2** | Lectura Nativa | ✅ Completado | Contenidos, Portafolio, Mensajería unificada, Foros, módulos secundarios y descargas autenticadas |
-| **Fase 3** | Escritura y Envío de Contenido | ⏳ Planificado | Enviar mensajes, subir entregas de Portafolio, participar en Foros y acciones interactivas |
-| **Fase 4** | Descarga Masiva (Foros y Contenidos) | ⏳ Planificado | Respaldo organizado por materia de archivos y foros completos antes de la depuración cuatrimestral |
-| **Fase 5** | Sesión Permanente | ⏳ Planificado | Persistencia local de credenciales, renovación silenciosa y auto-login continuo hasta logout manual |
+| **Fase 3** | Escritura y Envío de Contenido | ✅ Completado | Enviar mensajes, subir entregas de Portafolio, participar en Foros y acciones interactivas |
+| **Fase 4** | Descarga Masiva (Foros y Contenidos) | ✅ Completado | Respaldo organizado por materia de archivos y foros completos antes de la depuración cuatrimestral |
+| **Fase 5** | Sesión Permanente | ✅ Completado | Persistencia local de credenciales, renovación silenciosa y auto-login continuo hasta logout manual |
 | **Fase 6** | Buscador Global Offline | ⏳ Planificado | Búsqueda instantánea *full-text* (SQLite FTS5) sobre todas las materias sin conexión |
 | **Fase 7** | Integración con IA | ⏳ Planificado | Asistente de estudio *local-first* (Ollama/local o BYOK) sobre el material descargado de la cátedra |
 

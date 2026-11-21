@@ -27,10 +27,32 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
     - **Mensajería:** bandejas de **Entrada**, **Salida**, **Borradores** y **Favoritos** (con retorno a la lista al re-clickear la bandeja activa en el lateral), modo **Bandeja unificada (`Todas las materias`)** en solo lectura, paginación, panel de filtros, lector completo `verEntrada`/`verSalida` con `MielRichText`, modal de destinatarios (`verDestinatariosEntrada`), fotos de perfil autenticadas y descarga de adjuntos.
     - **Foros (`forov2`):** listado de **Temas abiertos** con tarjetas completamente clicables (y navegación directa desde el menú lateral), lector de hilos con barra lateral esmeralda (`4px` raíz / `1.5px` respuestas), colapsado inteligente `Ver comentarios anteriores (N)`, buscador interno con resaltado amarillo, `Invertir orden`, insignia docente `Tutor/a`, `@menciones` interactivas con scroll y destello, avatares e imágenes embebidas autenticadas (`img.foroImgAdjuntos`) con visor modal de zoom (`InteractiveViewer`) y descarga de adjuntos.
     - **Módulos secundarios:** lectores nativos para **Evaluación** (tabla de 6 columnas con estado de habilitación, candado e intentos), **Encuestas** y **Autoguía**.
-- Migración de esquema SQLite local (`v1 → v3`) para almacenar código de materia, rol, herramientas habilitadas, orden personalizado (`sortOrder`) y visibilidad local por comisión sin perder datos previos.
-- Nuevo ícono oficial de **LibreMIeL** aplicado en la app y en todos los targets (Linux, Android, Windows y macOS), manteniendo el hexágono esmeralda con campana en la bandeja del sistema (*system tray*).
-- Integraciones de plataforma: almacenamiento seguro de credenciales (con fallback cifrado/restringido `chmod 600` en Linux sin `libsecret`), notificaciones nativas, bandeja del sistema en escritorio y worker periódico en Android (`WorkManager`).
-- Workflows de GitHub Actions (`ci.yml` y `release.yml`) y configuraciones de empaquetado multi-arquitectura: Windows x64/ARM64 (`.exe` + `.zip`), macOS Universal x86_64+ARM64 (`.dmg` + `.zip`), Linux x64/ARM64 (`AppImage`, `.deb`, `.rpm`, Arch `.pkg.tar.zst`, portable `.tar.gz`) y Android (`.apk` universal + `arm64-v8a`, `armeabi-v7a`, `x86_64`).
+- **Fase 5 — Sesión permanente y auto-login continuo:**
+  - Persistencia segura de credenciales en el llavero del sistema operativo (`flutter_secure_storage`) o archivo local protegido `chmod 600` en el directorio de soporte del usuario.
+  - Auto-login inmediato en cada apertura de la app, iniciando sesión automáticamente sin requerir interacción del estudiante hasta que elija **Cerrar sesión** manualmente.
+  - Reconexión silenciosa en segundo plano (`ensureActiveSession`) con exclusión mutua para re-autenticar y reintentar peticiones caídas ante vencimiento de `PHPSESSID`.
+  - Keep-alive periódico en escritorio (`GET /principal/event/recargarSesion/`) cada 20 minutos para mantener la sesión viva.
+  - Invariante anti-bloqueo: interrupción inmediata de reintentos ante respuestas `estado != 0` (clave cambiada o cuenta bloqueada).
+- **Fase 3 — Escritura y envío nativo de contenido en MIeL:**
+  - Interfaz aislada `MielWriter` implementada en `DioMielClient`, blindando a `SyncEngine` contra efectos colaterales de escritura.
+  - Formato multipart/form-data y codificación UTF-8 Base64 fiel a `helpers.js` de MIeL.
+  - **Mensajería:** redactor nativo (`MensajeriaComposePanel`) con selector de destinatarios agrupados por rol (`Tutores`, `Alumnos`), respuesta (`MensajeriaReplyPanel`), validación de adjuntos (límite de 40 MB), guardado de borradores, toggle interactivo de favoritos, marcar leído/no leído individual y masivo, y eliminación de borradores.
+  - **Portafolio:** panel nativo de nueva entrega (`PortafolioSubmissionCard`) con selección de tutor destinatario, observaciones, enlace web y adjuntos validados.
+  - **Foros (`forov2`):** creación nativa de hilos, respuestas inline con `@mención` del autor y adjuntos (límite de 5 MB), contador en vivo interactivo de *Me gusta* (`POST /forov2/event/marcarUtil/`) y marcar todos los temas como leídos.
+  - **Evaluaciones:** modal nativo para ingreso con clave de acceso (`POST /evaluacion/event/ingresar/`).
+- **Fase 4 — Descarga masiva y exportación offline de Contenidos y Foros:**
+  - Exporters puros basados en la arquitectura de `ExtraerForosMIeL`:
+    - **Markdown (`.md`):** hilos anidados con roles (`Tutor/a` / `Alumno/a`), fechas, citas Markdown `> `, `@menciones` y rutas relativas a adjuntos locales.
+    - **JSON estructurado (`.json`):** catálogo completo del hilo con árbol de respuestas y metadatos.
+    - **HTML offline (`.html`):** documento autocontenido, responsivo y estilizado con la estética esmeralda de LibreMIeL para visualización en navegador sin conexión.
+    - **Contenidos:** generación automática de `indice_contenidos.md` y recopilador de enlaces externos/videos en `enlaces_externos.md`.
+  - Gestor de descargas masivas `BulkDownloadManager`:
+    - Ejecución estrictamente secuencial con pausas educadas de 250 ms (`_politeDelay`) para evitar sobrecargar los servidores de la UNLaM.
+    - Modo incremental inteligente: verificación previa de archivo en disco y catálogo en base de datos para omitir descargas redundantes.
+    - Controles interactivos con barra de progreso detallada, porcentaje, métricas en vivo (completados, omitidos, MB descargados), pausa, reanudación y cancelación.
+    - Cálculo de hash SHA-256 para archivos binarios descargados.
+    - Migración de base de datos a `schemaVersion: 4` con tabla `DownloadedResources`.
+  - Interfaz de respaldo offline `BulkDownloadSheet` (diálogo en escritorio y bottom sheet en móvil), integrable con selección de materias, módulos y formatos, accesible desde el encabezado de Contenidos ("Respaldo offline"), el encabezado de Foros ("Exportar foros") y el menú lateral ("Respaldo offline").
 
 ### Changed
 - Eliminadas secciones secundarias poco usadas (`Glosario`, `Preguntas frecuentes` en Contenidos y `Competencias` en Portafolio) y botones redundantes (`Actualizar` / `Abrir en MIeL`) en el encabezado de Contenidos.

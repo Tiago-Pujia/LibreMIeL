@@ -11,6 +11,7 @@ import 'module_providers.dart';
 import 'widgets/miel_file_icon.dart';
 import 'widgets/miel_rich_text.dart';
 import 'widgets/module_state_views.dart';
+import '../downloads/bulk_download_sheet.dart';
 
 /// Vista nativa de lectura del módulo **Contenidos** (`Archivos`)
 /// fiel a MIeL (`2025.2.0`).
@@ -71,6 +72,14 @@ class _ContenidosViewState extends ConsumerState<ContenidosView> {
         MielModuleHeader(
           title: 'Archivos',
           badgeCount: widget.subject.lastContenidosBadge,
+          trailing: MielActionButton(
+            label: 'Respaldo offline',
+            icon: Icons.download_for_offline_outlined,
+            onPressed: () => showBulkDownloadDialog(
+              context,
+              initialSubject: widget.subject,
+            ),
+          ),
         ),
         const SizedBox(height: 14),
 
