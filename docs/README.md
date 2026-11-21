@@ -12,6 +12,7 @@ Esta carpeta centraliza toda la documentación de **LibreMIEL**: seguimiento del
 | Documento | Descripción |
 | :--- | :--- |
 | **[STATUS.md](STATUS.md)** | Tabla de estado general del proyecto por fase y componente. |
+| **[ROADMAP.md](ROADMAP.md)** | Descripción detallada de las próximas fases (Fases 3 a 7: escritura, descargas masivas, sesión permanente, buscador offline e IA). |
 | **[CHANGELOG.md](CHANGELOG.md)** | Historial de cambios y versiones (Keep a Changelog / SemVer). |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Cómo preparar el entorno, colaborar y anonimizar capturas HTML de MIEL. |
 | **[GIT_WORKFLOW.md](GIT_WORKFLOW.md)** | Explicación práctica sobre cómo usar las ramas de Git, commits y releases. |

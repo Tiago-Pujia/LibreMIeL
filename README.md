@@ -14,8 +14,9 @@ Mejorar la experiencia diaria de cursada incorporando poco a poco funciones úti
 Enterarte a tiempo cuando un docente sube material en **Contenidos**, publica o corrige algo en **Portafolio**, envía un aviso por **Mensajería** o responde en los **Foros**, sin tener que entrar manualmente materia por materia.
 
 **Próximamente:**
-- Descargar **foros** completos por materia (basado en [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)).
-- Descargar **contenidos** y archivos por materia de forma masiva u organizada.
+- **Enviar contenido desde LibreMIEL:** redactar y responder en **Mensajería**, subir entregas en **Portafolio** y participar en **Foros**.
+- Descargar **foros** completos por materia (basado en [ExtraerForosMiel](https://github.com/Tiago-Pujia/ExtraerForosMiel)) y **contenidos** organizados por carpeta.
+- **Sesión permanente:** iniciar sesión una vez y reconectarse automáticamente siempre, cerrando sesión solo cuando vos lo pidas.
 - **Buscador global offline** para encontrar archivos, mensajes, foros y entregas en todas tus materias sin conexión.
 - **Integración con IA** para resumir apuntes, consultar dudas sobre el material de la cátedra y organizar el estudio.
 
@@ -37,7 +38,8 @@ Enterarte a tiempo cuando un docente sube material en **Contenidos**, publica o 
 | Qué | Dónde |
 |---|---|
 | Índice general de la documentación | [docs/README.md](docs/README.md) |
-| Estado del proyecto y próximos pasos | [docs/STATUS.md](docs/STATUS.md) |
+| Estado actual del proyecto | [docs/STATUS.md](docs/STATUS.md) |
+| Roadmap de próximas fases (Fases 3 a 7) | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Historial de cambios y versiones | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
 | Cómo colaborar y reportar problemas | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) |
 | Uso de ramas Git y publicación de versiones | [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md) |

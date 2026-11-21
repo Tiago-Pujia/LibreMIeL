@@ -20,12 +20,13 @@ Este archivo concentra el contexto operativo, las invariantes técnicas y las re
 Antes de editar código, revisá únicamente el documento que corresponde a tu tarea:
 
 1. **Estado actual del proyecto:** [`STATUS.md`](STATUS.md)
-2. **Protocolo de login, sesión, cookies y CORS:** [`02-arquitectura-y-sesion-miel.md`](02-arquitectura-y-sesion-miel.md)
-3. **Panel `/principal/interno/`, badges y módulos extra:** [`03-panel-principal-y-modulos.md`](03-panel-principal-y-modulos.md)
-4. **Endpoints exactos, DOM y efectos colaterales (4 módulos clave):** [`04-modulos-clave-endpoints-y-dom.md`](04-modulos-clave-endpoints-y-dom.md)
-5. **Estrategia de sincronización en 2 ciclos y arquitectura:** [`05-estrategia-notificaciones-y-arquitectura.md`](05-estrategia-notificaciones-y-arquitectura.md)
-6. **Flujo de ramas Git y commits:** [`GIT_WORKFLOW.md`](GIT_WORKFLOW.md)
-7. **Guía de contribución y anonimización de fixtures:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
+2. **Próximas fases y roadmap técnico (Fases 3 a 7):** [`ROADMAP.md`](ROADMAP.md)
+3. **Protocolo de login, sesión, cookies y CORS:** [`02-arquitectura-y-sesion-miel.md`](02-arquitectura-y-sesion-miel.md)
+4. **Panel `/principal/interno/`, badges y módulos extra:** [`03-panel-principal-y-modulos.md`](03-panel-principal-y-modulos.md)
+5. **Endpoints exactos, DOM y efectos colaterales (4 módulos clave):** [`04-modulos-clave-endpoints-y-dom.md`](04-modulos-clave-endpoints-y-dom.md)
+6. **Estrategia de sincronización en 2 ciclos y arquitectura:** [`05-estrategia-notificaciones-y-arquitectura.md`](05-estrategia-notificaciones-y-arquitectura.md)
+7. **Flujo de ramas Git y commits:** [`GIT_WORKFLOW.md`](GIT_WORKFLOW.md)
+8. **Guía de contribución y anonimización de fixtures:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ---
 
