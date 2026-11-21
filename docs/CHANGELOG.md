@@ -63,6 +63,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - **Encabezados de Contenidos y Foros:** retirados los botones redundantes "Respaldo offline" y "Exportar foros"; el respaldo masivo permanece centralizado en el menú lateral.
 - **Respaldo offline:** eliminada la opción redundante de adjuntos (ahora siempre se descargan) e incorporado selector con lista de verificación interactiva y atajos (*Todas* / *Ninguna*) al seleccionar materias específicas.
 - **Foros y Portafolio:** retirados los botones "Abrir en MIeL" de las barras superiores de los módulos, conservando solo las acciones esenciales (`Actualizar` y `Marcar todos leídos`).
+- **Bandeja del sistema (*system tray*):** agregado indicador visual de notificación no leída (`tray_icon_unread.png` / `.ico` con insignia roja) que se actualiza reactivamente cuando llegan novedades y vuelve al ícono normal al marcarlas como leídas, junto con conteo en el menú contextual.
+- **Feed de Novedades:** eliminado el botón externo "Abrir en MIeL" de cada tarjeta de notificación; al hacer click sobre cualquier notificación se marca como leída y abre directamente el módulo correspondiente dentro de LibreMIeL.
 
 ### Fixed
 - **Portafolio:** corregida la aserción de Flutter (`DropdownButton: There should be exactly one item with value: 0`) deduplicando las opciones de tutores en `parsePortafolioEntregasDetalleHtml` y sanitizando las opciones en `PortafolioSubmissionCard`.

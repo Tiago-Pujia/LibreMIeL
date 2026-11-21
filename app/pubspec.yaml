@@ -81,6 +81,8 @@ flutter:
     - assets/icons/libremiel.png
     - assets/icons/tray_icon.png
     - assets/icons/tray_icon.ico
+    - assets/icons/tray_icon_unread.png
+    - assets/icons/tray_icon_unread.ico
 
   # To add assets to your application, add an assets section, like this:
   # assets:

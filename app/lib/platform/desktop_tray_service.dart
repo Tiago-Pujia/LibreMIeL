@@ -13,9 +13,61 @@ class DesktopTrayService with TrayListener, WindowListener {
 
   bool _initialized = false;
   bool _trayReady = false;
+  int _unreadCount = 0;
 
   static bool get isDesktop =>
       !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
+
+  String _resolveIconPath(int unreadCount) {
+    final hasUnread = unreadCount > 0;
+    if (Platform.isWindows) {
+      return hasUnread
+          ? 'assets/icons/tray_icon_unread.ico'
+          : 'assets/icons/tray_icon.ico';
+    }
+    return hasUnread
+        ? 'assets/icons/tray_icon_unread.png'
+        : 'assets/icons/tray_icon.png';
+  }
+
+  Future<void> _applyTrayState() async {
+    await trayManager.setIcon(_resolveIconPath(_unreadCount));
+    final showLabel = _unreadCount > 0
+        ? 'Abrir LibreMIeL ($_unreadCount sin leer)'
+        : 'Abrir LibreMIeL';
+    await trayManager.setContextMenu(
+      Menu(
+        items: [
+          MenuItem(key: 'show', label: showLabel),
+          MenuItem.separator(),
+          MenuItem(key: 'quit', label: 'Salir completamente'),
+        ],
+      ),
+    );
+
+    if (!Platform.isLinux) {
+      try {
+        final tooltip = _unreadCount > 0
+            ? 'LibreMIeL — $_unreadCount notificación(es) sin leer'
+            : 'LibreMIeL — Monitor de novedades MIeL';
+        await trayManager.setToolTip(tooltip);
+      } catch (_) {
+        // Tooltip opcional; no afecta el menú contextual.
+      }
+    }
+  }
+
+  /// Actualiza el ícono y menú de la bandeja del sistema según la cantidad de notificaciones no leídas.
+  Future<void> setUnreadCount(int count) async {
+    if (_unreadCount == count && _trayReady) return;
+    _unreadCount = count;
+    if (!_trayReady) return;
+    try {
+      await _applyTrayState();
+    } catch (e) {
+      debugPrint('DesktopTrayService: error actualizando ícono de bandeja: $e');
+    }
+  }
 
   Future<void> initialize() async {
     if (!isDesktop || _initialized) return;
@@ -26,32 +78,11 @@ class DesktopTrayService with TrayListener, WindowListener {
     // `setContextMenu` siempre de forma independiente antes de cualquier tooltip.
     try {
       trayManager.addListener(this);
-      await trayManager.setIcon(
-        Platform.isWindows
-            ? 'assets/icons/tray_icon.ico'
-            : 'assets/icons/tray_icon.png',
-      );
-      await trayManager.setContextMenu(
-        Menu(
-          items: [
-            MenuItem(key: 'show', label: 'Abrir LibreMIeL'),
-            MenuItem.separator(),
-            MenuItem(key: 'quit', label: 'Salir completamente'),
-          ],
-        ),
-      );
+      await _applyTrayState();
       _trayReady = true;
     } catch (e) {
       debugPrint('DesktopTrayService: no se pudo inicializar la bandeja: $e');
       _trayReady = false;
-    }
-
-    if (_trayReady && !Platform.isLinux) {
-      try {
-        await trayManager.setToolTip('LibreMIeL — Monitor de novedades MIeL');
-      } catch (_) {
-        // Tooltip opcional; no afecta el menú contextual.
-      }
     }
 
     // 2. Configurar controles de ventana.

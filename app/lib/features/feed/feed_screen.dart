@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_providers.dart';
 import '../../core/models/miel_models.dart';
@@ -280,11 +279,14 @@ class _MielNotificationRow extends ConsumerWidget {
     return null;
   }
 
-  Future<void> _openInMiel(WidgetRef ref) async {
-    await ref.read(databaseProvider).markNotificationRead(item.id);
-    final uri = Uri.tryParse(item.targetUrl);
-    if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  void _handleOpenNotification(
+    WidgetRef ref, {
+    required bool canOpenModule,
+    required MielToolKind? linkedTool,
+  }) {
+    ref.read(databaseProvider).markNotificationRead(item.id);
+    if (canOpenModule && linkedTool != null) {
+      onOpenSubjectModule!(item.idComision, linkedTool);
     }
   }
 
@@ -308,7 +310,11 @@ class _MielNotificationRow extends ConsumerWidget {
       child: Material(
         color: unread ? palette.unreadBackground : palette.cardBackground,
         child: InkWell(
-          onTap: () => _openInMiel(ref),
+          onTap: () => _handleOpenNotification(
+            ref,
+            canOpenModule: canOpenDraft,
+            linkedTool: linkedTool,
+          ),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
@@ -385,38 +391,23 @@ class _MielNotificationRow extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 6),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: 'Abrir en MIeL',
-                      icon: Icon(
-                        Icons.open_in_new,
-                        size: 18,
-                        color: palette.linkAccent,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => _openInMiel(ref),
+                if (canOpenDraft) ...[
+                  const SizedBox(width: 6),
+                  IconButton(
+                    tooltip: 'Ver borrador del módulo',
+                    icon: Icon(
+                      Icons.visibility_outlined,
+                      size: 18,
+                      color: palette.textSecondary,
                     ),
-                    if (canOpenDraft)
-                      IconButton(
-                        tooltip: 'Ver borrador del módulo',
-                        icon: Icon(
-                          Icons.visibility_outlined,
-                          size: 18,
-                          color: palette.textSecondary,
-                        ),
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () {
-                          ref
-                              .read(databaseProvider)
-                              .markNotificationRead(item.id);
-                          onOpenSubjectModule!(item.idComision, linkedTool);
-                        },
-                      ),
-                  ],
-                ),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _handleOpenNotification(
+                      ref,
+                      canOpenModule: canOpenDraft,
+                      linkedTool: linkedTool,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

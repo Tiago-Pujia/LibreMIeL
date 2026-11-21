@@ -154,6 +154,7 @@ class AppSessionController extends Notifier<AppSessionState> {
   Timer? _desktopCycle1Timer;
   Timer? _desktopCycle2Timer;
   Timer? _desktopKeepAliveTimer;
+  StreamSubscription<int>? _trayUnreadSub;
   DesktopTrayService? _trayService;
   MielCredentials? _memoryCredentials;
   Future<bool>? _reloginInFlight;
@@ -165,6 +166,7 @@ class AppSessionController extends Notifier<AppSessionState> {
       _desktopCycle1Timer?.cancel();
       _desktopCycle2Timer?.cancel();
       _desktopKeepAliveTimer?.cancel();
+      _trayUnreadSub?.cancel();
       _trayService?.dispose();
     });
     Future.microtask(_bootstrap);
@@ -558,6 +560,8 @@ class AppSessionController extends Notifier<AppSessionState> {
     }
 
     _memoryCredentials = null;
+    await _trayUnreadSub?.cancel();
+    _trayUnreadSub = null;
     await _trayService?.dispose();
     _trayService = null;
 
@@ -599,9 +603,17 @@ class AppSessionController extends Notifier<AppSessionState> {
           _desktopCycle1Timer?.cancel();
           _desktopCycle2Timer?.cancel();
           _desktopKeepAliveTimer?.cancel();
+          await _trayUnreadSub?.cancel();
+          _trayUnreadSub = null;
         },
       );
       await _trayService!.initialize();
+
+      await _trayUnreadSub?.cancel();
+      final db = ref.read(databaseProvider);
+      _trayUnreadSub = db.watchUnreadNotificationsCount().listen((unreadCount) {
+        unawaited(_trayService?.setUnreadCount(unreadCount));
+      });
 
       _desktopCycle1Timer?.cancel();
       _desktopCycle2Timer?.cancel();
