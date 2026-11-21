@@ -25,6 +25,16 @@ Mejorar la experiencia diaria de cursada incorporando poco a poco funciones úti
 
 ---
 
+## 🖼️ Vista Previa
+
+### Inicio de sesión
+![Pantalla de inicio de sesión de LibreMIeL](docs/screenshots/login.png)
+
+### Panel principal — Materias activas
+![Panel principal de materias activas en LibreMIeL](docs/screenshots/materias-activas.png)
+
+---
+
 ## 💻 Sistemas Compatibles y Descargas
 
 🌐 **Sitio web y centro de descargas:** **[tiago-pujia.github.io/LibreMIeL](https://tiago-pujia.github.io/LibreMIeL/)** *(o desde [GitHub Releases](https://github.com/Tiago-Pujia/LibreMIeL/releases))*
