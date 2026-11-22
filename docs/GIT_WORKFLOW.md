@@ -127,6 +127,8 @@ Una vez que el **Paso 1** y el **Paso 2** terminaron en verde (`✓`):
    git checkout DEV
    ```
 
+> **Compatibilidad con la web de descargas y el futuro actualizador in-app (Fase 8):** mantené siempre alineado el tag `vX.Y.Z` con `version: X.Y.Z+N` en `app/pubspec.yaml`, sin cambiar los sufijos de artefactos ni omitir `SHA256SUMS.txt` ni la firma Android (`release.keystore`), ya que tanto [`packaging/web/`](../packaging/web) como el actualizador multiplataforma dependen de esa convención.
+
 ---
 
 ## 5. Reglas de Seguridad en Git

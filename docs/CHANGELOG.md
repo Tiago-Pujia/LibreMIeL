@@ -9,6 +9,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Added
 - Documentación técnica completa de la plataforma MIeL (`2025.2.0`) en `docs/`.
+- Especificación técnica y hoja de ruta de **Fase 8 — Actualizador Automático Multiplataforma** (alertas de releases vía GitHub API, verificación SHA-256 contra `SHA256SUMS.txt` e instalación in-app en Windows, Android, Linux y macOS) en `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/STATUS.md`, `docs/AGENTS.md` y `docs/GIT_WORKFLOW.md`.
+- Especificación técnica y hoja de ruta de **Fase 9 — Modo Offline y Contingencia ante Caídas de MIeL** (caché local opcional bajo sesión autenticada para Contenidos, Mensajería, Foros, Portafolio y módulos secundarios, diferenciación de caídas del servidor vs. falta de internet, banner global de aviso y respeto estricto a efectos colaterales) en `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/STATUS.md` y `docs/AGENTS.md`.
 - Licencia **GPL-3.0** (`LICENSE`) y documentación de gobernanza en `docs/` (`CONTRIBUTING.md`, `AGENTS.md`, `STATUS.md`, `GIT_WORKFLOW.md`, `CHANGELOG.md`).
 - Script anonimizador de capturas HTML de MIeL (`scripts/anonymize_html.py`) con tests automatizados (`scripts/test_anonymize_html.py`).
 - Entorno de emulación Android AVD oficial (`LibreMIeL_Pixel7`, Pixel 7, Android 14 x86_64 con KVM) para depuración y pruebas locales/asistidas, documentado en `docs/CONTRIBUTING.md` y con captura en `docs/screenshots/android-login.png`.

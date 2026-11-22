@@ -1,6 +1,6 @@
 # Estado del Proyecto — LibreMIeL
 
-*Última actualización: 21 de noviembre de 2026*
+*Última actualización: 22 de noviembre de 2026*
 
 Este tablero resume el avance de **LibreMIeL** por fase y componente.
 
@@ -29,6 +29,8 @@ Este tablero resume el avance de **LibreMIeL** por fase y componente.
 | **Fase 5 — Sesión permanente** | Persistencia local de credenciales y auto-login continuo | ✅ Completado | Inicio de sesión automático permanente con credenciales en almacén seguro del SO (`flutter_secure_storage`) o archivo local protegido, reconexión silenciosa (`ensureActiveSession`), keep-alive periódico y cierre de sesión exclusivamente manual |
 | **Fase 6 — Buscador offline** | Buscador global *full-text* sin conexión | ⏳ Pendiente | Índice local SQLite FTS5 sobre Contenidos, Mensajería, Foros y Portafolio con filtros por materia, módulo y rol docente. Ver [`ROADMAP.md`](ROADMAP.md#fase-6--buscador-global-offline) |
 | **Fase 7 — Integración con IA** | Asistente de estudio *local-first* (Ollama/local o BYOK) | ⏳ Pendiente | Resúmenes, preguntas con citas sobre apuntes/foros descargados y guías de estudio sin servidor central. Ver [`ROADMAP.md`](ROADMAP.md#fase-7--integración-con-ia-asistente-de-estudio) |
+| **Fase 8 — Actualizador automático** | Alertas de releases y actualización in-app multiplataforma | ⏳ Pendiente | Detección vía GitHub Releases API (`ETag`), notificación nativa + diálogo in-app, verificación `SHA256SUMS.txt` y actualización automática/asistida por SO sin ir al navegador. Ver [`ROADMAP.md`](ROADMAP.md#fase-8--actualizador-automático-en-la-app) |
+| **Fase 9 — Modo offline y contingencia** | Navegación sin conexión y detección de caídas de MIeL | ⏳ Pendiente | Caché local opcional (solo con sesión autenticada) para Contenidos, Mensajería, Foros, Portafolio y módulos secundarios ante caídas del servidor o falta de internet, más banner/aviso explícito de servidor caído y recuperación automática. Ver [`ROADMAP.md`](ROADMAP.md#fase-9--modo-offline-y-contingencia-ante-caídas-de-miel) |
 
 ---
 

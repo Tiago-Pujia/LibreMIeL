@@ -18,6 +18,8 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 | **Fase 5** | Sesión Permanente | ✅ Completado | Persistencia local de credenciales, renovación silenciosa y auto-login continuo hasta logout manual |
 | **Fase 6** | Buscador Global Offline | ⏳ Planificado | Búsqueda instantánea *full-text* (SQLite FTS5) sobre todas las materias sin conexión |
 | **Fase 7** | Integración con IA | ⏳ Planificado | Asistente de estudio *local-first* (Ollama/local o BYOK) sobre el material descargado de la cátedra |
+| **Fase 8** | Actualizador Automático en la App | ⏳ Planificado | Alertas de nuevos releases en GitHub y actualización automática/asistida por SO sin salir al navegador |
+| **Fase 9** | Modo Offline y Contingencia ante Caídas de MIeL | ⏳ Planificado | Navegación opcional sin conexión (Contenidos, Mensajería, Foros, Portafolio) con sesión activa y aviso de servidor caído |
 
 ---
 
@@ -116,3 +118,58 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
   1. **Modo IA 100% local (privacidad máxima):** conexión a backends locales compatibles con API OpenAI/Ollama (**Ollama**, **LM Studio**, `llama.cpp`) ejecutándose en el propio equipo sin enviar datos a internet.
   2. **Modo BYOK (*Bring Your Own Key*):** el usuario aporta su propia clave de API (Gemini, OpenAI, Anthropic, OpenRouter u otro proveedor compatible), guardada en el almacén seguro del sistema operativo.
 - **Protección de datos personales:** antes de enviar contexto a un modelo externo, filtrar/excluir automáticamente credenciales, cookies, DNI y datos personales sensibles, y mostrar con claridad qué archivos o fragmentos de la materia se incluyen en cada consulta.
+
+---
+
+## Fase 8 — Actualizador Automático en la App
+
+**Objetivo:** Detectar automáticamente nuevas versiones publicadas en **GitHub Releases**, notificar al estudiante mediante alertas nativas e in-app y permitir la descarga e instalación automática o asistida sin necesidad de abrir el navegador ni visitar la página web del proyecto.
+
+### Alcance funcional
+- **Comprobación silenciosa y eficiente:**
+  - Consultar periódicamente `GET https://api.github.com/repos/Tiago-Pujia/LibreMIeL/releases/latest` (máximo una vez cada 12–24 horas usando cabecera `If-None-Match` / `ETag` para no agotar la cuota gratuita de GitHub API) y ofrecer un botón manual *"Buscar actualizaciones ahora"* en **Ajustes**.
+  - Comparar SemVer contra la versión local instalada (`package_info_plus`), ignorando *drafts* y *pre-releases* por defecto, y permitir omitir una versión específica (`skippedReleaseVersion`).
+- **Alertas y experiencia in-app:**
+  - **Notificación del sistema (`NotificationService`):** aviso único por versión (`dedupeKey: app_update_<version>`) que al tocarse abre directamente el diálogo de actualización dentro de LibreMIeL (sin derivar al navegador externo).
+  - **Diálogo/banner de actualización:** muestra versión instalada vs. nueva versión, notas del release (`body`), tamaño de descarga, barra de progreso en vivo y botones `[Actualizar ahora]`, `[Omitir versión]` y `[Más tarde]`.
+- **Seguridad e integridad obligatoria:**
+  - Verificar siempre el checksum **SHA-256** del archivo descargado contra el `SHA256SUMS.txt` oficial adjunto en cada GitHub Release antes de ejecutar cualquier instalador.
+  - Cliente HTTP completamente aislado de `MielApiClient` / `SyncEngine` (sin compartir `CookieJar` ni enviar datos de MIeL hacia GitHub).
+
+### Estrategia de actualización por sistema operativo
+- **Windows:** descarga del instalador `LibreMIeL-<ver>-windows-<arch>-setup.exe` en `%TEMP%` y ejecución desatendida con Inno Setup (`/SILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS`), cerrando y relanzando la aplicación ya actualizada de forma transparente.
+- **Android:** descarga in-app del APK correspondiente a la ABI del dispositivo (`arm64-v8a`, `armeabi-v7a`, `x86_64` o *fallback* `universal`) y disparo directo del instalador nativo vía `Intent(ACTION_VIEW)` con `FileProvider` y permiso `REQUEST_INSTALL_PACKAGES` (actualización en 1 toque conservando base de datos y sesión).
+- **Linux:** detección automática en tiempo de ejecución del formato instalado:
+  - **AppImage:** descarga del nuevo `.AppImage`, `chmod +x`, reemplazo atómico del ejecutable referenciado por `APPIMAGE` y relanzamiento automático.
+  - **Paquetes del sistema (`.deb`, `.rpm`, `.pkg.tar.zst` en `/opt/libremiel/`):** descarga en `/tmp/` y apertura directa con el gestor gráfico del sistema (`xdg-open`) o instalación elevada vía `pkexec` previa confirmación del usuario.
+  - **Portable (`.tar.gz`):** descarga, extracción y reemplazo del bundle en disco con reinicio automático.
+- **macOS:** integración recomendada con el framework **Sparkle** (vía `auto_updater`) o descarga del `.zip` universal con reemplazo del bundle `.app` en `/Applications/` y relanzamiento.
+
+---
+
+## Fase 9 — Modo Offline y Contingencia ante Caídas de MIeL
+
+**Objetivo:** Permitir que un estudiante **ya autenticado** siga consultando sus materias, **Contenidos**, **Mensajería**, **Foros (`forov2`)**, **Portafolio** y módulos secundarios dentro de LibreMIeL incluso cuando los servidores de **MIeL (`miel.unlam.edu.ar`) estén caídos** o el dispositivo se encuentre sin internet, informando con total claridad el estado real del servidor.
+
+### Requisitos funcionales clave
+- **Opcional y configurable desde Ajustes:**
+  - Interruptor principal *"Modo sin conexión (caché ante caídas de MIeL)"* en **Ajustes** para que el usuario decida si desea conservar caché local de navegación o mantener un perfil mínimo sin copias adicionales.
+  - Opciones complementarias: límite de almacenamiento del caché, botón *"Limpiar caché offline"* y opción de precarga automática restringida exclusivamente a endpoints de solo lectura seguros (sin efectos colaterales).
+- **Exclusivo para sesiones ya autenticadas:**
+  - Solo funciona cuando existe una sesión activa/persistida localmente (`isAuthenticated == true` y `account_username` válido en SQLite, apoyándose en la Fase 5).
+  - Si los servidores de MIeL están caídos al abrir la app y el usuario ya había iniciado sesión antes, LibreMIeL **no** lo expulsa al login ni invalida su cuenta: abre directamente el panel en modo contingencia offline y reintenta la conexión en segundo plano con *backoff*.
+  - Al cerrar sesión manualmente o cambiar de cuenta, todo el caché offline se borra junto con `clearAccountData()`.
+- **Aviso explícito de MIeL caído vs. sin internet:**
+  - Detectar y distinguir en red entre falta de conectividad local y caída/mantenimiento del servidor de MIeL (`500`/`502`/`503`/`504`, `Connection refused`, *timeouts* o páginas de error Apache/PHP).
+  - Mostrar un **banner global persistente** y visible en toda la app indicando que MIeL está caído / no responde, la fecha de la última sincronización exitosa y un botón `[Reintentar conexión]`.
+  - Notificación opcional cuando MIeL vuelve a responder normalmente tras una caída, reactivando la sincronización automática sin intervención del usuario.
+
+### Cobertura por módulo en modo sin conexión
+- **Panel principal y Docentes:** materias activas/ocultas, badges conocidos y lista cacheada de `Tutor/a` desde SQLite.
+- **Contenidos:** estructura completa de carpetas/módulos y enlace directo para abrir archivos ya descargados en disco (integración directa con `DownloadedResources` de Fase 4).
+- **Mensajería:** consulta de bandejas cacheadas (`Entrada`, `Salida`, `Borradores`, `Favoritos`), lectura de mensajes ya visitados y posibilidad de guardar borradores locales si se intenta redactar sin conexión.
+- **Foros (`forov2`):** listado de temas e hilos/mensajes cacheados durante la navegación previa o respaldados mediante la exportación masiva de Fase 4, incluyendo imágenes/avatares cacheados localmente.
+- **Portafolio y módulos secundarios:** prácticas, fechas de vencimiento, entregas/correcciones previas, asistencia, notas, **Evaluación**, **Encuestas**, **Autoguía** y **Novedades**.
+- **Acciones bloqueadas con aviso claro:** cualquier envío (`MielWriter`), apertura de mensajes/hilos nunca visitados ni descargados, o descarga de archivos nuevos no cacheados muestra un estado claro indicando que requiere que MIeL vuelva a estar en línea.
+- **Respeto absoluto a los efectos colaterales:** el caché se puebla al navegar (*cache-on-read*) y sobre las respuestas seguras que `SyncEngine` ya obtiene; nunca se consulta `Contenidos` con badge `0`, `verEntrada` ni `forov2/mensajes` en segundo plano a escondidas del estudiante.
+

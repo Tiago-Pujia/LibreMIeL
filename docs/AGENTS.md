@@ -20,7 +20,7 @@ Este archivo concentra el contexto operativo, las invariantes técnicas y las re
 Antes de editar código, revisá únicamente el documento que corresponde a tu tarea:
 
 1. **Estado actual del proyecto:** [`STATUS.md`](STATUS.md)
-2. **Próximas fases y roadmap técnico (Fases 3 a 7):** [`ROADMAP.md`](ROADMAP.md)
+2. **Próximas fases y roadmap técnico (Fases 3 a 9):** [`ROADMAP.md`](ROADMAP.md)
 3. **Protocolo de login, sesión, cookies y CORS:** [`02-arquitectura-y-sesion-miel.md`](02-arquitectura-y-sesion-miel.md)
 4. **Panel `/principal/interno/`, badges y módulos extra:** [`03-panel-principal-y-modulos.md`](03-panel-principal-y-modulos.md)
 5. **Endpoints exactos, DOM y efectos colaterales (4 módulos clave):** [`04-modulos-clave-endpoints-y-dom.md`](04-modulos-clave-endpoints-y-dom.md)
@@ -58,6 +58,11 @@ Antes de editar código, revisá únicamente el documento que corresponde a tu t
 9. **Aislamiento multi-cuenta:**
    - Al iniciar sesión con un usuario distinto al registrado en `account_username`, ejecutar siempre `clearAccountData()` antes de sincronizar, limpiar cookies (`CookieJar`) antes del login, incrementar `sessionGenerationProvider` (invalidando caché en memoria de avatares/imágenes) y cancelar cualquier sincronización en curso (`isCancelled`).
    - En Ciclo 1, podar con `pruneSubjectsNotIn()` toda comisión local que ya no aparezca en `/principal/interno/`.
+10. **Seguridad e independencia del actualizador automático (Fase 8):**
+   - El comprobador/descargador de releases en GitHub (`app/lib/platform/updater/`) debe usar un cliente HTTP aislado de `MielClient`/`SyncEngine` (sin cookies ni datos de MIeL), respetar la cuota de GitHub API mediante `ETag` (`If-None-Match`) y verificar obligatoriamente el hash SHA-256 contra `SHA256SUMS.txt` antes de ejecutar cualquier instalador.
+11. **Invariantes del modo offline ante caídas de MIeL (Fase 9):**
+   - El acceso sin conexión es **opcional** y está restringido estrictamente a sesiones ya autenticadas (`isAuthenticated == true` y `account_username` válido), debiendo vaciarse en `clearAccountData()` al cerrar sesión o cambiar de cuenta.
+   - Una caída de MIeL (`5xx`, `SocketException`, *timeout*) **jamás** debe interpretarse como credenciales inválidas (`estado != 0`) ni cerrar la sesión; debe activar el aviso explícito de servidor caído y usar únicamente caché poblado sin violar las reglas 1, 2 y 3 (sin precarga ciega de `Contenidos`, `verEntrada` ni `forov2/mensajes`).
 
 ---
 
