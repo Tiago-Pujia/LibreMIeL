@@ -146,25 +146,55 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async => m.createAll(),
     onUpgrade: (m, from, to) async {
+      Future<void> addColumnSafely(TableInfo table, GeneratedColumn column) async {
+        try {
+          final columns = await customSelect("PRAGMA table_info('${table.actualTableName}');").get();
+          final exists = columns.any((row) => row.data['name'] == column.name);
+          if (!exists) {
+            await m.addColumn(table, column);
+          }
+        } catch (e) {
+          if (!e.toString().contains('duplicate column name')) {
+            rethrow;
+          }
+        }
+      }
+
+      Future<void> createTableSafely(TableInfo table) async {
+        try {
+          final tables = await customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?;",
+            variables: [Variable<String>(table.actualTableName)],
+          ).get();
+          if (tables.isEmpty) {
+            await m.createTable(table);
+          }
+        } catch (e) {
+          if (!e.toString().contains('already exists')) {
+            rethrow;
+          }
+        }
+      }
+
       if (from < 2) {
-        await m.addColumn(subjects, subjects.subjectCode);
-        await m.addColumn(subjects, subjects.roleLabel);
-        await m.addColumn(subjects, subjects.hasContenidos);
-        await m.addColumn(subjects, subjects.hasAutoguia);
-        await m.addColumn(subjects, subjects.hasMensajeria);
-        await m.addColumn(subjects, subjects.hasForo);
-        await m.addColumn(subjects, subjects.hasChat);
-        await m.addColumn(subjects, subjects.hasEncuestas);
+        await addColumnSafely(subjects, subjects.subjectCode);
+        await addColumnSafely(subjects, subjects.roleLabel);
+        await addColumnSafely(subjects, subjects.hasContenidos);
+        await addColumnSafely(subjects, subjects.hasAutoguia);
+        await addColumnSafely(subjects, subjects.hasMensajeria);
+        await addColumnSafely(subjects, subjects.hasForo);
+        await addColumnSafely(subjects, subjects.hasChat);
+        await addColumnSafely(subjects, subjects.hasEncuestas);
       }
       if (from < 3) {
-        await m.addColumn(subjects, subjects.sortOrder);
-        await m.addColumn(subjects, subjects.localVisibilityOverride);
+        await addColumnSafely(subjects, subjects.sortOrder);
+        await addColumnSafely(subjects, subjects.localVisibilityOverride);
       }
       if (from < 4) {
-        await m.createTable(downloadedResources);
+        await createTableSafely(downloadedResources);
       }
       if (from < 5) {
-        await m.addColumn(cachedTeachers, cachedTeachers.avatarUrl);
+        await addColumnSafely(cachedTeachers, cachedTeachers.avatarUrl);
       }
     },
   );
