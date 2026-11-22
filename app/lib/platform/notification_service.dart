@@ -81,11 +81,21 @@ class NotificationService {
     );
 
     if (Platform.isAndroid) {
-      await _plugin
+      final androidPlugin = _plugin
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
-          >()
-          ?.requestNotificationsPermission();
+          >();
+      await androidPlugin?.requestNotificationsPermission();
+
+      const channel = AndroidNotificationChannel(
+        _androidChannelId,
+        _androidChannelName,
+        description: _androidChannelDesc,
+        importance: Importance.high,
+        enableLights: true,
+        ledColor: _mielEmerald,
+      );
+      await androidPlugin?.createNotificationChannel(channel);
     }
 
     _initialized = true;
@@ -103,61 +113,73 @@ class NotificationService {
 
   Future<void> showBatch(List<DetectedNotification> notifications) async {
     if (notifications.isEmpty || kIsWeb) return;
-    if (!_initialized) {
-      await initialize();
-    }
+    try {
+      if (!_initialized) {
+        await initialize();
+      }
 
-    for (final n in notifications) {
-      final styleInformation = BigTextStyleInformation(
-        n.body,
-        contentTitle: n.title,
-        summaryText: n.subjectName,
-      );
+      for (final n in notifications) {
+        final styleInformation = BigTextStyleInformation(
+          n.body,
+          contentTitle: n.title,
+          summaryText: n.subjectName,
+        );
 
-      final payload = jsonEncode(
-        NotificationTapPayload(
-          idComision: n.idComision,
-          module: n.module.name,
-          targetUrl: n.targetUrl,
-        ).toJson(),
-      );
+        final payload = jsonEncode(
+          NotificationTapPayload(
+            idComision: n.idComision,
+            module: n.module.name,
+            targetUrl: n.targetUrl,
+          ).toJson(),
+        );
 
-      final category = switch (n.module) {
-        MielModuleType.mensajeria => AndroidNotificationCategory.message,
-        MielModuleType.foros => AndroidNotificationCategory.social,
-        _ => AndroidNotificationCategory.event,
-      };
+        final category = switch (n.module) {
+          MielModuleType.mensajeria => AndroidNotificationCategory.message,
+          MielModuleType.foros => AndroidNotificationCategory.social,
+          _ => AndroidNotificationCategory.event,
+        };
 
-      final details = NotificationDetails(
-        android: AndroidNotificationDetails(
-          _androidChannelId,
-          _androidChannelName,
-          channelDescription: _androidChannelDesc,
-          importance: Importance.high,
-          priority: Priority.high,
-          color: _mielEmerald,
-          subText: n.subjectName,
-          styleInformation: styleInformation,
-          category: category,
-          groupKey: 'io.github.tiago_pujia.libremiel.${n.idComision}',
-          channelShowBadge: true,
-          enableLights: true,
-          ledColor: _mielEmerald,
-        ),
-        linux: const LinuxNotificationDetails(
-          urgency: LinuxNotificationUrgency.normal,
-        ),
-        macOS: const DarwinNotificationDetails(),
-        windows: const WindowsNotificationDetails(),
-      );
+        final details = NotificationDetails(
+          android: AndroidNotificationDetails(
+            _androidChannelId,
+            _androidChannelName,
+            channelDescription: _androidChannelDesc,
+            importance: Importance.high,
+            priority: Priority.high,
+            color: _mielEmerald,
+            subText: n.subjectName,
+            styleInformation: styleInformation,
+            category: category,
+            groupKey: 'io.github.tiago_pujia.libremiel.${n.idComision}',
+            channelShowBadge: true,
+            enableLights: true,
+            ledColor: _mielEmerald,
+            ledOnMs: 1000,
+            ledOffMs: 500,
+          ),
+          linux: const LinuxNotificationDetails(
+            urgency: LinuxNotificationUrgency.normal,
+          ),
+          macOS: const DarwinNotificationDetails(),
+          windows: const WindowsNotificationDetails(),
+        );
 
-      await _plugin.show(
-        id: n.dedupeKey.hashCode & 0x7fffffff,
-        title: n.title,
-        body: n.body,
-        notificationDetails: details,
-        payload: payload,
-      );
+        try {
+          await _plugin.show(
+            id: n.dedupeKey.hashCode & 0x7fffffff,
+            title: n.title,
+            body: n.body,
+            notificationDetails: details,
+            payload: payload,
+          );
+        } catch (e, st) {
+          debugPrint(
+            'Error emitiendo notificación nativa (${n.dedupeKey}): $e\n$st',
+          );
+        }
+      }
+    } catch (e, st) {
+      debugPrint('Error general en showBatch: $e\n$st');
     }
   }
 

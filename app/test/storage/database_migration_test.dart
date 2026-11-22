@@ -7,12 +7,10 @@ import 'package:sqlite3/sqlite3.dart';
 
 void main() {
   group('AppDatabase migrations', () {
-    test(
-      'migration from v4 with existing avatar_url in cached_teachers succeeds idempotently',
-      () async {
-        final raw = sqlite3.openInMemory();
-        raw.execute('PRAGMA user_version = 4;');
-        raw.execute('''
+    test('migration from v4 with existing avatar_url in cached_teachers succeeds idempotently', () async {
+      final raw = sqlite3.openInMemory();
+      raw.execute('PRAGMA user_version = 4;');
+      raw.execute('''
           CREATE TABLE "subjects" (
             "id_comision" TEXT NOT NULL,
             "name" TEXT NOT NULL,
@@ -90,19 +88,18 @@ void main() {
           );
         ''');
 
-        final db = AppDatabase(NativeDatabase.opened(raw));
+      final db = AppDatabase(NativeDatabase.opened(raw));
 
-        // Al ejecutar una consulta inicial, Drift dispara la migración onUpgrade(4, 5).
-        final setting = await db.getSetting('dummy');
-        expect(setting, isNull);
+      // Al ejecutar una consulta inicial, Drift dispara la migración onUpgrade(4, 5).
+      final setting = await db.getSetting('dummy');
+      expect(setting, isNull);
 
-        // Verificamos que el PRAGMA user_version haya subido a 5
-        final versionResult = raw.select('PRAGMA user_version;');
-        expect(versionResult.first.columnAt(0), 5);
+      // Verificamos que el PRAGMA user_version haya subido a 5
+      final versionResult = raw.select('PRAGMA user_version;');
+      expect(versionResult.first.columnAt(0), 5);
 
-        await db.close();
-      },
-    );
+      await db.close();
+    });
 
     test(
       'migration from v4 without avatar_url adds the column successfully',
@@ -177,14 +174,17 @@ void main() {
       },
     );
 
-    test('real database copy from user environment migrates successfully', () async {
-      final file = File('/tmp/test_libremiel.sqlite');
-      if (!file.existsSync()) return;
+    test(
+      'real database copy from user environment migrates successfully',
+      () async {
+        final file = File('/tmp/test_libremiel.sqlite');
+        if (!file.existsSync()) return;
 
-      final db = AppDatabase(NativeDatabase(file));
-      final interval = await db.getSyncIntervalMinutes();
-      expect(interval, isA<int>());
-      await db.close();
-    });
+        final db = AppDatabase(NativeDatabase(file));
+        final interval = await db.getSyncIntervalMinutes();
+        expect(interval, isA<int>());
+        await db.close();
+      },
+    );
   });
 }

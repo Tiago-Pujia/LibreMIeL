@@ -146,9 +146,14 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async => m.createAll(),
     onUpgrade: (m, from, to) async {
-      Future<void> addColumnSafely(TableInfo table, GeneratedColumn column) async {
+      Future<void> addColumnSafely(
+        TableInfo table,
+        GeneratedColumn column,
+      ) async {
         try {
-          final columns = await customSelect("PRAGMA table_info('${table.actualTableName}');").get();
+          final columns = await customSelect(
+            "PRAGMA table_info('${table.actualTableName}');",
+          ).get();
           final exists = columns.any((row) => row.data['name'] == column.name);
           if (!exists) {
             await m.addColumn(table, column);
