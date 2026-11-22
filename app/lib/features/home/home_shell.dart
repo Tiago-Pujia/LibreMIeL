@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +11,7 @@ import '../../core/network/miel_client.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/libremiel_brand.dart';
 import '../../core/theme/miel_theme.dart';
+import '../../platform/notification_service.dart';
 import '../feed/feed_screen.dart';
 import '../modules/module_providers.dart';
 import '../modules/module_reader_host.dart';
@@ -39,6 +43,71 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   int _activeModuleSectionIndex = 0;
   int _moduleSectionNavTick = 0;
   String? _activeForoTopicId;
+  StreamSubscription<NotificationTapPayload>? _notifTapSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _notifTapSub = NotificationService.onNotificationTapped.stream.listen((
+      payload,
+    ) {
+      if (!mounted) return;
+      _handleNotificationPayloadTap(payload);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkInitialNotification();
+    });
+  }
+
+  @override
+  void dispose() {
+    _notifTapSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkInitialNotification() async {
+    final details = await ref
+        .read(notificationServiceProvider)
+        .getLaunchDetails();
+    if (details != null && details.didNotificationLaunchApp) {
+      final raw = details.notificationResponse?.payload;
+      if (raw != null && raw.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) {
+            _handleNotificationPayloadTap(
+              NotificationTapPayload.fromJson(decoded),
+            );
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  void _handleNotificationPayloadTap(NotificationTapPayload payload) {
+    if (payload.idComision.isEmpty ||
+        payload.idComision == 'global' ||
+        payload.idComision == 'sistema') {
+      _goNovedades();
+      return;
+    }
+
+    final subjects = ref.read(subjectsStreamProvider).value ?? [];
+    final tool = switch (payload.module) {
+      'contenidos' => MielToolKind.contenidos,
+      'portafolio' => MielToolKind.portafolio,
+      'mensajeria' => MielToolKind.mensajeria,
+      'foros' => MielToolKind.foro,
+      'evaluacion' => MielToolKind.evaluacion,
+      _ => null,
+    };
+
+    if (tool != null) {
+      _openModuleById(subjects, payload.idComision, tool);
+    } else {
+      _goNovedades();
+    }
+  }
 
   void _goHome() {
     setState(() {

@@ -523,10 +523,10 @@ class SyncEngine {
           subjectName: subject.name,
           module: MielModuleType.mensajeria,
           title: isCorrection
-              ? 'Corrección en ${subject.name}'
-              : 'Nuevo mensaje en ${subject.name}',
+              ? 'Corrección • ${msg.senderName.trim()}$roleTag'
+              : '${msg.senderName.trim()}$roleTag',
           body:
-              '${msg.senderName}$roleTag: ${msg.subject}'
+              '${msg.subject.trim()}'
               '${msg.hasAttachment ? ' 📎' : ''}',
           targetUrl: msg.detailUrl.isNotEmpty
               ? msg.detailUrl

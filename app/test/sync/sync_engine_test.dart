@@ -116,7 +116,7 @@ void main() {
       final msgNotif = summary.notifications.firstWhere(
         (n) => n.module == MielModuleType.mensajeria,
       );
-      expect(msgNotif.body, contains('(Docente)'));
+      expect(msgNotif.title, contains('(Docente)'));
 
       final portNotif = summary.notifications.firstWhere(
         (n) => n.module == MielModuleType.portafolio,

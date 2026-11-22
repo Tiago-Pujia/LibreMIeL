@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -69,6 +72,23 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                         ),
                 ),
+                if (!kIsWeb && Platform.isAndroid) ...[
+                  const SizedBox(height: 8),
+                  _MielPanel(
+                    palette: palette,
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.battery_charging_full,
+                        color: palette.linkAccent,
+                      ),
+                      title: const Text('Optimización de batería en Android'),
+                      subtitle: Text(
+                        'Para recibir notificaciones con la app cerrada, configurá la batería de LibreMIeL en "Sin restricciones" (especialmente en dispositivos Samsung / Xiaomi).',
+                        style: TextStyle(color: palette.textMuted),
+                      ),
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 20),
 

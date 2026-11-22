@@ -33,7 +33,8 @@ void libremielBackgroundCallbackDispatcher() {
         await notifications.showBatch(summary.notifications);
       }
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[LibreMIeL Background Worker] Error: $e\n$st');
       return false;
     } finally {
       await db.close();
@@ -63,7 +64,7 @@ class AndroidBackgroundWorker {
       kAndroidCycle1TaskName,
       kAndroidCycle1TaskName,
       frequency: Duration(minutes: safeCycle1),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
       constraints: Constraints(networkType: NetworkType.connected),
     );
 
@@ -71,7 +72,7 @@ class AndroidBackgroundWorker {
       kAndroidCycle2TaskName,
       kAndroidCycle2TaskName,
       frequency: Duration(minutes: safeCycle2),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
       constraints: Constraints(networkType: NetworkType.connected),
     );
   }
