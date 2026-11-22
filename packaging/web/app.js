@@ -16,9 +16,9 @@
     },
     linux: {
       name: "Linux",
-      recommendedSuffix: "-linux-x64.AppImage",
-      heroLabel: "Descargar para Linux (AppImage)",
-      hint: "También disponible en paquetes .deb (Ubuntu/Debian), .rpm (Fedora), Arch y ARM64."
+      recommendedSuffix: "-linux-amd64.deb",
+      heroLabel: "Descargar para Linux (.deb)",
+      hint: "Instalador recomendado para Ubuntu, Debian y Mint. También disponible en .rpm, Arch, AppImage y ARM64."
     },
     android: {
       name: "Android",
