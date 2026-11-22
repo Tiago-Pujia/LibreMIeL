@@ -46,6 +46,11 @@ Mejorar la experiencia diaria de cursada incorporando poco a poco funciones úti
 | **Linux** (Debian/Ubuntu, Fedora/Red Hat, Arch y derivadas) | `x86_64` (`amd64`) y `ARM64` (`aarch64`)                             | `AppImage`, `.deb`, `.rpm`, `.pkg.tar.zst` y portable (`.tar.gz`) |
 | **Android**                                                 | Universal, `ARM64` (`arm64-v8a`), `ARMv7` (`armeabi-v7a`) y `x86_64` | Instalador `.apk`                                                 |
 
+> [!TIP]
+> **Notificaciones fiables en segundo plano en Android (Samsung One UI, Xiaomi MIUI/HyperOS, Motorola):**  
+> Para que las notificaciones sigan llegando de forma puntual con la pantalla apagada o la app cerrada, configurá en tu dispositivo:  
+> **Ajustes > Aplicaciones > LibreMIeL > Batería > Seleccionar "Sin restricciones"** *(Unrestricted)*.
+
 ---
 
 ## 📖 Documentación

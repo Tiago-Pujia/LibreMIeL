@@ -64,10 +64,42 @@ Como MIeL **no envía cabeceras CORS** (`Access-Control-Allow-Origin` ausente) y
 
 ---
 
-## 4. Limitaciones Realistas en Segundo Plano (Android vs. Escritorio)
+## 4. Segundo Plano, Optimización de Batería y Notificaciones (Android vs. Escritorio)
 
-- **Escritorio (Windows, macOS, Linux):** La aplicación puede quedar minimizada en la bandeja del sistema (*system tray*) ejecutando el Ciclo 1 cada 5–15 minutos con notificaciones nativas inmediatas del sistema operativo.
-- **Android:** Debido a *Doze Mode* y las políticas de ahorro de batería de Android, el mecanismo estándar y eficiente (`WorkManager`) garantiza un intervalo mínimo de **15 minutos** (suficiente para avisos académicos sin drenar la batería). Si en el futuro alguien deseara alertas al segundo, podría existir un modo opcional de *Foreground Service* o un demonio *self-hosted* (corriendo en la PC/servidor del propio usuario) que envíe notificaciones push vía `ntfy` o similar.
+### Escritorio (Windows, macOS, Linux)
+- La aplicación puede quedar minimizada en la bandeja del sistema (*system tray*) ejecutando el Ciclo 1 cada 5–15 minutos con notificaciones nativas inmediatas del sistema operativo.
+- Soporta inicio automático al encender el sistema (*Autostart*) mediante XDG en Linux, el Registro en Windows (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`) y LaunchAgents en macOS.
+
+### Android (`WorkManager`, Doze Mode y Políticas de Ahorro Agresivo)
+- Debido a **Doze Mode** y las políticas de ahorro de batería de Android, el mecanismo estándar y eficiente es **`WorkManager`**, que impone un intervalo mínimo periódico de **15 minutos** (suficiente para avisos académicos sin drenar la batería).
+- **Problema de suspensión profunda (*Deep Sleep*) en capas OEM (Samsung One UI, Xiaomi HyperOS/MIUI, Motorola, etc.):**
+  Los fabricantes implementan administradores de energía sumamente agresivos que suspenden por completo los procesos de fondo y retrasan o descartan los workers periódicos de las apps si están en modo "Optimizado" o "Restringido".
+- **Configuración obligatoria para el usuario en Android:**
+  Para garantizar que las notificaciones lleguen de forma puntual con la pantalla apagada o la app cerrada, el usuario debe deshabilitar la optimización restrictiva de batería:
+  * **Samsung (One UI):**
+    > **Ajustes > Aplicaciones > LibreMIeL > Batería > Seleccionar "Sin restricciones"** (*Unrestricted*).
+  * **Xiaomi / Redmi / POCO (MIUI / HyperOS):**
+    > **Ajustes > Aplicaciones > Administrar aplicaciones > LibreMIeL > Ahorro de batería > Seleccionar "Sin restricciones"**, y habilitar **"Inicio automático"**.
+  * **Android Stock / Google Pixel / Motorola:**
+    > **Ajustes > Aplicaciones > LibreMIeL > Batería de la aplicación > Seleccionar "Sin restricciones"**.
+- **Permisos y mitigaciones en la aplicación:**
+  - `WAKE_LOCK`: Garantiza que durante el sondeo HTTP de fondo la CPU no se suspenda a mitad de la respuesta de MIeL.
+  - `POST_NOTIFICATIONS`: Solicitado explícitamente en Android 13+ (API 33+).
+  - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`: Facilita la exención de ahorro energético desde la pantalla de Ajustes.
+  - `RECEIVE_BOOT_COMPLETED`: Reprograma las tareas periódicas tras reiniciar el teléfono.
+  - Inicialización temprana: `Workmanager().initialize(...)` se ejecuta en `main()` antes de `runApp()`, asegurando que el dispatcher de fondo responda inmediatamente incluso ante aperturas en frío (*cold starts*).
+
+### Estética y Navegación Profunda de Notificaciones
+- **Estética enriquecida:**
+  - **Título:** Remitente en negrita (`ROGER, MATIAS ALEJANDRO (Docente)` o `Corrección • ...`) siguiendo la convención de apps de chat modernas.
+  - **Cuerpo (`BigTextStyleInformation`):** Asunto del mensaje o detalle de la novedad con soporte expandible y emoji de adjunto (`📎`).
+  - **SubText / Encabezado:** Nombre de la comisión o materia académica (*Fundamentos de Sistemas Embebidos*), evitando saturar el título.
+  - **Acento institucional:** Color verde esmeralda `#009674` (`_mielEmerald`) para iconos, badges y LEDs de notificación.
+  - **Categorización y agrupación:** `AndroidNotificationCategory.message`, `social` y `event`, con `groupKey` por comisión para no dispersar avisos en el panel del teléfono.
+- **Navegación nativa al pulsar la notificación:**
+  - Al pulsar la notificación, **LibreMIeL no redirige al navegador web externo**.
+  - A través de `NotificationTapPayload` y el stream `NotificationService.onNotificationTapped` (o `getLaunchDetails()` si la app estaba cerrada), LibreMIeL abre internamente la comisión y la herramienta específica (`mensajeria`, `contenidos`, `portafolio`, `foro` o `evaluacion`).
+
 
 ---
 

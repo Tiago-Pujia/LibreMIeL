@@ -72,8 +72,14 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - **Respaldo offline:** eliminada la opción redundante de adjuntos (ahora siempre se descargan) e incorporado selector con lista de verificación interactiva y atajos (*Todas* / *Ninguna*) al seleccionar materias específicas.
 - **Foros y Portafolio:** retirados los botones "Abrir en MIeL" de las barras superiores de los módulos, conservando solo las acciones esenciales (`Actualizar` y `Marcar todos leídos`).
 - **Bandeja del sistema (*system tray*):** agregado indicador visual de notificación no leída (`tray_icon_unread.png` / `.ico` con insignia roja) que se actualiza reactivamente cuando llegan novedades y vuelve al ícono normal al marcarlas como leídas, junto con conteo en el menú contextual.
-- **Feed de Novedades:** eliminado el botón externo "Abrir en MIeL" de cada tarjeta de notificación; al hacer click sobre cualquier notificación se marca como leída y abre directamente el módulo correspondiente dentro de LibreMIeL.
+- **Feed de Novedades y Notificaciones Nativas:** eliminado el botón externo "Abrir en MIeL"; al hacer click sobre cualquier notificación nativa o tarjeta del feed se abre directamente el módulo y comisión correspondiente dentro de LibreMIeL sin salir al navegador externo.
+- **Estética de Notificaciones Nativas en Android:** rediseño visual para mostrar el remitente como título destacado en negrita (`ROGER, MATIAS ALEJANDRO (Docente)` o `Corrección • ...`), el asunto en el cuerpo expandible (`BigTextStyleInformation`), la materia en el `subText` superior y el acento institucional verde esmeralda `#009674` (`_mielEmerald`) con luces LED y categorización nativa (`message`, `social`, `event`).
+- **Navegación Profunda Nativa al Tocar Notificaciones:** implementación de `NotificationTapPayload` en `NotificationService` y `HomeShell` con enrutamiento reactivo en caliente y en frío (*cold start* vía `getLaunchDetails()`), suprimiendo completamente el uso de `launchUrl(externalApplication)`.
 - **Licencia del proyecto:** relicenciado todo el proyecto a **GNU General Public License v3.0 (GPL-3.0)**.
+
+### Fixed
+- **Segundo Plano y Suspensión en Android (Samsung One UI / MIUI):** resolución de bloqueos por Doze Mode e hibernación agresiva mediante la incorporación de `WAKE_LOCK` y `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` en `AndroidManifest.xml`, inicialización temprana de `Workmanager` en el bootstrap de `main.dart`, y guía de configuración en Ajustes para seleccionar **"Sin restricciones"** en la batería de la aplicación.
+- **Validación de Mensajería en Producción:** prueba real de extremo a extremo de envío y recepción bidireccional entre cuentas de estudiantes autorizadas en comisión común (`117982`), confirmando HTTP 302 y 0 interacciones con terceros (docentes o compañeros).
 
 ### Fixed
 - **Detalle de comisión:** corregido el bug de parsing en `parseCursoDetallesHtml` que provocaba nombres duplicados y capturaba etiquetas del contenedor como si fueran docentes (ej. `"Docentes asignados: ... Tutor/a"`).
