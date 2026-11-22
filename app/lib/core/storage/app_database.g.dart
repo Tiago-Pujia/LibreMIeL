@@ -1536,6 +1536,18 @@ class $CachedTeachersTable extends CachedTeachers
     requiredDuringInsert: false,
     defaultValue: const Constant('Tutor/a'),
   );
+  static const VerificationMeta _avatarUrlMeta = const VerificationMeta(
+    'avatarUrl',
+  );
+  @override
+  late final GeneratedColumn<String> avatarUrl = GeneratedColumn<String>(
+    'avatar_url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _cachedAtMeta = const VerificationMeta(
     'cachedAt',
   );
@@ -1553,6 +1565,7 @@ class $CachedTeachersTable extends CachedTeachers
     normalizedName,
     displayName,
     role,
+    avatarUrl,
     cachedAt,
   ];
   @override
@@ -1603,6 +1616,12 @@ class $CachedTeachersTable extends CachedTeachers
         role.isAcceptableOrUnknown(data['role']!, _roleMeta),
       );
     }
+    if (data.containsKey('avatar_url')) {
+      context.handle(
+        _avatarUrlMeta,
+        avatarUrl.isAcceptableOrUnknown(data['avatar_url']!, _avatarUrlMeta),
+      );
+    }
     if (data.containsKey('cached_at')) {
       context.handle(
         _cachedAtMeta,
@@ -1636,6 +1655,10 @@ class $CachedTeachersTable extends CachedTeachers
         DriftSqlType.string,
         data['${effectivePrefix}role'],
       )!,
+      avatarUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}avatar_url'],
+      )!,
       cachedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cached_at'],
@@ -1654,12 +1677,14 @@ class CachedTeacher extends DataClass implements Insertable<CachedTeacher> {
   final String normalizedName;
   final String displayName;
   final String role;
+  final String avatarUrl;
   final DateTime cachedAt;
   const CachedTeacher({
     required this.idComision,
     required this.normalizedName,
     required this.displayName,
     required this.role,
+    required this.avatarUrl,
     required this.cachedAt,
   });
   @override
@@ -1669,6 +1694,7 @@ class CachedTeacher extends DataClass implements Insertable<CachedTeacher> {
     map['normalized_name'] = Variable<String>(normalizedName);
     map['display_name'] = Variable<String>(displayName);
     map['role'] = Variable<String>(role);
+    map['avatar_url'] = Variable<String>(avatarUrl);
     map['cached_at'] = Variable<DateTime>(cachedAt);
     return map;
   }
@@ -1679,6 +1705,7 @@ class CachedTeacher extends DataClass implements Insertable<CachedTeacher> {
       normalizedName: Value(normalizedName),
       displayName: Value(displayName),
       role: Value(role),
+      avatarUrl: Value(avatarUrl),
       cachedAt: Value(cachedAt),
     );
   }
@@ -1693,6 +1720,7 @@ class CachedTeacher extends DataClass implements Insertable<CachedTeacher> {
       normalizedName: serializer.fromJson<String>(json['normalizedName']),
       displayName: serializer.fromJson<String>(json['displayName']),
       role: serializer.fromJson<String>(json['role']),
+      avatarUrl: serializer.fromJson<String>(json['avatarUrl']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
     );
   }
@@ -1704,6 +1732,7 @@ class CachedTeacher extends DataClass implements Insertable<CachedTeacher> {
       'normalizedName': serializer.toJson<String>(normalizedName),
       'displayName': serializer.toJson<String>(displayName),
       'role': serializer.toJson<String>(role),
+      'avatarUrl': serializer.toJson<String>(avatarUrl),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
     };
   }
@@ -1713,12 +1742,14 @@ class CachedTeacher extends DataClass implements Insertable<CachedTeacher> {
     String? normalizedName,
     String? displayName,
     String? role,
+    String? avatarUrl,
     DateTime? cachedAt,
   }) => CachedTeacher(
     idComision: idComision ?? this.idComision,
     normalizedName: normalizedName ?? this.normalizedName,
     displayName: displayName ?? this.displayName,
     role: role ?? this.role,
+    avatarUrl: avatarUrl ?? this.avatarUrl,
     cachedAt: cachedAt ?? this.cachedAt,
   );
   CachedTeacher copyWithCompanion(CachedTeachersCompanion data) {
@@ -1733,6 +1764,7 @@ class CachedTeacher extends DataClass implements Insertable<CachedTeacher> {
           ? data.displayName.value
           : this.displayName,
       role: data.role.present ? data.role.value : this.role,
+      avatarUrl: data.avatarUrl.present ? data.avatarUrl.value : this.avatarUrl,
       cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
     );
   }
@@ -1744,14 +1776,21 @@ class CachedTeacher extends DataClass implements Insertable<CachedTeacher> {
           ..write('normalizedName: $normalizedName, ')
           ..write('displayName: $displayName, ')
           ..write('role: $role, ')
+          ..write('avatarUrl: $avatarUrl, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(idComision, normalizedName, displayName, role, cachedAt);
+  int get hashCode => Object.hash(
+    idComision,
+    normalizedName,
+    displayName,
+    role,
+    avatarUrl,
+    cachedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1760,6 +1799,7 @@ class CachedTeacher extends DataClass implements Insertable<CachedTeacher> {
           other.normalizedName == this.normalizedName &&
           other.displayName == this.displayName &&
           other.role == this.role &&
+          other.avatarUrl == this.avatarUrl &&
           other.cachedAt == this.cachedAt);
 }
 
@@ -1768,6 +1808,7 @@ class CachedTeachersCompanion extends UpdateCompanion<CachedTeacher> {
   final Value<String> normalizedName;
   final Value<String> displayName;
   final Value<String> role;
+  final Value<String> avatarUrl;
   final Value<DateTime> cachedAt;
   final Value<int> rowid;
   const CachedTeachersCompanion({
@@ -1775,6 +1816,7 @@ class CachedTeachersCompanion extends UpdateCompanion<CachedTeacher> {
     this.normalizedName = const Value.absent(),
     this.displayName = const Value.absent(),
     this.role = const Value.absent(),
+    this.avatarUrl = const Value.absent(),
     this.cachedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1783,6 +1825,7 @@ class CachedTeachersCompanion extends UpdateCompanion<CachedTeacher> {
     required String normalizedName,
     required String displayName,
     this.role = const Value.absent(),
+    this.avatarUrl = const Value.absent(),
     required DateTime cachedAt,
     this.rowid = const Value.absent(),
   }) : idComision = Value(idComision),
@@ -1794,6 +1837,7 @@ class CachedTeachersCompanion extends UpdateCompanion<CachedTeacher> {
     Expression<String>? normalizedName,
     Expression<String>? displayName,
     Expression<String>? role,
+    Expression<String>? avatarUrl,
     Expression<DateTime>? cachedAt,
     Expression<int>? rowid,
   }) {
@@ -1802,6 +1846,7 @@ class CachedTeachersCompanion extends UpdateCompanion<CachedTeacher> {
       if (normalizedName != null) 'normalized_name': normalizedName,
       if (displayName != null) 'display_name': displayName,
       if (role != null) 'role': role,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
       if (cachedAt != null) 'cached_at': cachedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1812,6 +1857,7 @@ class CachedTeachersCompanion extends UpdateCompanion<CachedTeacher> {
     Value<String>? normalizedName,
     Value<String>? displayName,
     Value<String>? role,
+    Value<String>? avatarUrl,
     Value<DateTime>? cachedAt,
     Value<int>? rowid,
   }) {
@@ -1820,6 +1866,7 @@ class CachedTeachersCompanion extends UpdateCompanion<CachedTeacher> {
       normalizedName: normalizedName ?? this.normalizedName,
       displayName: displayName ?? this.displayName,
       role: role ?? this.role,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       cachedAt: cachedAt ?? this.cachedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1840,6 +1887,9 @@ class CachedTeachersCompanion extends UpdateCompanion<CachedTeacher> {
     if (role.present) {
       map['role'] = Variable<String>(role.value);
     }
+    if (avatarUrl.present) {
+      map['avatar_url'] = Variable<String>(avatarUrl.value);
+    }
     if (cachedAt.present) {
       map['cached_at'] = Variable<DateTime>(cachedAt.value);
     }
@@ -1856,6 +1906,7 @@ class CachedTeachersCompanion extends UpdateCompanion<CachedTeacher> {
           ..write('normalizedName: $normalizedName, ')
           ..write('displayName: $displayName, ')
           ..write('role: $role, ')
+          ..write('avatarUrl: $avatarUrl, ')
           ..write('cachedAt: $cachedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4313,6 +4364,7 @@ typedef $$CachedTeachersTableCreateCompanionBuilder =
       required String normalizedName,
       required String displayName,
       Value<String> role,
+      Value<String> avatarUrl,
       required DateTime cachedAt,
       Value<int> rowid,
     });
@@ -4322,6 +4374,7 @@ typedef $$CachedTeachersTableUpdateCompanionBuilder =
       Value<String> normalizedName,
       Value<String> displayName,
       Value<String> role,
+      Value<String> avatarUrl,
       Value<DateTime> cachedAt,
       Value<int> rowid,
     });
@@ -4352,6 +4405,11 @@ class $$CachedTeachersTableFilterComposer
 
   ColumnFilters<String> get role => $composableBuilder(
     column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get avatarUrl => $composableBuilder(
+    column: $table.avatarUrl,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4390,6 +4448,11 @@ class $$CachedTeachersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get avatarUrl => $composableBuilder(
+    column: $table.avatarUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
     column: $table.cachedAt,
     builder: (column) => ColumnOrderings(column),
@@ -4422,6 +4485,9 @@ class $$CachedTeachersTableAnnotationComposer
 
   GeneratedColumn<String> get role =>
       $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get avatarUrl =>
+      $composableBuilder(column: $table.avatarUrl, builder: (column) => column);
 
   GeneratedColumn<DateTime> get cachedAt =>
       $composableBuilder(column: $table.cachedAt, builder: (column) => column);
@@ -4464,6 +4530,7 @@ class $$CachedTeachersTableTableManager
                 Value<String> normalizedName = const Value.absent(),
                 Value<String> displayName = const Value.absent(),
                 Value<String> role = const Value.absent(),
+                Value<String> avatarUrl = const Value.absent(),
                 Value<DateTime> cachedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CachedTeachersCompanion(
@@ -4471,6 +4538,7 @@ class $$CachedTeachersTableTableManager
                 normalizedName: normalizedName,
                 displayName: displayName,
                 role: role,
+                avatarUrl: avatarUrl,
                 cachedAt: cachedAt,
                 rowid: rowid,
               ),
@@ -4480,6 +4548,7 @@ class $$CachedTeachersTableTableManager
                 required String normalizedName,
                 required String displayName,
                 Value<String> role = const Value.absent(),
+                Value<String> avatarUrl = const Value.absent(),
                 required DateTime cachedAt,
                 Value<int> rowid = const Value.absent(),
               }) => CachedTeachersCompanion.insert(
@@ -4487,6 +4556,7 @@ class $$CachedTeachersTableTableManager
                 normalizedName: normalizedName,
                 displayName: displayName,
                 role: role,
+                avatarUrl: avatarUrl,
                 cachedAt: cachedAt,
                 rowid: rowid,
               ),

@@ -196,10 +196,12 @@ void main() {
       // Los 3 puntitos (⋮) abren el detalle oficial de MIeL (cursoDetalles)
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
-      expect(find.text('Detalle de la comisión'), findsOneWidget);
-      expect(find.text('2C 2026'), findsOneWidget);
-      expect(find.text('DOCENTE, UNO (Tutor/a)'), findsOneWidget);
-      await tester.tap(find.text('Cerrar'));
+      expect(find.text('Código de curso:'), findsOneWidget);
+      expect(find.text('Comisión:'), findsOneWidget);
+      expect(find.text('Docentes asignados:'), findsOneWidget);
+      expect(find.text('DOCENTE, UNO'), findsOneWidget);
+      expect(find.text('Tutor/a'), findsWidgets);
+      await tester.tap(find.byTooltip('Cerrar'));
       await tester.pumpAndSettle();
 
       // La campana al lado de los 3 puntitos abre la configuración de notificaciones de la materia

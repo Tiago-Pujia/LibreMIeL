@@ -736,17 +736,42 @@ class SyncEngine {
           for (final msg in thread.messages) {
             final msgKey = '${topic.idTema}:${msg.id}';
             final isNewMsg = !prevMsgs.containsKey(msgKey);
-            if (isTeacherReplyToCurrentUser(msg, thread)) {
+            final bool shouldNotify;
+            if (mode == ForumSyncMode.teacherReplies) {
+              shouldNotify = isTeacherReplyToCurrentUser(msg, thread);
+            } else {
+              // mentionsAndReplies: solo si te etiquetan o responden
+              shouldNotify = isMentionOrReplyToCurrentUser(msg, thread);
+            }
+
+            if (shouldNotify) {
               final preview = msg.bodyText.length > 140
                   ? '${msg.bodyText.substring(0, 140)}…'
                   : msg.bodyText;
+              final isMention =
+                  thread.currentUserId.isNotEmpty &&
+                  msg.mentionedUserIds.contains(thread.currentUserId);
+              final String title;
+              if (mode == ForumSyncMode.teacherReplies) {
+                title = 'Un docente te respondió en ${subject.name}';
+              } else {
+                if (msg.isTeacher) {
+                  title = isMention
+                      ? 'Un docente te etiquetó en ${subject.name}'
+                      : 'Un docente te respondió en ${subject.name}';
+                } else {
+                  title = isMention
+                      ? '${msg.authorName} te etiquetó en ${subject.name}'
+                      : '${msg.authorName} te respondió en ${subject.name}';
+                }
+              }
               final n = DetectedNotification(
                 dedupeKey:
                     'foro_reply:${subject.idComision}:${topic.idTema}:${msg.id}',
                 idComision: subject.idComision,
                 subjectName: subject.name,
                 module: MielModuleType.foros,
-                title: 'Un docente te respondió en ${subject.name}',
+                title: title,
                 body: '${msg.authorName} en "${thread.title}": $preview',
                 targetUrl: topic.url.isNotEmpty
                     ? topic.url

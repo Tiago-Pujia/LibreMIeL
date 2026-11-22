@@ -57,12 +57,15 @@ class MielModuleHeader extends StatelessWidget {
   }
 }
 
-/// Avatar circular autenticado fiel a `.fotoPerfil`, `.fotoRemitente` y `.foro-fotoPerfil` de MIeL.
+/// Avatar autenticado fiel a `.fotoPerfil`, `.fotoRemitente`, `.foro-fotoPerfil` y modales de MIeL.
 class MielAvatar extends ConsumerWidget {
   const MielAvatar({
     super.key,
     required this.avatarUrl,
     this.radius = 20,
+    this.width,
+    this.height,
+    this.borderRadius,
     this.fallbackBackgroundColor,
     this.fallbackIconColor = Colors.white,
     this.fallbackIconSize,
@@ -70,6 +73,9 @@ class MielAvatar extends ConsumerWidget {
 
   final String avatarUrl;
   final double radius;
+  final double? width;
+  final double? height;
+  final BorderRadius? borderRadius;
   final Color? fallbackBackgroundColor;
   final Color fallbackIconColor;
   final double? fallbackIconSize;
@@ -80,8 +86,19 @@ class MielAvatar extends ConsumerWidget {
     final bg =
         fallbackBackgroundColor ?? palette.textMuted.withValues(alpha: 0.45);
     final iconSz = fallbackIconSize ?? (radius * 1.15);
+    final w = width ?? (radius * 2);
+    final h = height ?? (radius * 2);
 
     Widget buildFallback() {
+      if (borderRadius != null) {
+        return Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(color: bg, borderRadius: borderRadius),
+          alignment: Alignment.center,
+          child: Icon(Icons.person, size: iconSz, color: fallbackIconColor),
+        );
+      }
       return CircleAvatar(
         radius: radius,
         backgroundColor: bg,
@@ -100,16 +117,19 @@ class MielAvatar extends ConsumerWidget {
         if (bytes.isEmpty) {
           return buildFallback();
         }
-        final diameter = radius * 2;
         return Container(
-          width: diameter,
-          height: diameter,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: bg),
+          width: w,
+          height: h,
+          decoration: BoxDecoration(
+            shape: borderRadius != null ? BoxShape.rectangle : BoxShape.circle,
+            borderRadius: borderRadius,
+            color: bg,
+          ),
           clipBehavior: Clip.antiAlias,
           child: Image.memory(
             bytes,
-            width: diameter,
-            height: diameter,
+            width: w,
+            height: h,
             fit: BoxFit.cover,
             gaplessPlayback: true,
             errorBuilder: (_, _, _) => buildFallback(),

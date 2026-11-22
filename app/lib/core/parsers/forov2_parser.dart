@@ -365,17 +365,16 @@ ForumThreadData parseForoMensajesHtml(
   );
 }
 
-/// Determina si un mensaje de foro representa una respuesta de un docente (`Tutor/a`)
-/// dirigida al usuario autenticado, aplicando las 3 reglas documentadas en `docs/04`.
-bool isTeacherReplyToCurrentUser(
+/// Determina si un mensaje de foro representa una mención (@mención) o una respuesta
+/// dirigida al usuario autenticado (ya sea de un docente o de un compañero).
+bool isMentionOrReplyToCurrentUser(
   ForumMessageItem message,
   ForumThreadData thread,
 ) {
-  if (!message.isTeacher) return false;
   final uid = thread.currentUserId;
   if (uid.isEmpty || message.authorId == uid) return false;
 
-  // Regla 1: Mención explícita .tagUsuario[data-idusuario="{usuarioId}"]
+  // Regla 1: Mención explícita (@mención) con el ID del usuario (.tagUsuario[data-idusuario="{usuarioId}"])
   if (message.mentionedUserIds.contains(uid)) {
     return true;
   }
@@ -401,4 +400,14 @@ bool isTeacherReplyToCurrentUser(
   }
 
   return false;
+}
+
+/// Determina si un mensaje de foro representa una respuesta de un docente (`Tutor/a`)
+/// dirigida al usuario autenticado, aplicando las 3 reglas documentadas en `docs/04`.
+bool isTeacherReplyToCurrentUser(
+  ForumMessageItem message,
+  ForumThreadData thread,
+) {
+  if (!message.isTeacher) return false;
+  return isMentionOrReplyToCurrentUser(message, thread);
 }

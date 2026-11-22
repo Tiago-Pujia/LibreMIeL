@@ -68,13 +68,65 @@ const String fixtureInternoConBadges = '''
 ''';
 
 const String fixtureCursoDetalles = '''
-<div class="w3-container">
-  <p>Cuatrimestre: 2C 2026</p>
-  <p>Modalidad: Presencial</p>
-  <ul>
-    <li><strong>DOCENTE, UNO</strong> (Tutor/a)</li>
-    <li>DOCENTE, DOS - Tutor/a</li>
-  </ul>
+<div class="w3-modal-content w3-card-4">
+    <header class="w3-container w3-light-grey">
+        <h5>ARQUITECTURA DE SISTEMAS SOFTWARE</h5>
+    </header>
+    <div class="w3-container w3-padding-16">
+        <div class="w3-row-padding w3-padding-4">
+            <div class="w3-col m3">C&oacute;digo de curso:</div>
+            <div class="w3-col m9">3653</div>
+        </div>
+        <div class="w3-row-padding w3-padding-4">
+            <div class="w3-col m3">Comisi&oacute;n:</div>
+            <div class="w3-col m9">01-1900 &nbsp; (2do Cuatrimestre)</div>
+        </div>
+        <div class="w3-row-padding w3-padding-4">
+            <div class="w3-col m3">Modalidad:</div>
+            <div class="w3-col m9">
+                Semipresencial &nbsp;
+                <a href="https://miel.unlam.edu.ar/vista/imagenes/infografia-cursada.jpg" target="_blank" title="Modalidades de cursada">
+                    <i class="material-icons w3-text-gray w3-large">help</i>
+                </a>
+            </div>
+        </div>
+        <div class="w3-row-padding w3-padding-4">
+            <div class="w3-col m3">Aula:</div>
+            <div class="w3-col m9">
+                <div>Ver aula en MIeL</div>
+                <div class="w3-text-gray w3-small cursiva">
+                    (si el aula no es correcta, consulte en su Departamento o en Intraconsulta)
+                </div>
+            </div>
+        </div>
+        <div class="w3-row-padding w3-padding-4">
+            <div class="w3-col m3">Departamento:</div>
+            <div class="w3-col m9">Ingeniería e Investigaciones Tecnológicas</div>
+        </div>
+        <div class="w3-row-padding w3-padding-4">
+            <div class="w3-col m3">Docentes asignados:</div>
+            <div class="w3-col m9">
+                <div class="w3-row-padding w3-margin-bottom">
+                    <div class="w3-col" style="width: 70px">
+                        <img src="https://miel.unlam.edu.ar/data2/avatares/avatar1.jpg" alt="Foto de perfil" style="width: 100%" />
+                    </div>
+                    <div class="w3-rest">
+                        <div>DOCENTE, UNO</div>
+                        <div class="w3-small">Tutor/a</div>
+                    </div>
+                </div>
+                <div class="w3-row-padding w3-margin-bottom">
+                    <div class="w3-col" style="width: 70px">
+                        <img src="https://miel.unlam.edu.ar/data2/avatares/avatar2.jpg" alt="Foto de perfil" style="width: 100%" />
+                    </div>
+                    <div class="w3-rest">
+                        <div>DOCENTE, DOS</div>
+                        <div class="w3-small">Tutor/a</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 ''';
 

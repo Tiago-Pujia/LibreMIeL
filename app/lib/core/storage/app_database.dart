@@ -53,6 +53,7 @@ class CachedTeachers extends Table {
   TextColumn get normalizedName => text()();
   TextColumn get displayName => text()();
   TextColumn get role => text().withDefault(const Constant('Tutor/a'))();
+  TextColumn get avatarUrl => text().withDefault(const Constant(''))();
   DateTimeColumn get cachedAt => dateTime()();
 
   @override
@@ -139,7 +140,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'libremiel'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -161,6 +162,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 4) {
         await m.createTable(downloadedResources);
+      }
+      if (from < 5) {
+        await m.addColumn(cachedTeachers, cachedTeachers.avatarUrl);
       }
     },
   );
@@ -198,7 +202,14 @@ class AppDatabase extends _$AppDatabase {
     if (raw == ForumSyncMode.teacherReplies.name) {
       return ForumSyncMode.teacherReplies;
     }
-    return ForumSyncMode.nonInvasive;
+    if (raw == ForumSyncMode.nonInvasive.name) {
+      return ForumSyncMode.nonInvasive;
+    }
+    if (raw == ForumSyncMode.mentionsAndReplies.name) {
+      return ForumSyncMode.mentionsAndReplies;
+    }
+    // Por defecto: solo si te etiquetan o responden (foro general desactivado)
+    return ForumSyncMode.mentionsAndReplies;
   }
 
   Future<bool> getMonitorEvaluaciones() async {
@@ -401,6 +412,7 @@ class AppDatabase extends _$AppDatabase {
             normalizedName: t.normalizedName,
             displayName: t.name,
             role: Value(t.role),
+            avatarUrl: Value(t.avatarUrl),
             cachedAt: cachedAt,
           ),
         );

@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_providers.dart';
 import '../../core/models/miel_models.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/libremiel_brand.dart';
 import '../../core/theme/miel_theme.dart';
+import '../modules/widgets/module_state_views.dart';
 
 /// Pantalla inicial fiel a `/principal/interno/` de MIeL ("Materias activas").
 class MielHomeView extends ConsumerStatefulWidget {
@@ -131,65 +133,230 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                 ],
 
                 // Aviso compacto de novedades sin leer (adaptación LibreMIeL)
+                // Aviso compacto de novedades sin leer (adaptación LibreMIeL)
                 if (unreadCount > 0) ...[
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(3),
-                    child: Material(
-                      color: palette.unreadBackground,
-                      child: InkWell(
-                        onTap: widget.onOpenNotifications,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              left: BorderSide(
-                                color: palette.unreadBorder,
-                                width: 4,
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.notifications_active,
-                                size: 18,
-                                color: palette.linkAccent,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  unreadCount == 1
-                                      ? 'Tenés 1 novedad nueva detectada por LibreMIeL.'
-                                      : 'Tenés $unreadCount novedades nuevas detectadas por LibreMIeL.',
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w500,
-                                    color: palette.textPrimary,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                'Ver notificaciones',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: palette.linkAccent,
-                                ),
-                              ),
-                              const SizedBox(width: 2),
-                              Icon(
-                                Icons.chevron_right,
-                                size: 18,
-                                color: palette.linkAccent,
-                              ),
-                            ],
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: palette.unreadBackground,
+                        border: Border(
+                          left: BorderSide(
+                            color: palette.unreadBorder,
+                            width: 4,
                           ),
                         ),
                       ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      child: isCompact
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: widget.onOpenNotifications,
+                                    borderRadius: BorderRadius.circular(2),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.notifications_active,
+                                          size: 18,
+                                          color: palette.linkAccent,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            unreadCount == 1
+                                                ? 'Tenés 1 actividad nueva'
+                                                : 'Tenés $unreadCount actividades nuevas',
+                                            style: TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w500,
+                                              color: palette.textPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () => ref
+                                            .read(databaseProvider)
+                                            .markAllNotificationsRead(),
+                                        borderRadius: BorderRadius.circular(3),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.done_all,
+                                                size: 16,
+                                                color: palette.textSecondary,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Limpiar',
+                                                style: TextStyle(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: palette.textSecondary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: widget.onOpenNotifications,
+                                        borderRadius: BorderRadius.circular(3),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 4,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'Ver notificaciones',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: palette.linkAccent,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 2),
+                                              Icon(
+                                                Icons.chevron_right,
+                                                size: 18,
+                                                color: palette.linkAccent,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Icon(
+                                  Icons.notifications_active,
+                                  size: 18,
+                                  color: palette.linkAccent,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: widget.onOpenNotifications,
+                                      borderRadius: BorderRadius.circular(2),
+                                      child: Text(
+                                        unreadCount == 1
+                                            ? 'Tenés 1 actividad nueva'
+                                            : 'Tenés $unreadCount actividades nuevas',
+                                        style: TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: palette.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () => ref
+                                        .read(databaseProvider)
+                                        .markAllNotificationsRead(),
+                                    borderRadius: BorderRadius.circular(3),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.done_all,
+                                            size: 16,
+                                            color: palette.textSecondary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Limpiar',
+                                            style: TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w500,
+                                              color: palette.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: widget.onOpenNotifications,
+                                    borderRadius: BorderRadius.circular(3),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 4,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Ver notificaciones',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: palette.linkAccent,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 2),
+                                          Icon(
+                                            Icons.chevron_right,
+                                            size: 18,
+                                            color: palette.linkAccent,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                     ),
                   ),
                 ],
@@ -1027,182 +1194,253 @@ class _MielCourseDetailDialog extends ConsumerWidget {
     final liveDetails = liveDetailsAsync.value;
     final teacherEntries =
         liveDetails != null && liveDetails.teachers.isNotEmpty
-        ? liveDetails.teachers.map((t) => (name: t.name, role: t.role)).toList()
+        ? liveDetails.teachers
         : cachedTeachers
-              .map((t) => (name: t.displayName, role: t.role))
+              .map(
+                (t) => CourseTeacher(
+                  name: t.displayName,
+                  normalizedName: t.normalizedName,
+                  role: t.role,
+                  avatarUrl: t.avatarUrl,
+                ),
+              )
               .toList();
 
+    final courseTitle = (liveDetails?.courseTitle.isNotEmpty == true)
+        ? liveDetails!.courseTitle
+        : subject.name.toUpperCase();
+    final courseCode = (liveDetails?.courseCode.isNotEmpty == true)
+        ? liveDetails!.courseCode
+        : subject.subjectCode;
+    final commission = (liveDetails?.commission.isNotEmpty == true)
+        ? liveDetails!.commission
+        : (subject.commissionCode +
+              (liveDetails?.term.isNotEmpty == true
+                  ? '  (${liveDetails!.term})'
+                  : ''));
+    final modality = liveDetails?.modality ?? '';
+    final modalityHelpUrl = liveDetails?.modalityHelpUrl ?? '';
+    final classroom = liveDetails?.classroom ?? '';
+    final classroomSubtext = liveDetails?.classroomSubtext ?? '';
+    final department = liveDetails?.department ?? '';
+
     return Dialog(
-      insetPadding: const EdgeInsets.all(20),
+      backgroundColor: palette.cardBackground,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500),
+        constraints: const BoxConstraints(maxWidth: 620),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(18, 14, 10, 14),
-              decoration: BoxDecoration(
-                color: palette.primary,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(4),
-                ),
-              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
               child: Row(
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Detalle de la comisión',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                        Text(
-                          subject.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      courseTitle,
+                      style: TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w600,
+                        color: palette.textPrimary,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, size: 20, color: palette.textMuted),
+                    tooltip: 'Cerrar',
+                    splashRadius: 18,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
-
             if (liveDetailsAsync.isLoading)
               LinearProgressIndicator(
                 minHeight: 2,
                 color: palette.primary,
                 backgroundColor: palette.divider,
               ),
-
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 22),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (subject.subjectCode.isNotEmpty)
+                    if (courseCode.isNotEmpty)
                       _DetailRow(
-                        label: 'Código de materia',
-                        value: subject.subjectCode,
+                        label: 'Código de curso',
                         palette: palette,
+                        child: Text(
+                          courseCode,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            color: palette.textPrimary,
+                          ),
+                        ),
                       ),
-                    if (subject.commissionCode.isNotEmpty)
+                    if (commission.isNotEmpty)
                       _DetailRow(
                         label: 'Comisión',
-                        value: subject.commissionCode,
                         palette: palette,
+                        child: Text(
+                          commission,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            color: palette.textPrimary,
+                          ),
+                        ),
                       ),
-                    if (subject.roleLabel.isNotEmpty)
-                      _DetailRow(
-                        label: 'Rol',
-                        value: subject.roleLabel,
-                        palette: palette,
-                      ),
-                    if (liveDetails != null && liveDetails.term.isNotEmpty)
-                      _DetailRow(
-                        label: 'Cuatrimestre',
-                        value: liveDetails.term,
-                        palette: palette,
-                      ),
-                    if (liveDetails != null && liveDetails.modality.isNotEmpty)
+                    if (modality.isNotEmpty)
                       _DetailRow(
                         label: 'Modalidad',
-                        value: liveDetails.modality,
                         palette: palette,
-                      ),
-                    if (liveDetails != null && liveDetails.classroom.isNotEmpty)
-                      _DetailRow(
-                        label: 'Aula',
-                        value: liveDetails.classroom,
-                        palette: palette,
-                      ),
-
-                    const SizedBox(height: 12),
-                    Divider(color: palette.divider, height: 1),
-                    const SizedBox(height: 12),
-
-                    Text(
-                      'Docentes',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: palette.linkAccent,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (teacherEntries.isEmpty)
-                      Text(
-                        liveDetailsAsync.isLoading
-                            ? 'Consultando docentes en MIeL…'
-                            : 'Sin docentes registrados en caché todavía.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: palette.textMuted,
-                        ),
-                      )
-                    else
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (final t in teacherEntries)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.person_outline,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              modality,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                color: palette.textPrimary,
+                              ),
+                            ),
+                            if (modalityHelpUrl.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Tooltip(
+                                message: 'Modalidades de cursada',
+                                child: InkWell(
+                                  onTap: () async {
+                                    final uri = Uri.tryParse(modalityHelpUrl);
+                                    if (uri != null) {
+                                      await launchUrl(
+                                        uri,
+                                        mode: LaunchMode.externalApplication,
+                                      );
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Icon(
+                                    Icons.help_outline,
                                     size: 16,
                                     color: palette.textMuted,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      '${t.name} (${t.role})',
-                                      style: TextStyle(
-                                        fontSize: 13.5,
-                                        color: palette.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    if (classroom.isNotEmpty)
+                      _DetailRow(
+                        label: 'Aula',
+                        palette: palette,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              classroom,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                color: palette.textPrimary,
                               ),
                             ),
-                        ],
+                            if (classroomSubtext.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                classroomSubtext,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontStyle: FontStyle.italic,
+                                  color: palette.textMuted,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
+                    if (department.isNotEmpty)
+                      _DetailRow(
+                        label: 'Departamento',
+                        palette: palette,
+                        child: Text(
+                          department,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            color: palette.textPrimary,
+                          ),
+                        ),
+                      ),
+                    _DetailRow(
+                      label: 'Docentes asignados',
+                      palette: palette,
+                      child: teacherEntries.isEmpty
+                          ? Text(
+                              liveDetailsAsync.isLoading
+                                  ? 'Consultando docentes en MIeL…'
+                                  : 'Sin docentes asignados.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: palette.textMuted,
+                              ),
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                for (final t in teacherEntries)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        MielAvatar(
+                                          avatarUrl: t.avatarUrl,
+                                          width: 56,
+                                          height: 56,
+                                          borderRadius: BorderRadius.circular(
+                                            2,
+                                          ),
+                                          fallbackIconSize: 28,
+                                        ),
+                                        const SizedBox(width: 14),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                t.name,
+                                                style: TextStyle(
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: palette.textPrimary,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 3),
+                                              Text(
+                                                t.role,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: palette.textMuted,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                    ),
                   ],
                 ),
-              ),
-            ),
-
-            Divider(color: palette.divider, height: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: palette.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                    child: const Text('Cerrar'),
-                  ),
-                ],
               ),
             ),
           ],
@@ -1215,38 +1453,34 @@ class _MielCourseDetailDialog extends ConsumerWidget {
 class _DetailRow extends StatelessWidget {
   const _DetailRow({
     required this.label,
-    required this.value,
+    required this.child,
     required this.palette,
   });
 
   final String label;
-  final String value;
+  final Widget child;
   final MielPalette palette;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 138,
+            width: 146,
             child: Text(
               '$label:',
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: palette.textMuted,
+                fontWeight: FontWeight.w400,
+                color: palette.textPrimary,
               ),
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 13.5, color: palette.textPrimary),
-            ),
-          ),
+          const SizedBox(width: 8),
+          Expanded(child: child),
         ],
       ),
     );
@@ -1382,7 +1616,14 @@ class _SubjectAlertsDialog extends ConsumerWidget {
                       SwitchListTile(
                         dense: true,
                         contentPadding: const EdgeInsets.only(left: 8),
-                        title: const Text('Foros'),
+                        title: const Text('Foros (etiquetas y respuestas)'),
+                        subtitle: Text(
+                          'Foro general desactivado por defecto',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: palette.textMuted,
+                          ),
+                        ),
                         value: liveSubject.notifyForos,
                         onChanged: liveSubject.muted
                             ? null

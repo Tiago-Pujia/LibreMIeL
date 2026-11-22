@@ -156,12 +156,13 @@ class SettingsScreen extends ConsumerWidget {
                     child: Column(
                       children: [
                         RadioListTile<ForumSyncMode>(
-                          value: ForumSyncMode.nonInvasive,
+                          value: ForumSyncMode.mentionsAndReplies,
                           activeColor: palette.primary,
-                          title: const Text('Modo no invasivo (recomendado)'),
+                          title: const Text(
+                            'Solo si te etiquetan o responden (por defecto)',
+                          ),
                           subtitle: Text(
-                            'Avisa qué tema tuvo actividad nueva sin abrir el hilo. '
-                            'Conserva intactos los contadores de no leídos en MIeL web.',
+                            'Te avisa únicamente cuando te etiquetan (@mención) o responden a tus mensajes o temas. Foro general desactivado.',
                             style: TextStyle(color: palette.textMuted),
                           ),
                         ),
@@ -169,11 +170,20 @@ class SettingsScreen extends ConsumerWidget {
                         RadioListTile<ForumSyncMode>(
                           value: ForumSyncMode.teacherReplies,
                           activeColor: palette.primary,
-                          title: const Text('Modo respuestas de docentes'),
+                          title: const Text('Solo respuestas de docentes'),
                           subtitle: Text(
-                            'Inspecciona los hilos con actividad para avisarte específicamente '
-                            'cuando un docente te responde. Nota: al abrir el hilo, MIeL web marca '
-                            'ese tema como leído.',
+                            'Te avisa exclusivamente cuando un docente (Tutor/a) te responde o etiqueta.',
+                            style: TextStyle(color: palette.textMuted),
+                          ),
+                        ),
+                        Divider(height: 1, color: palette.divider),
+                        RadioListTile<ForumSyncMode>(
+                          value: ForumSyncMode.nonInvasive,
+                          activeColor: palette.primary,
+                          title: const Text('Actividad general en foros'),
+                          subtitle: Text(
+                            'Te avisa ante cualquier actividad o tema nuevo en el foro (foro general activado). '
+                            'Conserva intactos los contadores de no leídos en MIeL web.',
                             style: TextStyle(color: palette.textMuted),
                           ),
                         ),

@@ -78,10 +78,54 @@ void main() {
       expect(s2.hasChat, isTrue);
     });
 
-    test('parseCursoDetallesHtml extrae docentes Tutor/a normalizados', () {
+    test('parseCursoDetallesHtml extrae metadatos oficiales y docentes con fotos de perfil', () {
       final details = parseCursoDetallesHtml(fixtureCursoDetalles, '117967');
+      expect(details.courseTitle, 'ARQUITECTURA DE SISTEMAS SOFTWARE');
+      expect(details.courseCode, '3653');
+      expect(details.commission, '01-1900 (2do Cuatrimestre)');
+      expect(details.term, '2do Cuatrimestre');
+      expect(details.modality, 'Semipresencial');
+      expect(
+        details.modalityHelpUrl,
+        'https://miel.unlam.edu.ar/vista/imagenes/infografia-cursada.jpg',
+      );
+      expect(details.classroom, 'Ver aula en MIeL');
+      expect(
+        details.classroomSubtext,
+        '(si el aula no es correcta, consulte en su Departamento o en Intraconsulta)',
+      );
+      expect(details.department, 'Ingeniería e Investigaciones Tecnológicas');
+      expect(details.teachers, hasLength(2));
+      expect(details.teachers[0].name, 'DOCENTE, UNO');
+      expect(details.teachers[0].normalizedName, 'docente, uno');
+      expect(details.teachers[0].role, 'Tutor/a');
+      expect(
+        details.teachers[0].avatarUrl,
+        'https://miel.unlam.edu.ar/data2/avatares/avatar1.jpg',
+      );
+      expect(
+        details.teachers[1].avatarUrl,
+        'https://miel.unlam.edu.ar/data2/avatares/avatar2.jpg',
+      );
+    });
+
+    test('parseCursoDetallesHtml soporta fallback de formato alternativo sin duplicar', () {
+      const fallbackHtml = '''
+<div class="w3-container">
+  <p>Cuatrimestre: 2C 2026</p>
+  <p>Modalidad: Presencial</p>
+  <p>Aula: Laboratorio 3</p>
+  <ul>
+    <li><strong>DOCENTE, UNO</strong> (Tutor/a)</li>
+    <li>DOCENTE, DOS - Tutor/a</li>
+  </ul>
+</div>
+''';
+      final details = parseCursoDetallesHtml(fallbackHtml, '117967');
       expect(details.term, '2C 2026');
       expect(details.modality, 'Presencial');
+      expect(details.classroom, 'Laboratorio 3');
+      expect(details.teachers, hasLength(2));
       expect(
         details.teachers.map((t) => t.normalizedName),
         containsAll(['docente, uno', 'docente, dos']),

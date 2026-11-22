@@ -11,6 +11,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - Documentación técnica completa de la plataforma MIeL (`2025.2.0`) en `docs/`.
 - Licencia **GPL-3.0** (`LICENSE`) y documentación de gobernanza en `docs/` (`CONTRIBUTING.md`, `AGENTS.md`, `STATUS.md`, `GIT_WORKFLOW.md`, `CHANGELOG.md`).
 - Script anonimizador de capturas HTML de MIeL (`scripts/anonymize_html.py`) con tests automatizados (`scripts/test_anonymize_html.py`).
+- Entorno de emulación Android AVD oficial (`LibreMIeL_Pixel7`, Pixel 7, Android 14 x86_64 con KVM) para depuración y pruebas locales/asistidas, documentado en `docs/CONTRIBUTING.md` y con captura en `docs/screenshots/android-login.png`.
 - Estructura inicial de la aplicación **Flutter** multiplataforma (`android`, `linux`, `windows`, `macos`) bajo el identificador `io.github.tiago_pujia.libremiel`.
 - Core de MIeL:
   - Cliente HTTP (`MielClient`) con manejo de cookies (`PHPSESSID`, `SESSID`), verificación de sesión y protección contra bloqueo de cuenta.
@@ -53,8 +54,13 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
     - Cálculo de hash SHA-256 para archivos binarios descargados.
     - Migración de base de datos a `schemaVersion: 4` con tabla `DownloadedResources`.
   - Interfaz de respaldo offline `BulkDownloadSheet` (diálogo en escritorio y bottom sheet en móvil), integrable con selección de materias, módulos y formatos, accesible desde el encabezado de Contenidos ("Respaldo offline"), el encabezado de Foros ("Exportar foros") y el menú lateral ("Respaldo offline").
+  - Extracción de fotos de perfil autenticadas de docentes (`avatarUrl`), código de curso, comisión con cuatrimestre, modalidad con enlace de infografía y aula con leyenda cursiva en `parseCursoDetallesHtml`, junto con soporte de avatares rectangulares/cuadrados en `MielAvatar` y migración a `schemaVersion: 5` en SQLite (`CachedTeachers.avatarUrl`).
 
 ### Changed
+- **Modal de Detalle de comisión:** rediseñado para replicar fielmente el diseño oficial de MIeL (`2025.2.0`), con cabecera neutra, alineación en dos columnas (`.w3-col.m3` vs `.w3-col.m9`), fotos cuadradas de docentes y sin franja verde ni botón redundante inferior.
+- **Aviso de actividades en inicio:** cambiado el texto del aviso a "Tenés X actividades nuevas" (con soporte singular y plural) e incorporado botón directo "Limpiar" para marcar todas las notificaciones como leídas y ocultar el aviso de inmediato.
+- **Notificaciones por defecto:** establecido por defecto el modo de sincronización de Foros en `mentionsAndReplies` ("Solo si te etiquetan o responden"), desactivando por defecto las alertas por actividad general en foros (evitando avisos masivos) y manteniendo activas Contenidos, Portafolio y Mensajería.
+- **Detección en Foros:** implementada la función pura `isMentionOrReplyToCurrentUser` para detectar `@menciones` con el ID de usuario del estudiante, respuestas directas a sus mensajes y respuestas en hilos propios tanto de docentes como de compañeros.
 - Eliminadas secciones secundarias poco usadas (`Glosario`, `Preguntas frecuentes` en Contenidos y `Competencias` en Portafolio) y botones redundantes (`Actualizar` / `Abrir en MIeL`) en el encabezado de Contenidos.
 - Alineado a la izquierda el nombre de la materia junto al botón de inicio en la barra superior, ajustado el badge rojo al ícono de herramienta y simplificado el placeholder del login a `DNI`.
 - **Barra superior:** retirada la campana de notificaciones de la barra verde para mantener una barra limpia; las notificaciones permanecen accesibles desde el menú lateral en *Funcionalidades* -> *Novedades*.
@@ -68,6 +74,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - **Licencia del proyecto:** relicenciado todo el proyecto a **GNU General Public License v3.0 (GPL-3.0)**.
 
 ### Fixed
+- **Detalle de comisión:** corregido el bug de parsing en `parseCursoDetallesHtml` que provocaba nombres duplicados y capturaba etiquetas del contenedor como si fueran docentes (ej. `"Docentes asignados: ... Tutor/a"`).
 - **Portafolio:** corregida la aserción de Flutter (`DropdownButton: There should be exactly one item with value: 0`) deduplicando las opciones de tutores en `parsePortafolioEntregasDetalleHtml` y sanitizando las opciones en `PortafolioSubmissionCard`.
 - **Notificaciones:** corregido el registro de mensajes y foros no leídos en `SyncEngine` (`_syncMensajeria` y `_syncForos`), garantizando que los avisos no leídos existentes se registren correctamente en el feed de Novedades sin depender exclusivamente de cambios de estado posteriores al baseline inicial.
 

@@ -129,11 +129,14 @@ enum MielToolKind {
 }
 
 enum ForumSyncMode {
-  /// Consulta solo /forov2/temas/comision/{id} sin abrir hilos (no borra badges en MIeL web).
-  nonInvasive,
+  /// Abre hilos con actividad para detectar si te etiquetan (@mención) o te responden (modo por defecto, foro general desactivado).
+  mentionsAndReplies,
 
-  /// Abre hilos con actividad para detectar respuestas de docentes (Tutor/a) al usuario.
+  /// Abre hilos con actividad para detectar exclusivamente respuestas de docentes (Tutor/a) al usuario.
   teacherReplies,
+
+  /// Consulta solo /forov2/temas/comision/{id} sin abrir hilos (notifica actividad general en temas).
+  nonInvasive,
 }
 
 class MielCredentials {
@@ -204,27 +207,41 @@ class CourseTeacher {
     required this.name,
     required this.normalizedName,
     required this.role,
+    this.avatarUrl = '',
   });
 
   final String name;
   final String normalizedName;
   final String role;
+  final String avatarUrl;
 }
 
 class CourseDetails {
   const CourseDetails({
     required this.idComision,
     required this.teachers,
+    this.courseTitle = '',
+    this.courseCode = '',
+    this.commission = '',
     this.term = '',
     this.modality = '',
+    this.modalityHelpUrl = '',
     this.classroom = '',
+    this.classroomSubtext = '',
+    this.department = '',
   });
 
   final String idComision;
   final List<CourseTeacher> teachers;
+  final String courseTitle;
+  final String courseCode;
+  final String commission;
   final String term;
   final String modality;
+  final String modalityHelpUrl;
   final String classroom;
+  final String classroomSubtext;
+  final String department;
 }
 
 /// Archivo o imagen adjunta en Mensajería, Foros o Portafolio.

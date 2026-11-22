@@ -65,6 +65,10 @@ void main() {
 
     test('Ciclo 1 con badges notifica Contenidos, Mensajería (+Corrección -> Portafolio) y Foro no invasivo', () async {
       when(() => client.isLogged()).thenAnswer((_) async => true);
+      await db.setSetting(
+        SettingKeys.forumSyncMode,
+        ForumSyncMode.nonInvasive.name,
+      );
 
       // Paso 1: Baseline inicial sin badges
       when(() => client.fetchInternoHtml())
@@ -164,6 +168,47 @@ void main() {
       expect(foroNotifs, hasLength(1));
       expect(foroNotifs.first.title, contains('docente te respondió'));
       expect(foroNotifs.first.body, contains('DOCENTE, UNO'));
+    });
+
+    test('Modo por defecto (mentionsAndReplies) notifica menciones y respuestas, ignorando actividad general', () async {
+      when(() => client.isLogged()).thenAnswer((_) async => true);
+
+      // Baseline
+      when(() => client.fetchInternoHtml())
+          .thenAnswer((_) async => fixtureInternoSinBadges);
+      when(() => client.fetchMensajeriaEntradaHtml('117967'))
+          .thenAnswer((_) async => fixtureMensajeriaVacia);
+      when(() => client.fetchForoTemasHtml('117967'))
+          .thenAnswer((_) async => fixtureForoTemasInicial);
+      when(() => client.fetchPortafolioPracticasHtml('117967'))
+          .thenAnswer((_) async => fixturePortafolioInicial);
+      when(() => client.fetchEvaluacionesHtml('117967'))
+          .thenAnswer((_) async => fixtureEvaluaciones);
+      await engine.runCycle1(loadCredentials: fakeCreds);
+
+      // Nueva actividad en foro con respuesta/etiqueta
+      when(() => client.fetchInternoHtml())
+          .thenAnswer((_) async => fixtureInternoConBadges);
+      when(() => client.fetchContenidosHtml('117967'))
+          .thenAnswer((_) async => fixtureContenidosConNovedad);
+      when(() => client.fetchMensajeriaEntradaHtml('117967'))
+          .thenAnswer((_) async => fixtureMensajeriaVacia);
+      when(() => client.fetchForoTemasHtml('117967'))
+          .thenAnswer((_) async => fixtureForoTemasConActividad);
+      when(() => client.fetchForoMensajesHtml('117967', '229745'))
+          .thenAnswer((_) async => fixtureForoMensajesHilo);
+
+      final summary = await engine.runCycle1(loadCredentials: fakeCreds);
+      final foroNotifs = summary.notifications
+          .where((n) => n.module == MielModuleType.foros)
+          .toList();
+
+      expect(foroNotifs, hasLength(2));
+      expect(
+        foroNotifs.any((n) => n.title.contains('docente te etiquetó')),
+        isTrue,
+      );
+      expect(foroNotifs.any((n) => n.title.contains('te respondió')), isTrue);
     });
 
     test(

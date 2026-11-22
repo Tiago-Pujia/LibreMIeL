@@ -86,7 +86,7 @@ class AppSessionState {
     this.lastSyncMessage,
     this.lastSyncAt,
     this.syncIntervalMinutes = 15,
-    this.forumSyncMode = ForumSyncMode.nonInvasive,
+    this.forumSyncMode = ForumSyncMode.mentionsAndReplies,
     this.monitorEvaluaciones = true,
     this.themeMode = ThemeMode.system,
     this.globalNovedadesBadge = 0,
@@ -469,8 +469,8 @@ class AppSessionController extends Notifier<AppSessionState> {
           : summary1.isBaseline
           ? 'Estado inicial guardado. A partir de ahora te avisaremos de cada novedad.'
           : allNotifs.isEmpty
-          ? 'Sin novedades nuevas.'
-          : 'Se detectaron ${allNotifs.length} novedad(es).';
+          ? 'Sin actividades nuevas.'
+          : 'Se detectaron ${allNotifs.length} actividad(es) nueva(s).';
 
       state = state.copyWith(
         isSyncing: false,

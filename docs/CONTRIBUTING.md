@@ -104,6 +104,37 @@ CMAKE_BUILD_PARALLEL_LEVEL=4 flutter run -d linux
 python3 -m unittest discover -s scripts -v
 ```
 
+### Emulador Android (AVD) para Pruebas Locales y Asistidas por IA
+
+El entorno cuenta con un dispositivo virtual oficial de Android configurado y acelerado por hardware (**KVM** en Linux):
+- **Nombre del AVD:** `LibreMIeL_Pixel7`
+- **Perfil de dispositivo:** Google Pixel 7 (pantalla 1080x2400)
+- **Imagen del sistema:** Android 14.0 (*UpsideDownCake*, API 34), arquitectura `x86_64` con Google APIs.
+
+#### Comandos útiles para operar el emulador:
+
+```bash
+# Listar emuladores disponibles
+flutter emulators
+
+# Iniciar el emulador desde Flutter
+flutter emulators --launch LibreMIeL_Pixel7
+
+# O iniciarlo directamente desde el binario del SDK (con aceleración por GPU):
+~/Android/Sdk/emulator/emulator -avd LibreMIeL_Pixel7
+
+# Ejecutar LibreMIeL en el emulador con Hot Reload:
+cd app
+flutter run -d LibreMIeL_Pixel7
+
+# Capturar una imagen de la pantalla actual (inspección visual automatizada):
+~/Android/Sdk/platform-tools/adb exec-out screencap -p > /tmp/screenshot.png
+
+# Instalar y abrir el APK compilado directamente:
+~/Android/Sdk/platform-tools/adb install app/build/app/outputs/flutter-apk/app-debug.apk
+~/Android/Sdk/platform-tools/adb shell am start -n io.github.tiago_pujia.libremiel/.MainActivity
+```
+
 ---
 
 ## 4. Arquitectura del Código
