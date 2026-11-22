@@ -1224,6 +1224,8 @@ class _MielCourseDetailDialog extends ConsumerWidget {
     final classroomSubtext = liveDetails?.classroomSubtext ?? '';
     final department = liveDetails?.department ?? '';
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Dialog(
       backgroundColor: palette.cardBackground,
       surfaceTintColor: Colors.transparent,
@@ -1235,8 +1237,16 @@ class _MielCourseDetailDialog extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 14, 12, 14),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF161616)
+                    : const Color(0xFFE8E8E8),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
+                ),
+              ),
               child: Row(
                 children: [
                   Expanded(
