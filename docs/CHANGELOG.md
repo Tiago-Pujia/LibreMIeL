@@ -57,6 +57,33 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
     - Migración de base de datos a `schemaVersion: 4` con tabla `DownloadedResources`.
   - Interfaz de respaldo offline `BulkDownloadSheet` (diálogo en escritorio y bottom sheet en móvil), integrable con selección de materias, módulos y formatos, accesible desde el encabezado de Contenidos ("Respaldo offline"), el encabezado de Foros ("Exportar foros") y el menú lateral ("Respaldo offline").
   - Extracción de fotos de perfil autenticadas de docentes (`avatarUrl`), código de curso, comisión con cuatrimestre, modalidad con enlace de infografía y aula con leyenda cursiva en `parseCursoDetallesHtml`, junto con soporte de avatares rectangulares/cuadrados en `MielAvatar` y migración a `schemaVersion: 5` en SQLite (`CachedTeachers.avatarUrl`).
+- **Fase 8 — Actualizador Automático Multiplataforma en la App:**
+  - Detección automática y manual de nuevas versiones de LibreMIeL contra la API de GitHub Releases con soporte de ETag HTTP (`If-None-Match` / `304 Not Modified`) y rate limiting (24 hs en segundo plano).
+  - Parser SemVer estricto (`SemVer.parse`) para comparación confiable de versiones (`vX.Y.Z`).
+  - Verificación criptográfica obligatoria **SHA-256** en streaming contra `SHA256SUMS.txt`, eliminando de inmediato archivos descargados si el checksum no coincide (`Sha256Verifier.verifyOrDelete`).
+  - Resolutor determinista de artefactos (`AssetResolver`) según sistema operativo y arquitectura:
+    - **Windows:** instalador ejecutable (`setup.exe`) o portable (`.zip`).
+    - **Android:** APK nativo según arquitectura del dispositivo (`arm64-v8a`, `armeabi-v7a`, `x86_64`) o fallback universal.
+    - **Linux:** AppImage (reemplazo atómico `rename` y reinicio desacoplado), `.deb`, `.rpm`, `.pkg.tar.zst` o `.tar.gz`.
+    - **macOS:** `.dmg` montable o `.zip`.
+  - Instalación in-app asistida o automática:
+    - **Windows:** ejecución desasociada con `/SILENT` y parámetros Inno Setup (`AppMutex`, `CloseApplications=yes`, `RestartApplications=yes`).
+    - **Android:** integración nativa mediante `MethodChannel` (`REQUEST_INSTALL_PACKAGES` y `FileProvider`).
+    - **Linux:** reemplazo atómico in-place de AppImage con permisos ejecutables (`chmod +x`) y reinicio silencioso con `xdg-open` / detached process para paquetes del sistema.
+    - **macOS:** apertura nativa del archivo `.dmg` / `.zip` con `open`.
+  - Notificaciones nativas del sistema (`showUpdateNotification`) y diálogo in-app modal (`UpdateDialog`) con estética oficial MIeL (`MielPalette`), notas de la versión con scroll, barra de progreso interactiva, opción de omitir versión y botones responsivos con `Wrap`.
+  - Sección *"Actualizaciones"* en la pantalla de Ajustes con versión actual instalada, estado del conmutador de comprobación automática, fecha de última comprobación y botón *"Buscar actualizaciones ahora"*.
+- **Fase 9 — Modo Offline y Contingencia ante Caídas de MIeL:**
+  - Clasificador determinista de estado de red (`classifyMielNetworkError` y `isLikelyMielMaintenanceHtml`) distinguiendo entre dispositivo sin conexión local (`MielServerStatus.deviceOffline`) y caída/mantenimiento de MIeL (`MielServerStatus.mielDown` ante 5xx, timeouts, connection refused, errores TLS o páginas de mantenimiento Apache/Nginx).
+  - Tabla de caché local en Drift SQLite (`OfflinePageCache`, esquema `schemaVersion: 6`) para páginas HTML visitadas con política de desalojo LRU según cuota configurable en MB (`pruneOfflineCacheToQuota`), recuento de bytes y limpieza atómica.
+  - Servicio de almacenamiento persistente de recursos multimedia autenticados en disco (`OfflineMediaService`) para fotos de perfil e imágenes embebidas de foros.
+  - Estrategia de consulta *Network-first con fallback automático a caché local* (`fetchInteractiveHtmlWithAuth`) en todos los proveedores de módulos (Comisiones, Contenidos, Portafolio, Mensajería, Foros, Evaluación, Encuestas, Autoguía).
+  - Precargador seguro de páginas (`OfflinePrefetcher`) con respeto absoluto a las invariantes de `AGENTS.md` (nunca consulta Contenidos con badge 0, nunca invoca `verEntrada`, nunca invoca `forov2/mensajes`, y respeta tokens de cancelación).
+  - Banner global persistente `MielStatusBanner` en la cabecera de la aplicación informando si MIeL no responde (ámbar) o si no hay conexión a internet (azul/gris), mostrando la fecha del último éxito online y botón interactivo para reintentar la conexión.
+  - Bloqueo preventivo de envíos (`runMielWriteWithAuth`) ante caídas del servidor o falta de conexión para evitar pérdidas de información o cuelgues por timeout.
+  - Sección *"Modo sin conexión y contingencia (Fase 9)"* en Ajustes con interruptor maestro, selector de cuota de almacenamiento (50, 100, 250, 500 MB), interruptor de precarga segura en segundo plano, visor en vivo del espacio ocupado y botón para vaciar el caché.
+  - Aislamiento completo: borrado automático del caché al cerrar sesión o cambiar de cuenta en `clearAccountData()`, y poda al cambiar materias activas en `pruneSubjectsNotIn()`.
+  - Configuración persistida en la tabla `AppSettings` de SQLite (`autoCheckUpdates`, `lastUpdateCheckAt`, `lastUpdateEtag`, `skippedReleaseVersion`).
 
 ### Changed
 - **Modal de Detalle de comisión:** rediseñado para replicar fielmente el diseño oficial de MIeL (`2025.2.0`), con cabecera neutra, alineación en dos columnas (`.w3-col.m3` vs `.w3-col.m9`), fotos cuadradas de docentes y sin franja verde ni botón redundante inferior.

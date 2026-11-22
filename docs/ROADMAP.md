@@ -18,7 +18,7 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 | **Fase 5** | Sesión Permanente | ✅ Completado | Persistencia local de credenciales, renovación silenciosa y auto-login continuo hasta logout manual |
 | **Fase 6** | Buscador Global Offline | ⏳ Planificado | Búsqueda instantánea *full-text* (SQLite FTS5) sobre todas las materias sin conexión |
 | **Fase 7** | Integración con IA | ⏳ Planificado | Asistente de estudio *local-first* (Ollama/local o BYOK) sobre el material descargado de la cátedra |
-| **Fase 8** | Actualizador Automático en la App | ⏳ Planificado | Alertas de nuevos releases en GitHub y actualización automática/asistida por SO sin salir al navegador |
+| **Fase 8** | Actualizador Automático en la App | ✅ Completado | Alertas de nuevos releases en GitHub y actualización automática/asistida por SO sin salir al navegador |
 | **Fase 9** | Modo Offline y Contingencia ante Caídas de MIeL | ⏳ Planificado | Navegación opcional sin conexión (Contenidos, Mensajería, Foros, Portafolio) con sesión activa y aviso de servidor caído |
 
 ---
@@ -147,7 +147,7 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 
 ---
 
-## Fase 9 — Modo Offline y Contingencia ante Caídas de MIeL
+## Fase 9 — Modo Offline y Contingencia ante Caídas de MIeL *(Estado: ✅ Completado)*
 
 **Objetivo:** Permitir que un estudiante **ya autenticado** siga consultando sus materias, **Contenidos**, **Mensajería**, **Foros (`forov2`)**, **Portafolio** y módulos secundarios dentro de LibreMIeL incluso cuando los servidores de **MIeL (`miel.unlam.edu.ar`) estén caídos** o el dispositivo se encuentre sin internet, informando con total claridad el estado real del servidor.
 

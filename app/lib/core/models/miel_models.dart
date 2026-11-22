@@ -9,6 +9,9 @@ enum MielAuthStatus {
   invalidResponse,
 }
 
+/// Estado de conectividad con los servidores de MIeL (Fase 9 — Modo Offline).
+enum MielServerStatus { online, mielDown, deviceOffline }
+
 class MielLoginResult {
   const MielLoginResult({required this.status, this.rawCode, this.message});
 

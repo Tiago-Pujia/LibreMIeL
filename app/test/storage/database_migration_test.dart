@@ -94,9 +94,9 @@ void main() {
       final setting = await db.getSetting('dummy');
       expect(setting, isNull);
 
-      // Verificamos que el PRAGMA user_version haya subido a 5
+      // Verificamos que el PRAGMA user_version haya subido a la versión actual del esquema (6)
       final versionResult = raw.select('PRAGMA user_version;');
-      expect(versionResult.first.columnAt(0), 5);
+      expect(versionResult.first.columnAt(0), 6);
 
       await db.close();
     });
@@ -168,7 +168,7 @@ void main() {
         expect(columnNames, contains('avatar_url'));
 
         final versionResult = raw.select('PRAGMA user_version;');
-        expect(versionResult.first.columnAt(0), 5);
+        expect(versionResult.first.columnAt(0), 6);
 
         await db.close();
       },

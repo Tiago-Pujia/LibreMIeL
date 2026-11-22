@@ -44,6 +44,9 @@ ArchitecturesAllowed={#SetupArchAllowed}
 ArchitecturesInstallIn64BitMode={#SetupArch64Bit}
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
+AppMutex=LibreMIeL_App_Mutex
+CloseApplications=yes
+RestartApplications=yes
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -64,3 +67,4 @@ Name: "{userstartup}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: startu
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExeName}"; Flags: nowait; Check: WizardSilent

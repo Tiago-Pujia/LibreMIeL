@@ -7,6 +7,9 @@ import 'package:material_ui/material_ui.dart';
 import '../../app/app_providers.dart';
 import '../../core/models/miel_models.dart';
 import '../../core/theme/miel_theme.dart';
+import '../../platform/updater/update_models.dart';
+import '../../platform/updater/updater_controller.dart';
+import '../updates/update_dialog.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -16,6 +19,8 @@ class SettingsScreen extends ConsumerWidget {
     final palette = MielPalette.of(context);
     final session = ref.watch(appSessionProvider);
     final controller = ref.read(appSessionProvider.notifier);
+    final updater = ref.watch(updaterProvider);
+    final updaterNotifier = ref.read(updaterProvider.notifier);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -214,6 +219,211 @@ class SettingsScreen extends ConsumerWidget {
 
                 const SizedBox(height: 20),
 
+                // Actualizaciones (Fase 8)
+                _SectionHeader(title: 'Actualizaciones', palette: palette),
+                const SizedBox(height: 8),
+                _MielPanel(
+                  palette: palette,
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(
+                          Icons.system_update_alt,
+                          color: palette.linkAccent,
+                        ),
+                        title: Text(
+                          'Versión instalada: v${updater.currentVersion.isNotEmpty ? updater.currentVersion : "0.1.0+1"}',
+                        ),
+                        subtitle: Text(
+                          updater.lastCheckedAt != null
+                              ? 'Última comprobación: ${_formatDateTime(updater.lastCheckedAt!)}'
+                              : 'Aún no se comprobó la versión.',
+                          style: TextStyle(color: palette.textMuted),
+                        ),
+                        trailing: updater.isChecking
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : updater.hasUpdate
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: palette.primary,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: const Text(
+                                  '¡Nueva versión!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                      Divider(height: 1, color: palette.divider),
+                      SwitchListTile(
+                        secondary: Icon(
+                          Icons.autorenew,
+                          color: palette.linkAccent,
+                        ),
+                        title: const Text(
+                          'Buscar actualizaciones automáticamente',
+                        ),
+                        subtitle: Text(
+                          'Consulta en segundo plano (máximo una vez cada 24 h) si hay nuevas versiones en GitHub Releases.',
+                          style: TextStyle(color: palette.textMuted),
+                        ),
+                        value: updater.isAutoCheckEnabled,
+                        onChanged: (v) =>
+                            updaterNotifier.setAutoCheckEnabled(v),
+                      ),
+                      Divider(height: 1, color: palette.divider),
+                      ListTile(
+                        leading: Icon(Icons.search, color: palette.linkAccent),
+                        title: const Text('Buscar actualizaciones ahora'),
+                        subtitle: Text(
+                          updater.status == UpdateStatus.upToDate
+                              ? 'Estás usando la versión más reciente.'
+                              : updater.status == UpdateStatus.error &&
+                                    updater.errorMessage != null
+                              ? updater.errorMessage!
+                              : 'Comprueba manualmente contra GitHub Releases.',
+                          style: TextStyle(
+                            color: updater.status == UpdateStatus.error
+                                ? palette.badgeRed
+                                : (updater.status == UpdateStatus.upToDate
+                                      ? palette.primary
+                                      : palette.textMuted),
+                          ),
+                        ),
+                        onTap: updater.isChecking
+                            ? null
+                            : () async {
+                                await updaterNotifier.checkForUpdates(
+                                  manual: true,
+                                );
+                                if (context.mounted) {
+                                  final latestState = ref.read(updaterProvider);
+                                  if (latestState.hasUpdate ||
+                                      latestState.status ==
+                                          UpdateStatus.upToDate) {
+                                    UpdateDialog.show(context);
+                                  }
+                                }
+                              },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Modo sin conexión y contingencia (Fase 9)
+                _SectionHeader(
+                  title: 'Modo sin conexión y contingencia (Fase 9)',
+                  palette: palette,
+                ),
+                const SizedBox(height: 8),
+                _MielPanel(
+                  palette: palette,
+                  child: Column(
+                    children: [
+                      SwitchListTile(
+                        secondary: Icon(
+                          Icons.cloud_off_rounded,
+                          color: palette.linkAccent,
+                        ),
+                        title: const Text('Modo sin conexión'),
+                        subtitle: Text(
+                          'Guarda copias locales de las secciones que consultás para seguir usándolas si MIeL se cae o no tenés internet.',
+                          style: TextStyle(color: palette.textMuted),
+                        ),
+                        value: session.offlineModeEnabled,
+                        onChanged: controller.updateOfflineModeEnabled,
+                      ),
+                      if (session.offlineModeEnabled) ...[
+                        Divider(height: 1, color: palette.divider),
+                        SwitchListTile(
+                          secondary: Icon(
+                            Icons.download_for_offline_outlined,
+                            color: palette.linkAccent,
+                          ),
+                          title: const Text('Precarga segura de solo lectura'),
+                          subtitle: Text(
+                            'Precarga comisiones y listados seguros en cada sincronización sin alterar badges ni efectos colaterales de MIeL.',
+                            style: TextStyle(color: palette.textMuted),
+                          ),
+                          value: session.offlinePrefetchSafeModules,
+                          onChanged:
+                              controller.updateOfflinePrefetchSafeModules,
+                        ),
+                        Divider(height: 1, color: palette.divider),
+                        ListTile(
+                          leading: Icon(
+                            Icons.storage_outlined,
+                            color: palette.linkAccent,
+                          ),
+                          title: const Text(
+                            'Límite de almacenamiento del caché',
+                          ),
+                          subtitle: Text(
+                            'Purga automáticamente las páginas menos consultadas al superar la cuota.',
+                            style: TextStyle(color: palette.textMuted),
+                          ),
+                          trailing: DropdownButton<int>(
+                            value:
+                                const [
+                                  50,
+                                  100,
+                                  250,
+                                  500,
+                                ].contains(session.offlineCacheMaxMb)
+                                ? session.offlineCacheMaxMb
+                                : 100,
+                            dropdownColor: palette.dropdownBackground,
+                            items: const [
+                              DropdownMenuItem(value: 50, child: Text('50 MB')),
+                              DropdownMenuItem(
+                                value: 100,
+                                child: Text('100 MB'),
+                              ),
+                              DropdownMenuItem(
+                                value: 250,
+                                child: Text('250 MB'),
+                              ),
+                              DropdownMenuItem(
+                                value: 500,
+                                child: Text('500 MB'),
+                              ),
+                            ],
+                            onChanged: (v) {
+                              if (v != null) {
+                                controller.updateOfflineCacheMaxMb(v);
+                              }
+                            },
+                          ),
+                        ),
+                        Divider(height: 1, color: palette.divider),
+                        _OfflineCacheStatsTile(
+                          palette: palette,
+                          controller: controller,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
                 // Cuenta y Datos Locales
                 _SectionHeader(
                   title: 'Cuenta y Datos Locales',
@@ -330,6 +540,92 @@ class _MielPanel extends StatelessWidget {
         side: BorderSide(color: palette.cardBorder),
       ),
       child: child,
+    );
+  }
+}
+
+String _formatDateTime(DateTime dt) {
+  final d = dt.day.toString().padLeft(2, '0');
+  final m = dt.month.toString().padLeft(2, '0');
+  final y = dt.year;
+  final h = dt.hour.toString().padLeft(2, '0');
+  final min = dt.minute.toString().padLeft(2, '0');
+  return '$d/$m/$y $h:$min';
+}
+
+class _OfflineCacheStatsTile extends ConsumerStatefulWidget {
+  const _OfflineCacheStatsTile({
+    required this.palette,
+    required this.controller,
+  });
+
+  final MielPalette palette;
+  final AppSessionController controller;
+
+  @override
+  ConsumerState<_OfflineCacheStatsTile> createState() =>
+      _OfflineCacheStatsTileState();
+}
+
+class _OfflineCacheStatsTileState
+    extends ConsumerState<_OfflineCacheStatsTile> {
+  double _cacheMb = 0.0;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCacheSize();
+  }
+
+  Future<void> _loadCacheSize() async {
+    final db = ref.read(databaseProvider);
+    final mediaService = ref.read(offlineMediaServiceProvider);
+    final pageBytes = await db.getOfflineCacheTotalBytes();
+    final mediaBytes = await mediaService.getTotalCachedMediaBytes();
+    final totalMb = (pageBytes + mediaBytes) / (1024 * 1024);
+    if (mounted) {
+      setState(() {
+        _cacheMb = totalMb;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _clearCache() async {
+    await widget.controller.clearOfflineCache();
+    await _loadCacheSize();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Se vació el caché local de navegación sin conexión.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = ref.watch(appSessionProvider);
+    final sizeText = _loading
+        ? 'Calculando peso…'
+        : '${_cacheMb.toStringAsFixed(1)} MB de ${session.offlineCacheMaxMb} MB';
+
+    return ListTile(
+      leading: Icon(
+        Icons.cleaning_services_outlined,
+        color: widget.palette.linkAccent,
+      ),
+      title: Text('Espacio en disco ocupado: $sizeText'),
+      subtitle: Text(
+        'Páginas HTML, datos estructurados e imágenes cacheadas localmente.',
+        style: TextStyle(color: widget.palette.textMuted),
+      ),
+      trailing: OutlinedButton(
+        onPressed: _loading ? null : _clearCache,
+        child: const Text('Vaciar caché'),
+      ),
     );
   }
 }

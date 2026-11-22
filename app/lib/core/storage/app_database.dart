@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
@@ -100,6 +102,20 @@ class DownloadedResources extends Table {
   DateTimeColumn get downloadedAt => dateTime()();
 }
 
+/// Registro local de páginas HTML cacheadas para navegación sin conexión y contingencia (Fase 9).
+class OfflinePageCache extends Table {
+  TextColumn get cacheKey => text()();
+  TextColumn get idComision => text().withDefault(const Constant(''))();
+  TextColumn get module => text().withDefault(const Constant(''))();
+  TextColumn get htmlContent => text()();
+  Int64Column get sizeBytes => int64().withDefault(Constant(BigInt.zero))();
+  DateTimeColumn get cachedAt => dateTime()();
+  DateTimeColumn get lastAccessedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {cacheKey};
+}
+
 /// Configuración clave-valor persistida localmente (intervalo, modo de foros, baseline, etc.).
 class AppSettings extends Table {
   TextColumn get key => text()();
@@ -123,6 +139,14 @@ class SettingKeys {
   static const String lastCycle2At = 'last_cycle2_at';
   static const String themeMode = 'theme_mode';
   static const String launchAtStartup = 'launch_at_startup';
+  static const String autoCheckUpdates = 'auto_check_updates';
+  static const String lastUpdateCheckAt = 'last_update_check_at';
+  static const String lastUpdateEtag = 'last_update_etag';
+  static const String skippedReleaseVersion = 'skipped_release_version';
+  static const String offlineModeEnabled = 'offline_mode_enabled';
+  static const String offlinePrefetchSafeModules =
+      'offline_prefetch_safe_modules';
+  static const String offlineCacheMaxMb = 'offline_cache_max_mb';
 }
 
 @DriftDatabase(
@@ -133,6 +157,7 @@ class SettingKeys {
     NotificationLogs,
     AppSettings,
     DownloadedResources,
+    OfflinePageCache,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -140,7 +165,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'libremiel'));
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -201,6 +226,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 5) {
         await addColumnSafely(cachedTeachers, cachedTeachers.avatarUrl);
       }
+      if (from < 6) {
+        await createTableSafely(offlinePageCache);
+      }
     },
   );
 
@@ -250,6 +278,40 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> getMonitorEvaluaciones() async {
     final raw = await getSetting(SettingKeys.monitorEvaluaciones);
     return raw != 'false';
+  }
+
+  Future<bool> getAutoCheckUpdates() async {
+    final raw = await getSetting(SettingKeys.autoCheckUpdates);
+    return raw != 'false';
+  }
+
+  Future<void> setAutoCheckUpdates(bool enabled) async {
+    await setSetting(SettingKeys.autoCheckUpdates, enabled.toString());
+  }
+
+  Future<DateTime?> getLastUpdateCheckAt() async {
+    final raw = await getSetting(SettingKeys.lastUpdateCheckAt);
+    return raw != null ? DateTime.tryParse(raw) : null;
+  }
+
+  Future<void> setLastUpdateCheckAt(DateTime at) async {
+    await setSetting(SettingKeys.lastUpdateCheckAt, at.toIso8601String());
+  }
+
+  Future<String?> getLastUpdateEtag() async {
+    return await getSetting(SettingKeys.lastUpdateEtag);
+  }
+
+  Future<void> setLastUpdateEtag(String etag) async {
+    await setSetting(SettingKeys.lastUpdateEtag, etag);
+  }
+
+  Future<String?> getSkippedReleaseVersion() async {
+    return await getSetting(SettingKeys.skippedReleaseVersion);
+  }
+
+  Future<void> setSkippedReleaseVersion(String version) async {
+    await setSetting(SettingKeys.skippedReleaseVersion, version);
   }
 
   // --- Subjects ---
@@ -567,6 +629,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> pruneSubjectsNotIn(Set<String> activeCommissionIds) async {
     await transaction(() async {
       if (activeCommissionIds.isEmpty) {
+        await delete(offlinePageCache).go();
         await delete(cachedTeachers).go();
         await delete(snapshotEntries).go();
         await delete(subjects).go();
@@ -580,14 +643,19 @@ class AppDatabase extends _$AppDatabase {
       await (delete(
         snapshotEntries,
       )..where((t) => t.idComision.isNotIn(ids))).go();
+      await (delete(offlinePageCache)..where(
+            (t) => t.idComision.isNotIn(ids) & t.idComision.isNotValue(''),
+          ))
+          .go();
     });
   }
 
   /// Borra únicamente los datos asociados a la cuenta de MIeL (materias, snapshots,
-  /// docentes, notificaciones y estado de sesión), preservando preferencias globales
+  /// docentes, notificaciones, caché offline y estado de sesión), preservando preferencias globales
   /// de la app (tema, intervalo de sync, inicio automático).
   Future<void> clearAccountData() async {
     await transaction(() async {
+      await delete(offlinePageCache).go();
       await delete(notificationLogs).go();
       await delete(snapshotEntries).go();
       await delete(cachedTeachers).go();
@@ -707,9 +775,93 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.idComision.equals(idComision))).go();
   }
 
+  // --- Offline Page Cache (Fase 9) ---
+
+  Future<void> putOfflinePage({
+    required String cacheKey,
+    required String idComision,
+    required String module,
+    required String htmlContent,
+    int maxCacheMb = 100,
+  }) async {
+    final now = DateTime.now();
+    final sizeBytes = BigInt.from(utf8.encode(htmlContent).length);
+    await into(offlinePageCache).insertOnConflictUpdate(
+      OfflinePageCacheCompanion(
+        cacheKey: Value(cacheKey),
+        idComision: Value(idComision),
+        module: Value(module),
+        htmlContent: Value(htmlContent),
+        sizeBytes: Value(sizeBytes),
+        cachedAt: Value(now),
+        lastAccessedAt: Value(now),
+      ),
+    );
+    await pruneOfflineCacheToQuota(maxCacheMb: maxCacheMb);
+  }
+
+  Future<OfflinePageCacheData?> getOfflinePage(String cacheKey) async {
+    final row = await (select(
+      offlinePageCache,
+    )..where((t) => t.cacheKey.equals(cacheKey))).getSingleOrNull();
+    if (row != null) {
+      await (update(
+        offlinePageCache,
+      )..where((t) => t.cacheKey.equals(cacheKey))).write(
+        OfflinePageCacheCompanion(lastAccessedAt: Value(DateTime.now())),
+      );
+    }
+    return row;
+  }
+
+  Future<int> getOfflineCacheTotalBytes() async {
+    final rows = await select(offlinePageCache).get();
+    var total = 0;
+    for (final r in rows) {
+      total += r.sizeBytes.toInt();
+    }
+    return total;
+  }
+
+  Future<void> clearOfflineCache() async {
+    await delete(offlinePageCache).go();
+  }
+
+  Future<void> pruneOfflineCacheToQuota({int maxCacheMb = 100}) async {
+    final maxBytes = maxCacheMb * 1024 * 1024;
+    var total = await getOfflineCacheTotalBytes();
+    if (total <= maxBytes) return;
+
+    final entries = await (select(
+      offlinePageCache,
+    )..orderBy([(t) => OrderingTerm.asc(t.lastAccessedAt)])).get();
+
+    for (final entry in entries) {
+      if (total <= maxBytes) break;
+      await (delete(
+        offlinePageCache,
+      )..where((t) => t.cacheKey.equals(entry.cacheKey))).go();
+      total -= entry.sizeBytes.toInt();
+    }
+  }
+
+  Future<bool> getOfflineModeEnabled() async {
+    return (await getSetting(SettingKeys.offlineModeEnabled)) == 'true';
+  }
+
+  Future<bool> getOfflinePrefetchSafeModules() async {
+    return (await getSetting(SettingKeys.offlinePrefetchSafeModules)) == 'true';
+  }
+
+  Future<int> getOfflineCacheMaxMb() async {
+    final raw = await getSetting(SettingKeys.offlineCacheMaxMb);
+    return int.tryParse(raw ?? '') ?? 100;
+  }
+
   /// Borra todos los datos locales al cerrar sesión.
   Future<void> clearAllLocalData() async {
     await transaction(() async {
+      await delete(offlinePageCache).go();
       await delete(downloadedResources).go();
       await delete(notificationLogs).go();
       await delete(snapshotEntries).go();

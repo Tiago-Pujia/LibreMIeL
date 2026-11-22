@@ -20,6 +20,8 @@ import '../modules/widgets/module_state_views.dart';
 import '../settings/settings_screen.dart';
 import '../subjects/miel_home_view.dart';
 import '../downloads/bulk_download_sheet.dart';
+import '../updates/update_dialog.dart';
+import 'widgets/miel_status_banner.dart';
 
 enum _ShellSection { home, novedades, ajustes, moduleDraft }
 
@@ -85,6 +87,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   void _handleNotificationPayloadTap(NotificationTapPayload payload) {
+    if (payload.module == 'app_update' ||
+        payload.targetUrl.startsWith('libremiel://update')) {
+      UpdateDialog.show(context);
+      return;
+    }
+
     if (payload.idComision.isEmpty ||
         payload.idComision == 'global' ||
         payload.idComision == 'sistema') {
@@ -311,6 +319,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 .toggleThemeMode(Theme.of(context).brightness),
             onLogout: () => ref.read(appSessionProvider.notifier).logout(),
           ),
+
+          // Banner de alerta de servidor caído o sin conexión (Fase 9)
+          const MielStatusBanner(),
 
           // Banner de alerta crítica si la autenticación fue pausada (estado 1/2/3)
           if (session.authPausedReason != null)

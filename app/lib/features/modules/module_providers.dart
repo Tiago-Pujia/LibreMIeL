@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,27 +7,85 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_providers.dart';
 import '../../core/models/miel_models.dart';
 import '../../core/network/miel_client.dart';
+import '../../core/network/miel_server_status_classifier.dart';
 import '../../core/parsers/miel_parsers.dart';
 
 /// Tipo de bandeja de Mensajería en MIeL.
 enum MensajeriaBoxKind { entrada, salida, borradores, favoritos }
 
 /// Ejecuta una consulta HTML interactiva con recuperación automática silenciosa
-/// de sesión (Fase 5 — Sesión Permanente) respetando `accountPausedReason`.
+/// de sesión (Fase 5) y contingencia/fallback al caché local si MIeL está caído
+/// o no hay conexión a internet (Fase 9).
 Future<String> fetchInteractiveHtmlWithAuth(
   Ref ref,
-  Future<String> Function(MielInteractiveReader reader) fetcher,
-) async {
-  final reader = await ref.read(mielInteractiveReaderProvider.future);
-  var html = await fetcher(reader);
+  Future<String> Function(MielInteractiveReader reader) fetcher, {
+  String? cacheKey,
+  String idComision = '',
+  String module = '',
+}) async {
+  var offlineEnabled = false;
+  var maxCacheMb = 100;
+  try {
+    final session = ref.read(appSessionProvider);
+    offlineEnabled = session.offlineModeEnabled;
+    maxCacheMb = session.offlineCacheMaxMb;
+  } catch (_) {}
 
-  if (isLikelyLoginRedirectHtml(html)) {
-    final recovered = await _recoverInteractiveSession(ref, reader);
-    if (recovered) {
-      html = await fetcher(reader);
-    }
+  void tryReportStatus(MielServerStatus status) {
+    try {
+      ref.read(appSessionProvider.notifier).reportServerStatus(status);
+    } catch (_) {}
   }
-  return html;
+
+  try {
+    final reader = await ref.read(mielInteractiveReaderProvider.future);
+    var html = await fetcher(reader);
+
+    if (isLikelyLoginRedirectHtml(html)) {
+      final recovered = await _recoverInteractiveSession(ref, reader);
+      if (recovered) {
+        html = await fetcher(reader);
+      }
+    }
+
+    if (isLikelyMielMaintenanceHtml(html)) {
+      throw HttpException('MIeL devolvió página de mantenimiento o error HTTP');
+    }
+
+    tryReportStatus(MielServerStatus.online);
+
+    // Si el modo offline está activo y hay cacheKey, persistir copia local en segundo plano
+    if (offlineEnabled &&
+        cacheKey != null &&
+        html.isNotEmpty &&
+        !isLikelyLoginRedirectHtml(html)) {
+      final db = ref.read(databaseProvider);
+      unawaited(
+        db.putOfflinePage(
+          cacheKey: cacheKey,
+          idComision: idComision,
+          module: module,
+          htmlContent: html,
+          maxCacheMb: maxCacheMb,
+        ),
+      );
+    }
+
+    return html;
+  } catch (error) {
+    final status = classifyMielNetworkError(error);
+    tryReportStatus(status);
+
+    // Fallback a copia local guardada previamente
+    if (offlineEnabled && cacheKey != null) {
+      final db = ref.read(databaseProvider);
+      final cached = await db.getOfflinePage(cacheKey);
+      if (cached != null && cached.htmlContent.isNotEmpty) {
+        return cached.htmlContent;
+      }
+    }
+    rethrow;
+  }
 }
 
 /// Recupera la sesión silenciosamente priorizando `AppSessionController.ensureActiveSession`
@@ -63,10 +123,24 @@ Future<bool> _recoverInteractiveSession(
 
 /// Ejecuta una operación de escritura de **Fase 3** (`MielWriter`) con reconexión
 /// automática silenciosa (Fase 5) si la sesión expiró en MIeL.
+///
+/// Si MIeL está caído o el dispositivo está desconectado (Fase 9), interrumpe
+/// el envío de inmediato con un mensaje informativo para no colgarse en timeouts.
 Future<T> runMielWriteWithAuth<T>(
   WidgetRef ref,
   Future<T> Function(MielWriter writer) action,
 ) async {
+  try {
+    final session = ref.read(appSessionProvider);
+    if (session.serverStatus != MielServerStatus.online) {
+      throw const HttpException(
+        'No se puede enviar en este momento: los servidores de MIeL no responden o no hay conexión a internet.',
+      );
+    }
+  } catch (e) {
+    if (e is HttpException) rethrow;
+  }
+
   final writer = await ref.read(mielWriterProvider.future);
   try {
     return await action(writer);
@@ -101,6 +175,9 @@ final contenidosPageProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchContenidosHtml(idComision),
+        cacheKey: 'contenidos:$idComision',
+        idComision: idComision,
+        module: 'contenidos',
       );
       final page = parseContenidosPageHtml(html, idComision);
       // Abrir Contenidos en MIeL limpia el badge del servidor; sincronizamos el badge local.
@@ -116,6 +193,9 @@ final contenidosGlosarioProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchContenidosGlosarioHtml(arg.idComision, letra: arg.letra),
+        cacheKey: 'contenidos:glosario:${arg.idComision}:${arg.letra ?? 'all'}',
+        idComision: arg.idComision,
+        module: 'contenidos',
       );
       return parseContenidosGlosarioHtml(html);
     });
@@ -125,6 +205,9 @@ final contenidosFaqProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchContenidosFaqHtml(idComision),
+        cacheKey: 'contenidos:faq:$idComision',
+        idComision: idComision,
+        module: 'contenidos',
       );
       return parseContenidosFaqHtml(html);
     });
@@ -136,6 +219,9 @@ final portafolioPracticasProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchPortafolioPracticasHtml(idComision),
+        cacheKey: 'portafolio:practicas:$idComision',
+        idComision: idComision,
+        module: 'portafolio',
       );
       return parsePortafolioPracticasHtml(html, idComision);
     });
@@ -148,6 +234,9 @@ final portafolioEntregasDetalleProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchPortafolioEntregasHtml(arg.idComision, arg.idPractica),
+        cacheKey: 'portafolio:entregas:${arg.idComision}:${arg.idPractica}',
+        idComision: arg.idComision,
+        module: 'portafolio',
       );
       return parsePortafolioEntregasDetalleHtml(
         html,
@@ -161,6 +250,9 @@ final portafolioArchivosEnviadosProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchPortafolioArchivosEnviadosHtml(idComision),
+        cacheKey: 'portafolio:archivos:$idComision',
+        idComision: idComision,
+        module: 'portafolio',
       );
       return parsePortafolioArchivosEnviadosHtml(html);
     });
@@ -170,6 +262,9 @@ final portafolioGruposProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchPortafolioGruposHtml(idComision),
+        cacheKey: 'portafolio:grupos:$idComision',
+        idComision: idComision,
+        module: 'portafolio',
       );
       return parsePortafolioGruposHtml(html);
     });
@@ -179,6 +274,9 @@ final portafolioNotasProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchPortafolioNotasHtml(idComision),
+        cacheKey: 'portafolio:notas:$idComision',
+        idComision: idComision,
+        module: 'portafolio',
       );
       return parsePortafolioNotasHtml(html);
     });
@@ -188,6 +286,9 @@ final portafolioCompetenciasProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchPortafolioCompetenciasHtml(idComision),
+        cacheKey: 'portafolio:competencias:$idComision',
+        idComision: idComision,
+        module: 'portafolio',
       );
       return parsePortafolioCompetenciasHtml(html);
     });
@@ -199,27 +300,36 @@ final mensajeriaBandejaProvider = FutureProvider.autoDispose
       MessageBoxPageData,
       ({String idComision, MensajeriaBoxKind box, int page})
     >((ref, arg) async {
-      final html = await fetchInteractiveHtmlWithAuth(ref, (r) {
-        switch (arg.box) {
-          case MensajeriaBoxKind.entrada:
-            return r.fetchMensajeriaEntradaPageHtml(
-              arg.idComision,
-              page: arg.page,
-            );
-          case MensajeriaBoxKind.salida:
-            return r.fetchMensajeriaSalidaHtml(arg.idComision, page: arg.page);
-          case MensajeriaBoxKind.borradores:
-            return r.fetchMensajeriaBorradoresHtml(
-              arg.idComision,
-              page: arg.page,
-            );
-          case MensajeriaBoxKind.favoritos:
-            return r.fetchMensajeriaFavoritosHtml(
-              arg.idComision,
-              page: arg.page,
-            );
-        }
-      });
+      final html = await fetchInteractiveHtmlWithAuth(
+        ref,
+        (r) {
+          switch (arg.box) {
+            case MensajeriaBoxKind.entrada:
+              return r.fetchMensajeriaEntradaPageHtml(
+                arg.idComision,
+                page: arg.page,
+              );
+            case MensajeriaBoxKind.salida:
+              return r.fetchMensajeriaSalidaHtml(
+                arg.idComision,
+                page: arg.page,
+              );
+            case MensajeriaBoxKind.borradores:
+              return r.fetchMensajeriaBorradoresHtml(
+                arg.idComision,
+                page: arg.page,
+              );
+            case MensajeriaBoxKind.favoritos:
+              return r.fetchMensajeriaFavoritosHtml(
+                arg.idComision,
+                page: arg.page,
+              );
+          }
+        },
+        cacheKey: 'mensajeria:${arg.box.name}:${arg.idComision}:p${arg.page}',
+        idComision: arg.idComision,
+        module: 'mensajeria',
+      );
       return parseMensajeriaBandejaHtml(
         html,
         arg.idComision,
@@ -248,6 +358,9 @@ final mensajeriaUnifiedInboxProvider =
           final html = await fetchInteractiveHtmlWithAuth(
             ref,
             (r) => r.fetchMensajeriaEntradaPageHtml(subject.idComision),
+            cacheKey: 'mensajeria:entrada:${subject.idComision}:p1',
+            idComision: subject.idComision,
+            module: 'mensajeria',
           );
           final page = parseMensajeriaBandejaHtml(html, subject.idComision);
           for (final msg in page.messages) {
@@ -271,6 +384,9 @@ final mensajeriaDetalleProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchMensajeriaDetalleHtml(url),
+        cacheKey: 'mensajeria:detalle:${arg.idComision}:${arg.idMensaje}',
+        idComision: arg.idComision,
+        module: 'mensajeria',
       );
       final detail = parseMensajeriaDetalleHtml(
         html,
@@ -289,6 +405,8 @@ final mensajeriaDestinatariosProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchMensajeriaDestinatariosHtml(url),
+        cacheKey: 'mensajeria:destinatarios:$url',
+        module: 'mensajeria',
       );
       return parseMensajeriaDestinatariosHtml(html);
     });
@@ -300,6 +418,9 @@ final foroTemasProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchForoTemasHtml(idComision),
+        cacheKey: 'foro:temas:$idComision',
+        idComision: idComision,
+        module: 'forov2',
       );
       return parseForoTemasHtml(html, idComision);
     });
@@ -312,6 +433,9 @@ final foroMensajesProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchForoMensajesHtml(arg.idComision, arg.idTema),
+        cacheKey: 'foro:mensajes:${arg.idComision}:${arg.idTema}',
+        idComision: arg.idComision,
+        module: 'forov2',
       );
       final thread = parseForoMensajesHtml(html, arg.idComision, arg.idTema);
       if (arg.unreadBadge > 0) {
@@ -329,6 +453,9 @@ final evaluacionesListProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchEvaluacionesHtml(idComision),
+        cacheKey: 'evaluaciones:$idComision',
+        idComision: idComision,
+        module: 'evaluacion',
       );
       return parseEvaluacionesHtml(html, idComision);
     });
@@ -338,6 +465,9 @@ final encuestasListProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchEncuestasHtml(idComision),
+        cacheKey: 'encuestas:$idComision',
+        idComision: idComision,
+        module: 'encuestas',
       );
       return parseEncuestasHtml(html, idComision);
     });
@@ -347,11 +477,14 @@ final autoguiaListProvider = FutureProvider.autoDispose
       final html = await fetchInteractiveHtmlWithAuth(
         ref,
         (r) => r.fetchAutoguiaHtml(idComision),
+        cacheKey: 'autoguia:$idComision',
+        idComision: idComision,
+        module: 'autoguia',
       );
       return parseAutoguiaHtml(html, idComision);
     });
 
-// --- Caché en memoria para imágenes autenticadas de Foros y perfiles ---
+// --- Caché en memoria y disco para imágenes autenticadas de Foros y perfiles ---
 
 int _authenticatedImageCacheGeneration = -1;
 final Map<String, Uint8List> _authenticatedImageMemoryCache =
@@ -368,16 +501,47 @@ final authenticatedImageBytesProvider = FutureProvider.autoDispose
       final cached = _authenticatedImageMemoryCache[url];
       if (cached != null) return cached;
 
-      final reader = await ref.read(mielInteractiveReaderProvider.future);
-      final bytes = await reader.downloadAuthenticatedBytes(url);
-      if (_authenticatedImageCacheGeneration != sessionGen) {
+      var offlineEnabled = false;
+      try {
+        offlineEnabled = ref.read(appSessionProvider).offlineModeEnabled;
+      } catch (_) {}
+
+      if (offlineEnabled) {
+        final mediaService = ref.read(offlineMediaServiceProvider);
+        final diskCached = await mediaService.getCachedImageBytes(url);
+        if (diskCached != null) {
+          _authenticatedImageMemoryCache[url] = diskCached;
+          return diskCached;
+        }
+      }
+
+      try {
+        final reader = await ref.read(mielInteractiveReaderProvider.future);
+        final bytes = await reader.downloadAuthenticatedBytes(url);
+        if (_authenticatedImageCacheGeneration != sessionGen) {
+          return bytes;
+        }
+        if (_authenticatedImageMemoryCache.length >= 64) {
+          _authenticatedImageMemoryCache.remove(
+            _authenticatedImageMemoryCache.keys.first,
+          );
+        }
+        _authenticatedImageMemoryCache[url] = bytes;
+
+        if (offlineEnabled) {
+          final mediaService = ref.read(offlineMediaServiceProvider);
+          unawaited(mediaService.saveCachedImageBytes(url, bytes));
+        }
+
         return bytes;
+      } catch (e) {
+        if (offlineEnabled) {
+          final mediaService = ref.read(offlineMediaServiceProvider);
+          final diskFallback = await mediaService.getCachedImageBytes(url);
+          if (diskFallback != null) {
+            return diskFallback;
+          }
+        }
+        rethrow;
       }
-      if (_authenticatedImageMemoryCache.length >= 64) {
-        _authenticatedImageMemoryCache.remove(
-          _authenticatedImageMemoryCache.keys.first,
-        );
-      }
-      _authenticatedImageMemoryCache[url] = bytes;
-      return bytes;
     });

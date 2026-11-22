@@ -183,6 +183,74 @@ class NotificationService {
     }
   }
 
+  Future<void> showUpdateNotification({
+    required String version,
+    required String releaseNotes,
+    String? assetName,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      if (!_initialized) {
+        await initialize();
+      }
+
+      final title = 'Actualización disponible: LibreMIeL v$version';
+      final cleanNotes = releaseNotes.trim();
+      final body = cleanNotes.isNotEmpty
+          ? cleanNotes.split('\n').first.trim()
+          : 'Hay una nueva versión disponible con mejoras y correcciones.';
+
+      final styleInformation = BigTextStyleInformation(
+        cleanNotes.isNotEmpty ? cleanNotes : body,
+        contentTitle: title,
+        summaryText: 'LibreMIeL v$version',
+      );
+
+      final payload = jsonEncode(
+        const NotificationTapPayload(
+          idComision: '',
+          module: 'app_update',
+          targetUrl: 'libremiel://update',
+        ).toJson(),
+      );
+
+      final details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          _androidChannelId,
+          _androidChannelName,
+          channelDescription: _androidChannelDesc,
+          importance: Importance.high,
+          priority: Priority.high,
+          color: _mielEmerald,
+          subText: 'Actualización disponible',
+          styleInformation: styleInformation,
+          category: AndroidNotificationCategory.status,
+          channelShowBadge: true,
+          enableLights: true,
+          ledColor: _mielEmerald,
+          ledOnMs: 1000,
+          ledOffMs: 500,
+        ),
+        linux: const LinuxNotificationDetails(
+          urgency: LinuxNotificationUrgency.normal,
+        ),
+        macOS: const DarwinNotificationDetails(),
+        windows: const WindowsNotificationDetails(),
+      );
+
+      final dedupeKey = 'app_update_$version';
+      await _plugin.show(
+        id: dedupeKey.hashCode & 0x7fffffff,
+        title: title,
+        body: body,
+        notificationDetails: details,
+        payload: payload,
+      );
+    } catch (e, st) {
+      debugPrint('Error emitiendo notificación de actualización: $e\n$st');
+    }
+  }
+
   static Future<void> _onNotificationTap(NotificationResponse response) async {
     // Si la app está en escritorio, traer la ventana al frente
     if (!kIsWeb &&

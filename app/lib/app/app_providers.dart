@@ -16,11 +16,28 @@ import '../platform/desktop_tray_service.dart';
 import '../platform/file_download_service.dart';
 import '../platform/notification_service.dart';
 import '../platform/secure_credentials_store.dart';
+import '../core/network/miel_server_status_classifier.dart';
+import '../core/storage/offline_media_service.dart';
+import '../core/sync/offline_prefetcher.dart';
+import '../core/theme/miel_theme.dart';
+import '../platform/updater/updater_controller.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(db.close);
   return db;
+});
+
+final offlineMediaServiceProvider = Provider<OfflineMediaService>((ref) {
+  return const OfflineMediaService();
+});
+
+final offlinePrefetcherProvider = FutureProvider<OfflinePrefetcher>((
+  ref,
+) async {
+  final reader = await ref.watch(mielInteractiveReaderProvider.future);
+  final db = ref.watch(databaseProvider);
+  return OfflinePrefetcher(client: reader, database: db);
 });
 
 final credentialsStoreProvider = Provider<SecureCredentialsStore>((ref) {
@@ -92,6 +109,12 @@ class AppSessionState {
     this.globalNovedadesBadge = 0,
     this.launchAtStartup = false,
     this.autostartSupported = false,
+    this.serverStatus = MielServerStatus.online,
+    this.serverDownSince,
+    this.lastOnlineSuccessAt,
+    this.offlineModeEnabled = false,
+    this.offlineCacheMaxMb = 100,
+    this.offlinePrefetchSafeModules = false,
   });
 
   final bool isChecking;
@@ -109,6 +132,12 @@ class AppSessionState {
   final int globalNovedadesBadge;
   final bool launchAtStartup;
   final bool autostartSupported;
+  final MielServerStatus serverStatus;
+  final DateTime? serverDownSince;
+  final DateTime? lastOnlineSuccessAt;
+  final bool offlineModeEnabled;
+  final int offlineCacheMaxMb;
+  final bool offlinePrefetchSafeModules;
 
   AppSessionState copyWith({
     bool? isChecking,
@@ -127,6 +156,13 @@ class AppSessionState {
     int? globalNovedadesBadge,
     bool? launchAtStartup,
     bool? autostartSupported,
+    MielServerStatus? serverStatus,
+    DateTime? serverDownSince,
+    bool clearServerDownSince = false,
+    DateTime? lastOnlineSuccessAt,
+    bool? offlineModeEnabled,
+    int? offlineCacheMaxMb,
+    bool? offlinePrefetchSafeModules,
   }) {
     return AppSessionState(
       isChecking: isChecking ?? this.isChecking,
@@ -146,6 +182,15 @@ class AppSessionState {
       globalNovedadesBadge: globalNovedadesBadge ?? this.globalNovedadesBadge,
       launchAtStartup: launchAtStartup ?? this.launchAtStartup,
       autostartSupported: autostartSupported ?? this.autostartSupported,
+      serverStatus: serverStatus ?? this.serverStatus,
+      serverDownSince: clearServerDownSince
+          ? null
+          : (serverDownSince ?? this.serverDownSince),
+      lastOnlineSuccessAt: lastOnlineSuccessAt ?? this.lastOnlineSuccessAt,
+      offlineModeEnabled: offlineModeEnabled ?? this.offlineModeEnabled,
+      offlineCacheMaxMb: offlineCacheMaxMb ?? this.offlineCacheMaxMb,
+      offlinePrefetchSafeModules:
+          offlinePrefetchSafeModules ?? this.offlinePrefetchSafeModules,
     );
   }
 }
@@ -185,7 +230,9 @@ class AppSessionController extends Notifier<AppSessionState> {
     final notifService = ref.read(notificationServiceProvider);
     final autostart = ref.read(autostartServiceProvider);
 
-    await notifService.initialize();
+    try {
+      await notifService.initialize();
+    } catch (_) {}
 
     final interval = await db.getSyncIntervalMinutes();
     final forumMode = await db.getForumSyncMode();
@@ -225,6 +272,9 @@ class AppSessionController extends Notifier<AppSessionState> {
     final lastSyncAt = lastCycle1Raw != null
         ? DateTime.tryParse(lastCycle1Raw)
         : null;
+    final offlineModeEnabled = await db.getOfflineModeEnabled();
+    final offlineCacheMaxMb = await db.getOfflineCacheMaxMb();
+    final offlinePrefetch = await db.getOfflinePrefetchSafeModules();
 
     state = state.copyWith(
       isChecking: false,
@@ -240,6 +290,9 @@ class AppSessionController extends Notifier<AppSessionState> {
       launchAtStartup: launchAtStartup,
       autostartSupported: autostartSupported,
       lastSyncAt: lastSyncAt,
+      offlineModeEnabled: offlineModeEnabled,
+      offlineCacheMaxMb: offlineCacheMaxMb,
+      offlinePrefetchSafeModules: offlinePrefetch,
     );
 
     if (authenticated) {
@@ -248,6 +301,11 @@ class AppSessionController extends Notifier<AppSessionState> {
         unawaited(syncNow(includeCycle2: false));
       }
     }
+
+    // Comprobar actualizaciones de la app en segundo plano (respetando frecuencia de 24h)
+    unawaited(
+      ref.read(updaterProvider.notifier).checkForUpdates(manual: false),
+    );
   }
 
   Future<MielCredentials?> loadActiveCredentials() async {
@@ -296,9 +354,12 @@ class AppSessionController extends Notifier<AppSessionState> {
     if (!forceRelogin) {
       try {
         if (await client.isLogged()) {
+          reportServerStatus(MielServerStatus.online);
           return true;
         }
-      } catch (_) {}
+      } catch (e) {
+        reportServerStatus(classifyMielNetworkError(e));
+      }
     }
 
     final creds = await loadActiveCredentials();
@@ -314,11 +375,17 @@ class AppSessionController extends Notifier<AppSessionState> {
     if (gen != _sessionGeneration) return false;
 
     if (loginRes.isSuccess) {
+      reportServerStatus(MielServerStatus.online);
       await db.deleteSetting(SettingKeys.accountPausedReason);
       if (state.authPausedReason != null) {
         state = state.copyWith(clearAuthPausedReason: true);
       }
       return true;
+    }
+
+    if (loginRes.status == MielAuthStatus.networkError) {
+      reportServerStatus(MielServerStatus.mielDown);
+      return false;
     }
 
     if (loginRes.status == MielAuthStatus.invalidCredentials ||
@@ -483,14 +550,92 @@ class AppSessionController extends Notifier<AppSessionState> {
         clearAuthPausedReason: !summary1.authPaused,
         lastSyncMessage: msg,
         lastSyncAt: DateTime.now(),
+        serverStatus: MielServerStatus.online,
+        lastOnlineSuccessAt: DateTime.now(),
+        clearServerDownSince: true,
       );
+
+      // Precarga segura de solo lectura si está habilitada por el usuario
+      if (state.offlineModeEnabled &&
+          state.offlinePrefetchSafeModules &&
+          !summary1.authPaused) {
+        try {
+          final prefetcher = await ref.read(offlinePrefetcherProvider.future);
+          final activeSubjects = await db.getAllSubjects();
+          await prefetcher.prefetchSafeModules(
+            activeSubjects: activeSubjects
+                .where((s) => !s.isEffectivelyHidden)
+                .toList(),
+            isCancelled: isCancelled,
+            maxCacheMb: state.offlineCacheMaxMb,
+          );
+        } catch (_) {}
+      }
     } catch (e) {
       if (isCancelled()) return;
+      final status = classifyMielNetworkError(e);
       state = state.copyWith(
         isSyncing: false,
         lastSyncMessage: 'Error durante la sincronización: $e',
+        serverStatus: status,
+        serverDownSince: state.serverDownSince ?? DateTime.now(),
       );
     }
+  }
+
+  void reportServerStatus(MielServerStatus status) {
+    if (state.serverStatus == status) return;
+    final now = DateTime.now();
+    state = state.copyWith(
+      serverStatus: status,
+      serverDownSince: status == MielServerStatus.online
+          ? null
+          : (state.serverDownSince ?? now),
+      clearServerDownSince: status == MielServerStatus.online,
+      lastOnlineSuccessAt: status == MielServerStatus.online
+          ? now
+          : state.lastOnlineSuccessAt,
+    );
+  }
+
+  Future<void> updateOfflineModeEnabled(bool enabled) async {
+    final db = ref.read(databaseProvider);
+    await db.setSetting(
+      SettingKeys.offlineModeEnabled,
+      enabled ? 'true' : 'false',
+    );
+    if (!enabled) {
+      await db.clearOfflineCache();
+      await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
+    }
+    state = state.copyWith(offlineModeEnabled: enabled);
+  }
+
+  Future<void> updateOfflinePrefetchSafeModules(bool enabled) async {
+    final db = ref.read(databaseProvider);
+    await db.setSetting(
+      SettingKeys.offlinePrefetchSafeModules,
+      enabled ? 'true' : 'false',
+    );
+    state = state.copyWith(offlinePrefetchSafeModules: enabled);
+  }
+
+  Future<void> updateOfflineCacheMaxMb(int maxMb) async {
+    final safeMb = maxMb < 10 ? 10 : maxMb;
+    final db = ref.read(databaseProvider);
+    await db.setSetting(SettingKeys.offlineCacheMaxMb, safeMb.toString());
+    await db.pruneOfflineCacheToQuota(maxCacheMb: safeMb);
+    state = state.copyWith(offlineCacheMaxMb: safeMb);
+  }
+
+  Future<void> clearOfflineCache() async {
+    final db = ref.read(databaseProvider);
+    await db.clearOfflineCache();
+    await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
+  }
+
+  Future<void> retryConnection() async {
+    await syncNow(includeCycle2: true, ignoreAuthPause: true);
   }
 
   Future<void> updateSyncInterval(int minutes) async {
@@ -575,6 +720,7 @@ class AppSessionController extends Notifier<AppSessionState> {
 
     if (wipeLocalData) {
       await db.clearAllLocalData();
+      await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
       await db.setSetting(SettingKeys.themeMode, preservedTheme.name);
     }
 

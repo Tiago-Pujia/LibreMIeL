@@ -3690,6 +3690,481 @@ class DownloadedResourcesCompanion extends UpdateCompanion<DownloadedResource> {
   }
 }
 
+class $OfflinePageCacheTable extends OfflinePageCache
+    with TableInfo<$OfflinePageCacheTable, OfflinePageCacheData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OfflinePageCacheTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cacheKeyMeta = const VerificationMeta(
+    'cacheKey',
+  );
+  @override
+  late final GeneratedColumn<String> cacheKey = GeneratedColumn<String>(
+    'cache_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idComisionMeta = const VerificationMeta(
+    'idComision',
+  );
+  @override
+  late final GeneratedColumn<String> idComision = GeneratedColumn<String>(
+    'id_comision',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _moduleMeta = const VerificationMeta('module');
+  @override
+  late final GeneratedColumn<String> module = GeneratedColumn<String>(
+    'module',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _htmlContentMeta = const VerificationMeta(
+    'htmlContent',
+  );
+  @override
+  late final GeneratedColumn<String> htmlContent = GeneratedColumn<String>(
+    'html_content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  @override
+  late final GeneratedColumn<BigInt> sizeBytes = GeneratedColumn<BigInt>(
+    'size_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.bigInt,
+    requiredDuringInsert: false,
+    defaultValue: Constant(BigInt.zero),
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastAccessedAtMeta = const VerificationMeta(
+    'lastAccessedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastAccessedAt =
+      GeneratedColumn<DateTime>(
+        'last_accessed_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cacheKey,
+    idComision,
+    module,
+    htmlContent,
+    sizeBytes,
+    cachedAt,
+    lastAccessedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'offline_page_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<OfflinePageCacheData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cache_key')) {
+      context.handle(
+        _cacheKeyMeta,
+        cacheKey.isAcceptableOrUnknown(data['cache_key']!, _cacheKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cacheKeyMeta);
+    }
+    if (data.containsKey('id_comision')) {
+      context.handle(
+        _idComisionMeta,
+        idComision.isAcceptableOrUnknown(data['id_comision']!, _idComisionMeta),
+      );
+    }
+    if (data.containsKey('module')) {
+      context.handle(
+        _moduleMeta,
+        module.isAcceptableOrUnknown(data['module']!, _moduleMeta),
+      );
+    }
+    if (data.containsKey('html_content')) {
+      context.handle(
+        _htmlContentMeta,
+        htmlContent.isAcceptableOrUnknown(
+          data['html_content']!,
+          _htmlContentMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_htmlContentMeta);
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    if (data.containsKey('last_accessed_at')) {
+      context.handle(
+        _lastAccessedAtMeta,
+        lastAccessedAt.isAcceptableOrUnknown(
+          data['last_accessed_at']!,
+          _lastAccessedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastAccessedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cacheKey};
+  @override
+  OfflinePageCacheData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return OfflinePageCacheData(
+      cacheKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cache_key'],
+      )!,
+      idComision: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id_comision'],
+      )!,
+      module: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}module'],
+      )!,
+      htmlContent: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}html_content'],
+      )!,
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.bigInt,
+        data['${effectivePrefix}size_bytes'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+      lastAccessedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_accessed_at'],
+      )!,
+    );
+  }
+
+  @override
+  $OfflinePageCacheTable createAlias(String alias) {
+    return $OfflinePageCacheTable(attachedDatabase, alias);
+  }
+}
+
+class OfflinePageCacheData extends DataClass
+    implements Insertable<OfflinePageCacheData> {
+  final String cacheKey;
+  final String idComision;
+  final String module;
+  final String htmlContent;
+  final BigInt sizeBytes;
+  final DateTime cachedAt;
+  final DateTime lastAccessedAt;
+  const OfflinePageCacheData({
+    required this.cacheKey,
+    required this.idComision,
+    required this.module,
+    required this.htmlContent,
+    required this.sizeBytes,
+    required this.cachedAt,
+    required this.lastAccessedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cache_key'] = Variable<String>(cacheKey);
+    map['id_comision'] = Variable<String>(idComision);
+    map['module'] = Variable<String>(module);
+    map['html_content'] = Variable<String>(htmlContent);
+    map['size_bytes'] = Variable<BigInt>(sizeBytes);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    map['last_accessed_at'] = Variable<DateTime>(lastAccessedAt);
+    return map;
+  }
+
+  OfflinePageCacheCompanion toCompanion(bool nullToAbsent) {
+    return OfflinePageCacheCompanion(
+      cacheKey: Value(cacheKey),
+      idComision: Value(idComision),
+      module: Value(module),
+      htmlContent: Value(htmlContent),
+      sizeBytes: Value(sizeBytes),
+      cachedAt: Value(cachedAt),
+      lastAccessedAt: Value(lastAccessedAt),
+    );
+  }
+
+  factory OfflinePageCacheData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return OfflinePageCacheData(
+      cacheKey: serializer.fromJson<String>(json['cacheKey']),
+      idComision: serializer.fromJson<String>(json['idComision']),
+      module: serializer.fromJson<String>(json['module']),
+      htmlContent: serializer.fromJson<String>(json['htmlContent']),
+      sizeBytes: serializer.fromJson<BigInt>(json['sizeBytes']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+      lastAccessedAt: serializer.fromJson<DateTime>(json['lastAccessedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cacheKey': serializer.toJson<String>(cacheKey),
+      'idComision': serializer.toJson<String>(idComision),
+      'module': serializer.toJson<String>(module),
+      'htmlContent': serializer.toJson<String>(htmlContent),
+      'sizeBytes': serializer.toJson<BigInt>(sizeBytes),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+      'lastAccessedAt': serializer.toJson<DateTime>(lastAccessedAt),
+    };
+  }
+
+  OfflinePageCacheData copyWith({
+    String? cacheKey,
+    String? idComision,
+    String? module,
+    String? htmlContent,
+    BigInt? sizeBytes,
+    DateTime? cachedAt,
+    DateTime? lastAccessedAt,
+  }) => OfflinePageCacheData(
+    cacheKey: cacheKey ?? this.cacheKey,
+    idComision: idComision ?? this.idComision,
+    module: module ?? this.module,
+    htmlContent: htmlContent ?? this.htmlContent,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    cachedAt: cachedAt ?? this.cachedAt,
+    lastAccessedAt: lastAccessedAt ?? this.lastAccessedAt,
+  );
+  OfflinePageCacheData copyWithCompanion(OfflinePageCacheCompanion data) {
+    return OfflinePageCacheData(
+      cacheKey: data.cacheKey.present ? data.cacheKey.value : this.cacheKey,
+      idComision: data.idComision.present
+          ? data.idComision.value
+          : this.idComision,
+      module: data.module.present ? data.module.value : this.module,
+      htmlContent: data.htmlContent.present
+          ? data.htmlContent.value
+          : this.htmlContent,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+      lastAccessedAt: data.lastAccessedAt.present
+          ? data.lastAccessedAt.value
+          : this.lastAccessedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OfflinePageCacheData(')
+          ..write('cacheKey: $cacheKey, ')
+          ..write('idComision: $idComision, ')
+          ..write('module: $module, ')
+          ..write('htmlContent: $htmlContent, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('lastAccessedAt: $lastAccessedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    cacheKey,
+    idComision,
+    module,
+    htmlContent,
+    sizeBytes,
+    cachedAt,
+    lastAccessedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OfflinePageCacheData &&
+          other.cacheKey == this.cacheKey &&
+          other.idComision == this.idComision &&
+          other.module == this.module &&
+          other.htmlContent == this.htmlContent &&
+          other.sizeBytes == this.sizeBytes &&
+          other.cachedAt == this.cachedAt &&
+          other.lastAccessedAt == this.lastAccessedAt);
+}
+
+class OfflinePageCacheCompanion extends UpdateCompanion<OfflinePageCacheData> {
+  final Value<String> cacheKey;
+  final Value<String> idComision;
+  final Value<String> module;
+  final Value<String> htmlContent;
+  final Value<BigInt> sizeBytes;
+  final Value<DateTime> cachedAt;
+  final Value<DateTime> lastAccessedAt;
+  final Value<int> rowid;
+  const OfflinePageCacheCompanion({
+    this.cacheKey = const Value.absent(),
+    this.idComision = const Value.absent(),
+    this.module = const Value.absent(),
+    this.htmlContent = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.lastAccessedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  OfflinePageCacheCompanion.insert({
+    required String cacheKey,
+    this.idComision = const Value.absent(),
+    this.module = const Value.absent(),
+    required String htmlContent,
+    this.sizeBytes = const Value.absent(),
+    required DateTime cachedAt,
+    required DateTime lastAccessedAt,
+    this.rowid = const Value.absent(),
+  }) : cacheKey = Value(cacheKey),
+       htmlContent = Value(htmlContent),
+       cachedAt = Value(cachedAt),
+       lastAccessedAt = Value(lastAccessedAt);
+  static Insertable<OfflinePageCacheData> custom({
+    Expression<String>? cacheKey,
+    Expression<String>? idComision,
+    Expression<String>? module,
+    Expression<String>? htmlContent,
+    Expression<BigInt>? sizeBytes,
+    Expression<DateTime>? cachedAt,
+    Expression<DateTime>? lastAccessedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cacheKey != null) 'cache_key': cacheKey,
+      if (idComision != null) 'id_comision': idComision,
+      if (module != null) 'module': module,
+      if (htmlContent != null) 'html_content': htmlContent,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (lastAccessedAt != null) 'last_accessed_at': lastAccessedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  OfflinePageCacheCompanion copyWith({
+    Value<String>? cacheKey,
+    Value<String>? idComision,
+    Value<String>? module,
+    Value<String>? htmlContent,
+    Value<BigInt>? sizeBytes,
+    Value<DateTime>? cachedAt,
+    Value<DateTime>? lastAccessedAt,
+    Value<int>? rowid,
+  }) {
+    return OfflinePageCacheCompanion(
+      cacheKey: cacheKey ?? this.cacheKey,
+      idComision: idComision ?? this.idComision,
+      module: module ?? this.module,
+      htmlContent: htmlContent ?? this.htmlContent,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      cachedAt: cachedAt ?? this.cachedAt,
+      lastAccessedAt: lastAccessedAt ?? this.lastAccessedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cacheKey.present) {
+      map['cache_key'] = Variable<String>(cacheKey.value);
+    }
+    if (idComision.present) {
+      map['id_comision'] = Variable<String>(idComision.value);
+    }
+    if (module.present) {
+      map['module'] = Variable<String>(module.value);
+    }
+    if (htmlContent.present) {
+      map['html_content'] = Variable<String>(htmlContent.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<BigInt>(sizeBytes.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    if (lastAccessedAt.present) {
+      map['last_accessed_at'] = Variable<DateTime>(lastAccessedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OfflinePageCacheCompanion(')
+          ..write('cacheKey: $cacheKey, ')
+          ..write('idComision: $idComision, ')
+          ..write('module: $module, ')
+          ..write('htmlContent: $htmlContent, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('lastAccessedAt: $lastAccessedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3704,6 +4179,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $DownloadedResourcesTable downloadedResources =
       $DownloadedResourcesTable(this);
+  late final $OfflinePageCacheTable offlinePageCache = $OfflinePageCacheTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3715,6 +4193,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     notificationLogs,
     appSettings,
     downloadedResources,
+    offlinePageCache,
   ];
 }
 
@@ -5586,6 +6065,271 @@ typedef $$DownloadedResourcesTableProcessedTableManager =
       DownloadedResource,
       PrefetchHooks Function()
     >;
+typedef $$OfflinePageCacheTableCreateCompanionBuilder =
+    OfflinePageCacheCompanion Function({
+      required String cacheKey,
+      Value<String> idComision,
+      Value<String> module,
+      required String htmlContent,
+      Value<BigInt> sizeBytes,
+      required DateTime cachedAt,
+      required DateTime lastAccessedAt,
+      Value<int> rowid,
+    });
+typedef $$OfflinePageCacheTableUpdateCompanionBuilder =
+    OfflinePageCacheCompanion Function({
+      Value<String> cacheKey,
+      Value<String> idComision,
+      Value<String> module,
+      Value<String> htmlContent,
+      Value<BigInt> sizeBytes,
+      Value<DateTime> cachedAt,
+      Value<DateTime> lastAccessedAt,
+      Value<int> rowid,
+    });
+
+class $$OfflinePageCacheTableFilterComposer
+    extends Composer<_$AppDatabase, $OfflinePageCacheTable> {
+  $$OfflinePageCacheTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cacheKey => $composableBuilder(
+    column: $table.cacheKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get idComision => $composableBuilder(
+    column: $table.idComision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get module => $composableBuilder(
+    column: $table.module,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get htmlContent => $composableBuilder(
+    column: $table.htmlContent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<BigInt> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastAccessedAt => $composableBuilder(
+    column: $table.lastAccessedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$OfflinePageCacheTableOrderingComposer
+    extends Composer<_$AppDatabase, $OfflinePageCacheTable> {
+  $$OfflinePageCacheTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cacheKey => $composableBuilder(
+    column: $table.cacheKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get idComision => $composableBuilder(
+    column: $table.idComision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get module => $composableBuilder(
+    column: $table.module,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get htmlContent => $composableBuilder(
+    column: $table.htmlContent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<BigInt> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastAccessedAt => $composableBuilder(
+    column: $table.lastAccessedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$OfflinePageCacheTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OfflinePageCacheTable> {
+  $$OfflinePageCacheTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cacheKey =>
+      $composableBuilder(column: $table.cacheKey, builder: (column) => column);
+
+  GeneratedColumn<String> get idComision => $composableBuilder(
+    column: $table.idComision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get module =>
+      $composableBuilder(column: $table.module, builder: (column) => column);
+
+  GeneratedColumn<String> get htmlContent => $composableBuilder(
+    column: $table.htmlContent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<BigInt> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastAccessedAt => $composableBuilder(
+    column: $table.lastAccessedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$OfflinePageCacheTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $OfflinePageCacheTable,
+          OfflinePageCacheData,
+          $$OfflinePageCacheTableFilterComposer,
+          $$OfflinePageCacheTableOrderingComposer,
+          $$OfflinePageCacheTableAnnotationComposer,
+          $$OfflinePageCacheTableCreateCompanionBuilder,
+          $$OfflinePageCacheTableUpdateCompanionBuilder,
+          (
+            OfflinePageCacheData,
+            BaseReferences<
+              _$AppDatabase,
+              $OfflinePageCacheTable,
+              OfflinePageCacheData
+            >,
+          ),
+          OfflinePageCacheData,
+          PrefetchHooks Function()
+        > {
+  $$OfflinePageCacheTableTableManager(
+    _$AppDatabase db,
+    $OfflinePageCacheTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OfflinePageCacheTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OfflinePageCacheTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OfflinePageCacheTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cacheKey = const Value.absent(),
+                Value<String> idComision = const Value.absent(),
+                Value<String> module = const Value.absent(),
+                Value<String> htmlContent = const Value.absent(),
+                Value<BigInt> sizeBytes = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+                Value<DateTime> lastAccessedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => OfflinePageCacheCompanion(
+                cacheKey: cacheKey,
+                idComision: idComision,
+                module: module,
+                htmlContent: htmlContent,
+                sizeBytes: sizeBytes,
+                cachedAt: cachedAt,
+                lastAccessedAt: lastAccessedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cacheKey,
+                Value<String> idComision = const Value.absent(),
+                Value<String> module = const Value.absent(),
+                required String htmlContent,
+                Value<BigInt> sizeBytes = const Value.absent(),
+                required DateTime cachedAt,
+                required DateTime lastAccessedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => OfflinePageCacheCompanion.insert(
+                cacheKey: cacheKey,
+                idComision: idComision,
+                module: module,
+                htmlContent: htmlContent,
+                sizeBytes: sizeBytes,
+                cachedAt: cachedAt,
+                lastAccessedAt: lastAccessedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$OfflinePageCacheTable, OfflinePageCacheData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $OfflinePageCacheTable,
+                    OfflinePageCacheData
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$OfflinePageCacheTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $OfflinePageCacheTable,
+      OfflinePageCacheData,
+      $$OfflinePageCacheTableFilterComposer,
+      $$OfflinePageCacheTableOrderingComposer,
+      $$OfflinePageCacheTableAnnotationComposer,
+      $$OfflinePageCacheTableCreateCompanionBuilder,
+      $$OfflinePageCacheTableUpdateCompanionBuilder,
+      (
+        OfflinePageCacheData,
+        BaseReferences<
+          _$AppDatabase,
+          $OfflinePageCacheTable,
+          OfflinePageCacheData
+        >,
+      ),
+      OfflinePageCacheData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5602,4 +6346,6 @@ class $AppDatabaseManager {
       $$AppSettingsTableTableManager(_db, _db.appSettings);
   $$DownloadedResourcesTableTableManager get downloadedResources =>
       $$DownloadedResourcesTableTableManager(_db, _db.downloadedResources);
+  $$OfflinePageCacheTableTableManager get offlinePageCache =>
+      $$OfflinePageCacheTableTableManager(_db, _db.offlinePageCache);
 }
