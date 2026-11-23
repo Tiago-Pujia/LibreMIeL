@@ -8,20 +8,23 @@ Alternativa **gratuita, libre y open source** para usar **MIeL** desde tus dispo
 
 ## 🎯 Objetivo
 
-Mejorar la experiencia diaria de cursada incorporando poco a poco funciones útiles que hoy faltan en la plataforma oficial.
+Mejorar la experiencia diaria de cursada incorporando funciones útiles que hoy faltan en la plataforma oficial, manteniendo una interfaz ágil y fiel a MIeL.
 
 **Funcionalidades principales:**
 
-- **Notificaciones en tiempo real:** enterarte al instante de novedades en Contenidos, Portafolio, Mensajería, Foros o Evaluaciones.
-
-- **Respaldo offline masivo:** descargar y respaldar **foros completos** (en Markdown, JSON y HTML offline) y **contenidos organizados** por carpeta con modo incremental.
-
-- **Sesión permanente:** inicio de sesión automático y reconexión silenciosa continua, cerrando sesión solo cuando vos lo decidas.
+- **Notificaciones y widgets:** enterate al instante de nuevos archivos, entregas, mensajes, foros o evaluaciones, y accedé directo a cada materia desde las notificaciones o desde el widget de pantalla de inicio en Android.
+- **Sincronización no invasiva:** revisa novedades en segundo plano sin borrar tus carteles rojos en la web oficial de MIeL, con filtro opcional en foros para recibir alertas solo cuando te mencionan o responden.
+- **Modo sin conexión ante caídas:** seguí consultando tus materias, contenidos, mensajes, foros y entregas visitadas incluso si te quedás sin internet o si el servidor de MIeL está caído.
+- **Experiencia fiel a MIeL:** un modelo pensado para sentirse lo más nativo posible a MIeL (en modo claro y oscuro) para leer y responder mensajes, subir entregas de Portafolio, revisar asistencias y participar en foros.
+- **Respaldo completo de materias:** descargá foros enteros y todo el material de tus materias ordenado por carpetas con un solo clic para conservar tus apuntes antes de que cierre el cuatrimestre.
+- **Sesión siempre activa:** iniciá sesión una sola vez con reconexión automática, cerrando tu cuenta únicamente cuando vos lo decidas.
+- **Actualizaciones desde la app:** mantené LibreMIeL al día con avisos de nuevas versiones y actualización directa desde la aplicación.
 
 **Próximamente:**
 
-- **Buscador global offline (Fase 6)** para encontrar archivos, mensajes, foros y entregas en todas tus materias sin conexión.
-- **Integración con IA (Fase 7)** para resumir apuntes, consultar dudas sobre el material de la cátedra y organizar el estudio.
+- **Buscador global sin conexión** para encontrar al instante cualquier archivo, mensaje, foro o entrega en todas tus materias.
+- **Asistente de estudio con IA** para resumir apuntes, consultar dudas sobre el material de la cátedra y organizar el estudio.
+- **Soporte para iPhone (iOS)** para llevar la misma experiencia local y privada al ecosistema móvil de Apple.
 
 ---
 
