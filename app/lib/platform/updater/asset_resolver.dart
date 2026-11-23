@@ -21,6 +21,33 @@ class AssetResolver {
 
       final exec = Platform.resolvedExecutable;
       if (exec.startsWith('/opt/libremiel') || exec.startsWith('/usr/')) {
+        final osReleaseFile = File('/etc/os-release');
+        if (osReleaseFile.existsSync()) {
+          try {
+            final lower = osReleaseFile.readAsStringSync().toLowerCase();
+            if (lower.contains('id=arch') ||
+                lower.contains('id_like=arch') ||
+                lower.contains('archlinux') ||
+                lower.contains('cachyos') ||
+                lower.contains('manjaro')) {
+              return LinuxInstallKind.arch;
+            }
+            if (lower.contains('id=fedora') ||
+                lower.contains('id=rhel') ||
+                lower.contains('id_like=fedora') ||
+                lower.contains('id_like="rhel') ||
+                lower.contains('opensuse')) {
+              return LinuxInstallKind.rpm;
+            }
+            if (lower.contains('id=debian') ||
+                lower.contains('id=ubuntu') ||
+                lower.contains('id_like=debian') ||
+                lower.contains('id_like=ubuntu')) {
+              return LinuxInstallKind.deb;
+            }
+          } catch (_) {}
+        }
+
         if (File('/etc/debian_version').existsSync()) {
           return LinuxInstallKind.deb;
         }
@@ -44,7 +71,7 @@ class AssetResolver {
       final res = await _androidChannel.invokeMethod<List<dynamic>>(
         'getSupportedAbis',
       );
-      if (res != null) {
+      if (res != null && res.isNotEmpty) {
         return res.map((e) => e.toString().trim()).toList();
       }
     } catch (_) {}
@@ -55,10 +82,16 @@ class AssetResolver {
   static bool isArm64Architecture() {
     final v = Platform.version.toLowerCase();
     final uname = Platform.environment['HOSTTYPE']?.toLowerCase() ?? '';
+    final winArch =
+        Platform.environment['PROCESSOR_ARCHITECTURE']?.toLowerCase() ?? '';
+    final winWow64 =
+        Platform.environment['PROCESSOR_ARCHITEW6432']?.toLowerCase() ?? '';
     return v.contains('arm64') ||
         v.contains('aarch64') ||
         uname.contains('arm64') ||
-        uname.contains('aarch64');
+        uname.contains('aarch64') ||
+        winArch.contains('arm64') ||
+        winWow64.contains('arm64');
   }
 
   /// Selecciona el asset más adecuado de la lista de assets de un release en GitHub.

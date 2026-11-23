@@ -251,6 +251,62 @@ class NotificationService {
     }
   }
 
+  /// Notifica que los servidores de MIeL volvieron a responder normalmente tras una caída.
+  Future<void> showMielRecoveredNotification() async {
+    if (kIsWeb) return;
+    try {
+      if (!_initialized) {
+        await initialize();
+      }
+
+      const title = 'MIeL volvió a estar en línea';
+      const body =
+          'Los servidores de MIeL (UNLaM) respondieron normalmente y se reanudó la sincronización.';
+
+      final payload = jsonEncode(
+        const NotificationTapPayload(
+          idComision: 'sistema',
+          module: 'sistema',
+          targetUrl: '',
+        ).toJson(),
+      );
+
+      final details = NotificationDetails(
+        android: const AndroidNotificationDetails(
+          _androidChannelId,
+          _androidChannelName,
+          channelDescription: _androidChannelDesc,
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+          color: _mielEmerald,
+          subText: 'Conexión restablecida',
+          category: AndroidNotificationCategory.status,
+          enableLights: true,
+          ledColor: _mielEmerald,
+          ledOnMs: 1000,
+          ledOffMs: 500,
+        ),
+        linux: const LinuxNotificationDetails(
+          urgency: LinuxNotificationUrgency.normal,
+        ),
+        macOS: const DarwinNotificationDetails(),
+        windows: const WindowsNotificationDetails(),
+      );
+
+      await _plugin.show(
+        id: 'miel_recovered'.hashCode & 0x7fffffff,
+        title: title,
+        body: body,
+        notificationDetails: details,
+        payload: payload,
+      );
+    } catch (e, st) {
+      debugPrint(
+        'Error emitiendo notificación de recuperación de MIeL: $e\n$st',
+      );
+    }
+  }
+
   static Future<void> _onNotificationTap(NotificationResponse response) async {
     // Si la app está en escritorio, traer la ventana al frente
     if (!kIsWeb &&

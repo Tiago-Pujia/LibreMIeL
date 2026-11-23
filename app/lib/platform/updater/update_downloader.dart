@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'sha256_verifier.dart';
+import 'update_checker.dart';
 import 'update_models.dart';
 
 /// Gestor de descarga segura de assets con seguimiento de progreso y verificación SHA-256 obligatoria.
@@ -35,10 +36,25 @@ class UpdateDownloader {
   Future<File> downloadAndVerify({
     required ReleaseInfo release,
     void Function(UpdateProgress progress)? onProgress,
+    void Function()? onVerifying,
     CancelToken? cancelToken,
   }) async {
+    if (!Sha256Verifier.isValidSha256(release.expectedSha256)) {
+      throw const MissingChecksumException();
+    }
+    if (!isTrustedGitHubDownloadUrl(release.downloadUrl)) {
+      throw const FormatException(
+        'La URL de descarga no pertenece a un dominio HTTPS oficial de GitHub.',
+      );
+    }
+
+    final safeFileName = p.basename(release.assetName.trim());
+    if (safeFileName.isEmpty || safeFileName == '.' || safeFileName == '..') {
+      throw const FormatException('Nombre de artefacto de descarga inválido.');
+    }
+
     final dir = await getUpdatesDirectory();
-    final targetFile = File(p.join(dir.path, release.assetName));
+    final targetFile = File(p.join(dir.path, safeFileName));
 
     // Si ya existe un archivo previo con el mismo nombre, eliminarlo
     if (targetFile.existsSync()) {
@@ -51,6 +67,7 @@ class UpdateDownloader {
       release.downloadUrl,
       targetFile.path,
       cancelToken: cancelToken,
+      deleteOnError: true,
       onReceiveProgress: (received, total) {
         if (onProgress != null) {
           onProgress(
@@ -63,10 +80,9 @@ class UpdateDownloader {
       },
     );
 
-    // Verificación obligatoria de SHA-256
-    if (release.expectedSha256.isNotEmpty) {
-      await Sha256Verifier.verifyOrDelete(targetFile, release.expectedSha256);
-    }
+    // Verificación criptográfica obligatoria de SHA-256 (Invariante #10)
+    onVerifying?.call();
+    await Sha256Verifier.verifyOrDelete(targetFile, release.expectedSha256);
 
     return targetFile;
   }

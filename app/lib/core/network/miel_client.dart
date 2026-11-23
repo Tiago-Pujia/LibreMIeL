@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/miel_models.dart';
 import '../parsers/text_normalizer.dart';
+import 'miel_server_status_classifier.dart';
 import 'miel_upload_helpers.dart';
 
 export '../parsers/text_normalizer.dart' show kMielBaseUrl;
@@ -332,7 +333,17 @@ class DioMielClient implements MielInteractiveReader, MielWriter {
         // 1. Limpiar cookies previas y obtener PHPSESSID/SESSID limpios en /principal/home/
         //    para evitar arrastre de sesión al cambiar de cuenta.
         await _cookieJar.deleteAll();
-        await _requestWithBackoff(() => _dio.get<String>('/principal/home/'));
+        final homeResp = await _requestWithBackoff(
+          () => _dio.get<String>('/principal/home/'),
+        );
+        if (isLikelyMielMaintenanceHtml(homeResp.data ?? '')) {
+          return const MielLoginResult(
+            status: MielAuthStatus.networkError,
+            message:
+                'Los servidores de MIeL no responden o están en mantenimiento.',
+            networkErrorStatus: MielServerStatus.mielDown,
+          );
+        }
 
         // 2. Enviar credenciales en application/x-www-form-urlencoded (sin CSRF/CAPTCHA)
         final payload = <String, dynamic>{
@@ -356,6 +367,15 @@ class DioMielClient implements MielInteractiveReader, MielWriter {
         );
 
         final rawBody = (response.data ?? '').trim();
+        if (isLikelyMielMaintenanceHtml(rawBody)) {
+          return const MielLoginResult(
+            status: MielAuthStatus.networkError,
+            message:
+                'Los servidores de MIeL no responden o están en mantenimiento.',
+            networkErrorStatus: MielServerStatus.mielDown,
+          );
+        }
+
         Map<String, dynamic> decoded;
         try {
           final parsed = jsonDecode(rawBody);
@@ -405,6 +425,25 @@ class DioMielClient implements MielInteractiveReader, MielWriter {
           status: MielAuthStatus.networkError,
           message:
               'Error de red al conectar con MIeL: ${e.message ?? e.type.name}',
+          networkErrorStatus: classifyMielNetworkError(e),
+        );
+      } on SocketException catch (e) {
+        return MielLoginResult(
+          status: MielAuthStatus.networkError,
+          message: 'Error de red al conectar con MIeL: ${e.message}',
+          networkErrorStatus: classifyMielNetworkError(e),
+        );
+      } on TimeoutException catch (e) {
+        return MielLoginResult(
+          status: MielAuthStatus.networkError,
+          message: 'Tiempo de espera agotado al conectar con MIeL: $e',
+          networkErrorStatus: MielServerStatus.mielDown,
+        );
+      } on HttpException catch (e) {
+        return MielLoginResult(
+          status: MielAuthStatus.networkError,
+          message: 'Error HTTP al conectar con MIeL: ${e.message}',
+          networkErrorStatus: classifyMielNetworkError(e),
         );
       }
     });

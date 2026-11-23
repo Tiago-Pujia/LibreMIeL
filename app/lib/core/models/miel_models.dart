@@ -13,11 +13,17 @@ enum MielAuthStatus {
 enum MielServerStatus { online, mielDown, deviceOffline }
 
 class MielLoginResult {
-  const MielLoginResult({required this.status, this.rawCode, this.message});
+  const MielLoginResult({
+    required this.status,
+    this.rawCode,
+    this.message,
+    this.networkErrorStatus,
+  });
 
   final MielAuthStatus status;
   final int? rawCode;
   final String? message;
+  final MielServerStatus? networkErrorStatus;
 
   bool get isSuccess => status == MielAuthStatus.ok;
 }
@@ -984,6 +990,7 @@ class SyncRunSummary {
     this.authPaused = false,
     this.authErrorMessage,
     this.warnings = const [],
+    this.networkErrorStatus,
   });
 
   final int cycle;
@@ -992,4 +999,5 @@ class SyncRunSummary {
   final bool authPaused;
   final String? authErrorMessage;
   final List<String> warnings;
+  final MielServerStatus? networkErrorStatus;
 }

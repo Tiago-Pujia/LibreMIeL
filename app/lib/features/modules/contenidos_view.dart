@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -624,19 +626,69 @@ class _ContenidosViewState extends ConsumerState<ContenidosView> {
   ) async {
     if (item.url.isEmpty) return;
 
+    final serverStatus = ref.read(appSessionProvider).serverStatus;
+    final isOffline = serverStatus != MielServerStatus.online;
+
     if (item.isExternal) {
+      if (serverStatus == MielServerStatus.deviceOffline) {
+        showMielStatusToast(
+          context,
+          message: 'Sin conexión a internet: no se puede abrir el enlace externo ahora.',
+          isError: true,
+        );
+        return;
+      }
       setState(() => _locallyDownloadedIds.add(item.idElemento));
       await openMielExternalUrl(item.url);
-      try {
-        final reader = await ref.read(mielInteractiveReaderProvider.future);
-        await reader.markExternalContentDownloaded(
-          item.idComision,
-          item.idElemento,
-        );
-      } catch (_) {}
+      if (!isOffline) {
+        try {
+          final reader = await ref.read(mielInteractiveReaderProvider.future);
+          await reader.markExternalContentDownloaded(
+            item.idComision,
+            item.idElemento,
+          );
+        } catch (_) {}
+      }
       return;
     }
 
+    // Integración con Fase 4 (DownloadedResources): si hay copia local en disco y estamos offline, abrirla directo
+    final db = ref.read(databaseProvider);
+    final localRec = await db.getDownloadedResource(
+      idComision: item.idComision,
+      module: 'contenidos',
+      resourceId: item.idElemento,
+    );
+    final hasLocalFile =
+        localRec != null &&
+        localRec.localPath.isNotEmpty &&
+        File(localRec.localPath).existsSync();
+
+    if (isOffline) {
+      if (hasLocalFile) {
+        final opened = await ref
+            .read(fileDownloadServiceProvider)
+            .openDownloadedFile(localRec.localPath);
+        if (context.mounted) {
+          showMielStatusToast(
+            context,
+            message: opened
+                ? 'Abriendo copia local: ${localRec.title}'
+                : 'No se pudo abrir el archivo local (${localRec.localPath}).',
+            isError: !opened,
+          );
+        }
+      } else if (context.mounted) {
+        showMielStatusToast(
+          context,
+          message: 'Este archivo no fue descargado previamente y requiere que MIeL vuelva a estar en línea.',
+          isError: true,
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
     await triggerMielFileDownload(
       context,
       ref,
@@ -646,6 +698,18 @@ class _ContenidosViewState extends ConsumerState<ContenidosView> {
         if (mounted) {
           setState(() => _locallyDownloadedIds.add(item.idElemento));
         }
+      },
+      onDownloadedResult: (result) async {
+        try {
+          await db.recordDownloadedResource(
+            idComision: item.idComision,
+            module: 'contenidos',
+            resourceId: item.idElemento,
+            title: item.title.isNotEmpty ? item.title : result.fileName,
+            localPath: result.filePath,
+            fileSize: BigInt.from(result.bytesWritten),
+          );
+        } catch (_) {}
       },
     );
   }

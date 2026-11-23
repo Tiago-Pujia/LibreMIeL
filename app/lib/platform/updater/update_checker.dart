@@ -1,9 +1,25 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'asset_resolver.dart';
 import 'sha256_verifier.dart';
 import 'update_models.dart';
+
+/// Valida que una URL de descarga o manifiesto pertenezca a los dominios HTTPS
+/// oficiales de GitHub Releases.
+bool isTrustedGitHubDownloadUrl(String rawUrl) {
+  final uri = Uri.tryParse(rawUrl.trim());
+  if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+    return false;
+  }
+  final host = uri.host.toLowerCase();
+  return host == 'github.com' ||
+      host == 'api.github.com' ||
+      host.endsWith('.githubusercontent.com');
+}
 
 /// Excepción para límites de cuota de la API de GitHub.
 class GitHubRateLimitException implements Exception {
@@ -37,6 +53,10 @@ class UpdateChecker {
     String? currentVersionOverride,
     String? repoOwner,
     String? repoName,
+    this.overrideOs,
+    this.overrideIsArm64,
+    this.overrideLinuxKind,
+    Future<List<String>> Function()? androidAbisProvider,
   }) : _dio =
            dio ??
            Dio(
@@ -54,12 +74,18 @@ class UpdateChecker {
            ),
        _currentVersionOverride = currentVersionOverride?.trim(),
        _repoOwner = repoOwner ?? 'Tiago-Pujia',
-       _repoName = repoName ?? 'LibreMIeL';
+       _repoName = repoName ?? 'LibreMIeL',
+       _androidAbisProvider =
+           androidAbisProvider ?? AssetResolver.getAndroidSupportedAbis;
 
   final Dio _dio;
   final String? _currentVersionOverride;
   final String _repoOwner;
   final String _repoName;
+  final String? overrideOs;
+  final bool? overrideIsArm64;
+  final LinuxInstallKind? overrideLinuxKind;
+  final Future<List<String>> Function() _androidAbisProvider;
 
   /// Obtiene la versión actual de la app instalada.
   Future<SemVer> getCurrentVersion() async {
@@ -152,40 +178,73 @@ class UpdateChecker {
       }
     }
 
-    // Buscar y descargar SHA256SUMS.txt si está disponible
-    final checksumAsset = assets.firstWhere(
-      (a) => (a['name'] as String? ?? '').toLowerCase() == 'sha256sums.txt',
-      orElse: () => const {},
-    );
-
-    var sha256Map = <String, String>{};
-    if (checksumAsset.isNotEmpty) {
-      final shaUrl = checksumAsset['browser_download_url'] as String? ?? '';
-      if (shaUrl.isNotEmpty) {
-        try {
-          final shaResp = await _dio.get(
-            shaUrl,
-            options: Options(responseType: ResponseType.plain),
-          );
-          if (shaResp.statusCode == 200 && shaResp.data != null) {
-            sha256Map = Sha256Verifier.parseSha256Sums(shaResp.data.toString());
-          }
-        } catch (_) {
-          // Si falla la descarga del archivo de checksums, se intentará luego o fallará la verificación
-        }
-      }
+    // Resolver ABIs reales del dispositivo en Android antes de seleccionar el asset
+    List<String>? androidAbis;
+    final effectiveOs =
+        overrideOs ?? (!kIsWeb && Platform.isAndroid ? 'android' : null);
+    if (effectiveOs == 'android') {
+      androidAbis = await _androidAbisProvider();
     }
 
     // Seleccionar el asset óptimo para la plataforma actual
-    final bestAsset = AssetResolver.selectBestAsset(assets: assets);
+    final bestAsset = AssetResolver.selectBestAsset(
+      assets: assets,
+      overrideOs: overrideOs,
+      overrideIsArm64: overrideIsArm64,
+      overrideAndroidAbis: androidAbis,
+      overrideLinuxKind: overrideLinuxKind,
+    );
     if (bestAsset == null) {
       return UpdateCheckResult(isNewVersionAvailable: false, etag: newEtag);
     }
 
     final assetName = bestAsset['name'] as String? ?? '';
     final downloadUrl = bestAsset['browser_download_url'] as String? ?? '';
-    final assetSize = bestAsset['size'] as int? ?? 0;
+    final assetSize = (bestAsset['size'] as num?)?.toInt() ?? 0;
+    if (assetName.isEmpty || !isTrustedGitHubDownloadUrl(downloadUrl)) {
+      throw const FormatException(
+        'El artefacto de actualización no proviene de una URL HTTPS oficial de GitHub.',
+      );
+    }
+
+    // Invariante #10: SHA256SUMS.txt es obligatorio antes de ofrecer la descarga
+    final checksumAsset = assets.firstWhere(
+      (a) => (a['name'] as String? ?? '').toLowerCase() == 'sha256sums.txt',
+      orElse: () => const {},
+    );
+    final shaUrl = checksumAsset['browser_download_url'] as String? ?? '';
+    if (checksumAsset.isEmpty || !isTrustedGitHubDownloadUrl(shaUrl)) {
+      throw const MissingChecksumException(
+        'El release no incluye un archivo SHA256SUMS.txt oficial válido. '
+        'No se puede verificar la integridad de la actualización.',
+      );
+    }
+
+    final Response shaResp;
+    try {
+      shaResp = await _dio.get(
+        shaUrl,
+        options: Options(responseType: ResponseType.plain),
+      );
+    } catch (_) {
+      throw const MissingChecksumException(
+        'No se pudo descargar SHA256SUMS.txt para verificar la integridad del release.',
+      );
+    }
+
+    if (shaResp.statusCode != 200 || shaResp.data == null) {
+      throw const MissingChecksumException(
+        'SHA256SUMS.txt respondió con un estado inválido y no permite verificar la actualización.',
+      );
+    }
+
+    final sha256Map = Sha256Verifier.parseSha256Sums(shaResp.data.toString());
     final expectedSha256 = sha256Map[assetName] ?? '';
+    if (!Sha256Verifier.isValidSha256(expectedSha256)) {
+      throw MissingChecksumException(
+        'No se encontró el checksum SHA-256 oficial para $assetName en SHA256SUMS.txt.',
+      );
+    }
 
     final releaseNotes = data['body'] as String? ?? '';
     final publishedAtStr = data['published_at'] as String? ?? '';

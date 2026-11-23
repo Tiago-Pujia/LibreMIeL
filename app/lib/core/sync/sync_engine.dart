@@ -1,5 +1,6 @@
 import '../models/miel_models.dart';
 import '../network/miel_client.dart';
+import '../network/miel_server_status_classifier.dart';
 import '../parsers/miel_parsers.dart';
 import '../storage/app_database.dart';
 
@@ -38,6 +39,31 @@ class SyncEngine {
     await _db.deleteSetting(SettingKeys.accountPausedReason);
   }
 
+  Future<void> _cacheOfflineHtmlIfEnabled({
+    required String cacheKey,
+    required String idComision,
+    required String module,
+    required String html,
+    required bool offlineEnabled,
+    required int maxCacheMb,
+  }) async {
+    if (!offlineEnabled ||
+        html.isEmpty ||
+        isLikelyLoginRedirectHtml(html) ||
+        isLikelyMielMaintenanceHtml(html)) {
+      return;
+    }
+    try {
+      await _db.putOfflinePage(
+        cacheKey: cacheKey,
+        idComision: idComision,
+        module: module,
+        htmlContent: html,
+        maxCacheMb: maxCacheMb,
+      );
+    } catch (_) {}
+  }
+
   /// Ciclo 1 (frecuente): 1 `GET /principal/interno/` + módulos con badge > 0.
   Future<SyncRunSummary> runCycle1({
     required CredentialsLoader loadCredentials,
@@ -71,7 +97,7 @@ class SyncEngine {
       }
     }
 
-    final authCheck = await _ensureAuthenticated(loadCredentials, now);
+    final authCheck = await _ensureAuthenticated(loadCredentials, now, 1);
     if (authCheck != null || cancelled()) {
       return authCheck ??
           const SyncRunSummary(cycle: 1, isBaseline: false, notifications: []);
@@ -85,6 +111,19 @@ class SyncEngine {
         notifications: [],
       );
     }
+
+    if (isLikelyMielMaintenanceHtml(internoHtml)) {
+      return const SyncRunSummary(
+        cycle: 1,
+        isBaseline: false,
+        notifications: [],
+        warnings: [
+          'MIeL devolvió una página de mantenimiento o error del servidor.',
+        ],
+        networkErrorStatus: MielServerStatus.mielDown,
+      );
+    }
+
     final overview = parseInternoHtml(internoHtml);
 
     if (overview.subjects.isEmpty && !internoHtml.contains('materia-bloque')) {
@@ -99,6 +138,17 @@ class SyncEngine {
         warnings: warnings,
       );
     }
+
+    final offlineEnabled = await _db.getOfflineModeEnabled();
+    final maxCacheMb = await _db.getOfflineCacheMaxMb();
+    await _cacheOfflineHtmlIfEnabled(
+      cacheKey: 'principal:interno',
+      idComision: '',
+      module: 'principal',
+      html: internoHtml,
+      offlineEnabled: offlineEnabled,
+      maxCacheMb: maxCacheMb,
+    );
 
     await _db.setSetting(SettingKeys.studentName, overview.studentName);
     if (overview.studentAvatarUrl.isNotEmpty) {
@@ -164,7 +214,12 @@ class SyncEngine {
       if (!isBaseline &&
           subject.notifyContenidos &&
           summary.contenidosBadge > 0) {
-        final newContenidos = await _syncContenidos(subject, now);
+        final newContenidos = await _syncContenidos(
+          subject,
+          now,
+          offlineEnabled: offlineEnabled,
+          maxCacheMb: maxCacheMb,
+        );
         notifications.addAll(newContenidos);
       }
 
@@ -185,6 +240,8 @@ class SyncEngine {
           subject,
           isBaseline: isBaseline,
           now: now,
+          offlineEnabled: offlineEnabled,
+          maxCacheMb: maxCacheMb,
         );
         notifications.addAll(result.notifications);
 
@@ -197,6 +254,8 @@ class SyncEngine {
             subject,
             isBaseline: false,
             now: now,
+            offlineEnabled: offlineEnabled,
+            maxCacheMb: maxCacheMb,
           );
           notifications.addAll(portNotifs);
         }
@@ -218,6 +277,8 @@ class SyncEngine {
           mode: forumMode,
           isBaseline: isBaseline,
           now: now,
+          offlineEnabled: offlineEnabled,
+          maxCacheMb: maxCacheMb,
         );
         notifications.addAll(foroNotifs);
       }
@@ -233,12 +294,24 @@ class SyncEngine {
       // En baseline, capturar snapshot inicial de Portafolio y Evaluaciones silenciosamente
       if (isBaseline) {
         if (subject.hasPortafolio) {
-          await _syncPortafolio(subject, isBaseline: true, now: now);
+          await _syncPortafolio(
+            subject,
+            isBaseline: true,
+            now: now,
+            offlineEnabled: offlineEnabled,
+            maxCacheMb: maxCacheMb,
+          );
         }
         if (!cancelled() &&
             subject.hasEvaluacion &&
             await _db.getMonitorEvaluaciones()) {
-          await _syncEvaluaciones(subject, isBaseline: true, now: now);
+          await _syncEvaluaciones(
+            subject,
+            isBaseline: true,
+            now: now,
+            offlineEnabled: offlineEnabled,
+            maxCacheMb: maxCacheMb,
+          );
         }
       }
     }
@@ -305,7 +378,7 @@ class SyncEngine {
       );
     }
 
-    final authCheck = await _ensureAuthenticated(loadCredentials, now);
+    final authCheck = await _ensureAuthenticated(loadCredentials, now, 2);
     if (authCheck != null || cancelled()) {
       return authCheck ??
           const SyncRunSummary(cycle: 2, isBaseline: false, notifications: []);
@@ -313,6 +386,8 @@ class SyncEngine {
 
     final subjects = await _db.getAllSubjects();
     final monitorEval = await _db.getMonitorEvaluaciones();
+    final offlineEnabled = await _db.getOfflineModeEnabled();
+    final maxCacheMb = await _db.getOfflineCacheMaxMb();
     final notifications = <DetectedNotification>[];
 
     for (final subject in subjects) {
@@ -330,6 +405,8 @@ class SyncEngine {
           subject,
           isBaseline: false,
           now: now,
+          offlineEnabled: offlineEnabled,
+          maxCacheMb: maxCacheMb,
         );
         notifications.addAll(portNotifs);
       }
@@ -345,6 +422,8 @@ class SyncEngine {
           subject,
           isBaseline: false,
           now: now,
+          offlineEnabled: offlineEnabled,
+          maxCacheMb: maxCacheMb,
         );
         notifications.addAll(evalNotifs);
       }
@@ -370,6 +449,7 @@ class SyncEngine {
   Future<SyncRunSummary?> _ensureAuthenticated(
     CredentialsLoader loadCredentials,
     DateTime now,
+    int cycle,
   ) async {
     if (await _client.isLogged()) {
       return null;
@@ -377,10 +457,10 @@ class SyncEngine {
 
     final creds = await loadCredentials();
     if (creds == null || creds.username.isEmpty || creds.password.isEmpty) {
-      return const SyncRunSummary(
-        cycle: 1,
+      return SyncRunSummary(
+        cycle: cycle,
         isBaseline: false,
-        notifications: [],
+        notifications: const [],
         authPaused: true,
         authErrorMessage:
             'No hay credenciales guardadas para iniciar sesión en MIeL.',
@@ -418,7 +498,7 @@ class SyncEngine {
       final inserted = await _db.insertNotificationIfNew(alert);
 
       return SyncRunSummary(
-        cycle: 1,
+        cycle: cycle,
         isBaseline: false,
         notifications: inserted ? [alert] : const [],
         authPaused: true,
@@ -426,19 +506,34 @@ class SyncEngine {
       );
     }
 
+    final netStatus = loginRes.status == MielAuthStatus.networkError
+        ? (loginRes.networkErrorStatus ?? MielServerStatus.mielDown)
+        : MielServerStatus.mielDown;
+
     return SyncRunSummary(
-      cycle: 1,
+      cycle: cycle,
       isBaseline: false,
       notifications: const [],
       warnings: [loginRes.message ?? 'Error temporal al autenticar con MIeL.'],
+      networkErrorStatus: netStatus,
     );
   }
 
   Future<List<DetectedNotification>> _syncContenidos(
     Subject subject,
-    DateTime now,
-  ) async {
+    DateTime now, {
+    required bool offlineEnabled,
+    required int maxCacheMb,
+  }) async {
     final html = await _client.fetchContenidosHtml(subject.idComision);
+    await _cacheOfflineHtmlIfEnabled(
+      cacheKey: 'contenidos:${subject.idComision}',
+      idComision: subject.idComision,
+      module: 'contenidos',
+      html: html,
+      offlineEnabled: offlineEnabled,
+      maxCacheMb: maxCacheMb,
+    );
     final items = parseContenidosHtml(html, subject.idComision);
     final prevSnapshots = await _db.getSnapshots(
       subject.idComision,
@@ -494,8 +589,18 @@ class SyncEngine {
     Subject subject, {
     required bool isBaseline,
     required DateTime now,
+    required bool offlineEnabled,
+    required int maxCacheMb,
   }) async {
     final html = await _client.fetchMensajeriaEntradaHtml(subject.idComision);
+    await _cacheOfflineHtmlIfEnabled(
+      cacheKey: 'mensajeria:entrada:${subject.idComision}:p1',
+      idComision: subject.idComision,
+      module: 'mensajeria',
+      html: html,
+      offlineEnabled: offlineEnabled,
+      maxCacheMb: maxCacheMb,
+    );
     final messages = parseMensajeriaEntradaHtml(html, subject.idComision);
     final prevSnapshots = await _db.getSnapshots(
       subject.idComision,
@@ -509,7 +614,12 @@ class SyncEngine {
     for (final msg in messages) {
       final isNew = !prevSnapshots.containsKey(msg.idMensaje);
       if (msg.isUnread) {
-        teacherNames ??= await _getOrRefreshTeachers(subject.idComision, now);
+        teacherNames ??= await _getOrRefreshTeachers(
+          subject.idComision,
+          now,
+          offlineEnabled: offlineEnabled,
+          maxCacheMb: maxCacheMb,
+        );
         final fromTeacher = isSenderTeacher(msg.senderName, teacherNames);
         final isCorrection = isPortfolioCorrectionMessage(msg);
         if (isCorrection) {
@@ -558,8 +668,10 @@ class SyncEngine {
 
   Future<List<String>> _getOrRefreshTeachers(
     String idComision,
-    DateTime now,
-  ) async {
+    DateTime now, {
+    required bool offlineEnabled,
+    required int maxCacheMb,
+  }) async {
     final cached = await _db.getTeachersForSubject(idComision);
     final isFresh =
         cached.isNotEmpty &&
@@ -570,6 +682,14 @@ class SyncEngine {
 
     try {
       final detailsHtml = await _client.fetchCursoDetallesHtml(idComision);
+      await _cacheOfflineHtmlIfEnabled(
+        cacheKey: 'cursoDetalles:$idComision',
+        idComision: idComision,
+        module: 'docentes',
+        html: detailsHtml,
+        offlineEnabled: offlineEnabled,
+        maxCacheMb: maxCacheMb,
+      );
       final details = parseCursoDetallesHtml(detailsHtml, idComision);
       if (details.teachers.isNotEmpty) {
         await _db.replaceTeachersForSubject(idComision, details.teachers, now);
@@ -585,8 +705,18 @@ class SyncEngine {
     Subject subject, {
     required bool isBaseline,
     required DateTime now,
+    required bool offlineEnabled,
+    required int maxCacheMb,
   }) async {
     final html = await _client.fetchPortafolioPracticasHtml(subject.idComision);
+    await _cacheOfflineHtmlIfEnabled(
+      cacheKey: 'portafolio:practicas:${subject.idComision}',
+      idComision: subject.idComision,
+      module: 'portafolio',
+      html: html,
+      offlineEnabled: offlineEnabled,
+      maxCacheMb: maxCacheMb,
+    );
     final practices = parsePortafolioPracticasHtml(html, subject.idComision);
     final prevSnapshots = await _db.getSnapshots(
       subject.idComision,
@@ -622,6 +752,15 @@ class SyncEngine {
             final detailHtml = await _client.fetchPortafolioEntregasHtml(
               subject.idComision,
               p.idPractica,
+            );
+            await _cacheOfflineHtmlIfEnabled(
+              cacheKey:
+                  'portafolio:entregas:${subject.idComision}:${p.idPractica}',
+              idComision: subject.idComision,
+              module: 'portafolio',
+              html: detailHtml,
+              offlineEnabled: offlineEnabled,
+              maxCacheMb: maxCacheMb,
             );
             final corrections = parsePortafolioCorreccionesHtml(detailHtml);
             if (corrections.isNotEmpty) {
@@ -682,8 +821,18 @@ class SyncEngine {
     required ForumSyncMode mode,
     required bool isBaseline,
     required DateTime now,
+    required bool offlineEnabled,
+    required int maxCacheMb,
   }) async {
     final html = await _client.fetchForoTemasHtml(subject.idComision);
+    await _cacheOfflineHtmlIfEnabled(
+      cacheKey: 'foro:temas:${subject.idComision}',
+      idComision: subject.idComision,
+      module: 'forov2',
+      html: html,
+      offlineEnabled: offlineEnabled,
+      maxCacheMb: maxCacheMb,
+    );
     final topics = parseForoTemasHtml(html, subject.idComision);
     final prevTopics = await _db.getSnapshots(
       subject.idComision,
@@ -722,6 +871,14 @@ class SyncEngine {
           final threadHtml = await _client.fetchForoMensajesHtml(
             subject.idComision,
             topic.idTema,
+          );
+          await _cacheOfflineHtmlIfEnabled(
+            cacheKey: 'foro:mensajes:${subject.idComision}:${topic.idTema}',
+            idComision: subject.idComision,
+            module: 'forov2',
+            html: threadHtml,
+            offlineEnabled: offlineEnabled,
+            maxCacheMb: maxCacheMb,
           );
           final thread = parseForoMensajesHtml(
             threadHtml,
@@ -814,8 +971,18 @@ class SyncEngine {
     Subject subject, {
     required bool isBaseline,
     required DateTime now,
+    required bool offlineEnabled,
+    required int maxCacheMb,
   }) async {
     final html = await _client.fetchEvaluacionesHtml(subject.idComision);
+    await _cacheOfflineHtmlIfEnabled(
+      cacheKey: 'evaluaciones:${subject.idComision}',
+      idComision: subject.idComision,
+      module: 'evaluacion',
+      html: html,
+      offlineEnabled: offlineEnabled,
+      maxCacheMb: maxCacheMb,
+    );
     final items = parseEvaluacionesHtml(html, subject.idComision);
     final prev = await _db.getSnapshots(subject.idComision, _modEvaluacion);
     final notifications = <DetectedNotification>[];

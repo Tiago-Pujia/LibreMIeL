@@ -115,6 +115,7 @@ class AppSessionState {
     this.offlineModeEnabled = false,
     this.offlineCacheMaxMb = 100,
     this.offlinePrefetchSafeModules = false,
+    this.notifyOnMielRecovery = true,
   });
 
   final bool isChecking;
@@ -138,6 +139,7 @@ class AppSessionState {
   final bool offlineModeEnabled;
   final int offlineCacheMaxMb;
   final bool offlinePrefetchSafeModules;
+  final bool notifyOnMielRecovery;
 
   AppSessionState copyWith({
     bool? isChecking,
@@ -163,6 +165,7 @@ class AppSessionState {
     bool? offlineModeEnabled,
     int? offlineCacheMaxMb,
     bool? offlinePrefetchSafeModules,
+    bool? notifyOnMielRecovery,
   }) {
     return AppSessionState(
       isChecking: isChecking ?? this.isChecking,
@@ -191,6 +194,7 @@ class AppSessionState {
       offlineCacheMaxMb: offlineCacheMaxMb ?? this.offlineCacheMaxMb,
       offlinePrefetchSafeModules:
           offlinePrefetchSafeModules ?? this.offlinePrefetchSafeModules,
+      notifyOnMielRecovery: notifyOnMielRecovery ?? this.notifyOnMielRecovery,
     );
   }
 }
@@ -199,6 +203,8 @@ class AppSessionController extends Notifier<AppSessionState> {
   Timer? _desktopCycle1Timer;
   Timer? _desktopCycle2Timer;
   Timer? _desktopKeepAliveTimer;
+  Timer? _recoveryBackoffTimer;
+  int _recoveryBackoffAttempt = 0;
   StreamSubscription<int>? _trayUnreadSub;
   DesktopTrayService? _trayService;
   MielCredentials? _memoryCredentials;
@@ -211,11 +217,24 @@ class AppSessionController extends Notifier<AppSessionState> {
       _desktopCycle1Timer?.cancel();
       _desktopCycle2Timer?.cancel();
       _desktopKeepAliveTimer?.cancel();
+      _recoveryBackoffTimer?.cancel();
       _trayUnreadSub?.cancel();
       _trayService?.dispose();
     });
     Future.microtask(_bootstrap);
     return const AppSessionState();
+  }
+
+  /// Libera timers y bandeja del sistema antes de salir para aplicar una actualización.
+  Future<void> prepareForAppExit() async {
+    _desktopCycle1Timer?.cancel();
+    _desktopCycle2Timer?.cancel();
+    _desktopKeepAliveTimer?.cancel();
+    _recoveryBackoffTimer?.cancel();
+    await _trayUnreadSub?.cancel();
+    _trayUnreadSub = null;
+    await _trayService?.dispose();
+    _trayService = null;
   }
 
   ThemeMode _parseThemeMode(String? raw) {
@@ -259,6 +278,7 @@ class AppSessionController extends Notifier<AppSessionState> {
         await db.setSetting(SettingKeys.accountUsername, currentUser);
       } else if (storedUser != currentUser) {
         await db.clearAccountData();
+        await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
         await db.setSetting(SettingKeys.accountUsername, currentUser);
       }
     }
@@ -275,6 +295,7 @@ class AppSessionController extends Notifier<AppSessionState> {
     final offlineModeEnabled = await db.getOfflineModeEnabled();
     final offlineCacheMaxMb = await db.getOfflineCacheMaxMb();
     final offlinePrefetch = await db.getOfflinePrefetchSafeModules();
+    final notifyOnMielRecovery = await db.getNotifyOnMielRecovery();
 
     state = state.copyWith(
       isChecking: false,
@@ -290,9 +311,11 @@ class AppSessionController extends Notifier<AppSessionState> {
       launchAtStartup: launchAtStartup,
       autostartSupported: autostartSupported,
       lastSyncAt: lastSyncAt,
+      lastOnlineSuccessAt: lastSyncAt,
       offlineModeEnabled: offlineModeEnabled,
       offlineCacheMaxMb: offlineCacheMaxMb,
       offlinePrefetchSafeModules: offlinePrefetch,
+      notifyOnMielRecovery: notifyOnMielRecovery,
     );
 
     if (authenticated) {
@@ -384,7 +407,9 @@ class AppSessionController extends Notifier<AppSessionState> {
     }
 
     if (loginRes.status == MielAuthStatus.networkError) {
-      reportServerStatus(MielServerStatus.mielDown);
+      reportServerStatus(
+        loginRes.networkErrorStatus ?? MielServerStatus.mielDown,
+      );
       return false;
     }
 
@@ -405,11 +430,13 @@ class AppSessionController extends Notifier<AppSessionState> {
       final client = await ref.read(mielClientProvider.future);
       if (await client.isLogged()) {
         await client.refreshSession();
+        reportServerStatus(MielServerStatus.online);
       } else {
         await ensureActiveSession(forceRelogin: true);
       }
-    } catch (_) {
-      // Error de red transitorio: nunca desloguear; se reintentará en el próximo ciclo.
+    } catch (e) {
+      // Error de red transitorio: nunca desloguear; reportar estado y reintentar con backoff.
+      reportServerStatus(classifyMielNetworkError(e));
     }
   }
 
@@ -433,6 +460,7 @@ class AppSessionController extends Notifier<AppSessionState> {
         previousUser == null || previousUser != normalizedUser;
     if (isDifferentAccount) {
       await db.clearAccountData();
+      await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
     }
     await db.setSetting(SettingKeys.accountUsername, normalizedUser);
 
@@ -455,6 +483,10 @@ class AppSessionController extends Notifier<AppSessionState> {
     final restoredAvatar = isDifferentAccount
         ? ''
         : ((await db.getSetting(SettingKeys.studentAvatarUrl)) ?? '');
+    final offlineModeEnabled = await db.getOfflineModeEnabled();
+    final offlineCacheMaxMb = await db.getOfflineCacheMaxMb();
+    final offlinePrefetch = await db.getOfflinePrefetchSafeModules();
+    final notifyOnMielRecovery = await db.getNotifyOnMielRecovery();
 
     _sessionGeneration++;
     ref.read(sessionGenerationProvider.notifier).bump();
@@ -467,6 +499,7 @@ class AppSessionController extends Notifier<AppSessionState> {
       authPausedReason: null,
       lastSyncMessage: 'Sesión iniciada. Sincronizando materias…',
       lastSyncAt: isDifferentAccount ? null : state.lastSyncAt,
+      lastOnlineSuccessAt: DateTime.now(),
       syncIntervalMinutes: state.syncIntervalMinutes,
       forumSyncMode: state.forumSyncMode,
       monitorEvaluaciones: state.monitorEvaluaciones,
@@ -474,6 +507,10 @@ class AppSessionController extends Notifier<AppSessionState> {
       globalNovedadesBadge: isDifferentAccount ? 0 : state.globalNovedadesBadge,
       launchAtStartup: state.launchAtStartup,
       autostartSupported: state.autostartSupported,
+      offlineModeEnabled: offlineModeEnabled,
+      offlineCacheMaxMb: offlineCacheMaxMb,
+      offlinePrefetchSafeModules: offlinePrefetch,
+      notifyOnMielRecovery: notifyOnMielRecovery,
     );
 
     await _startBackgroundSchedulers(state.syncIntervalMinutes);
@@ -503,15 +540,65 @@ class AppSessionController extends Notifier<AppSessionState> {
       );
       if (isCancelled()) return;
 
+      // Si Ciclo 1 falló por caída de MIeL o falta de internet, NO marcar online
+      if (summary1.networkErrorStatus != null) {
+        final netStatus = summary1.networkErrorStatus!;
+        state = state.copyWith(
+          isSyncing: false,
+          lastSyncMessage: summary1.warnings.isNotEmpty
+              ? summary1.warnings.first
+              : (netStatus == MielServerStatus.deviceOffline
+                    ? 'Sin conexión a internet.'
+                    : 'Los servidores de MIeL no responden.'),
+        );
+        reportServerStatus(netStatus);
+        return;
+      }
+
+      // Si la sincronización fue pausada por estado 1/2/3, conservar estado de red real
+      if (summary1.authPaused) {
+        if (!summary1.isBaseline && summary1.notifications.isNotEmpty) {
+          await notifService.showBatch(summary1.notifications);
+        }
+        if (isCancelled()) return;
+        state = state.copyWith(
+          isSyncing: false,
+          authPausedReason: summary1.authErrorMessage,
+          lastSyncMessage:
+              summary1.authErrorMessage ??
+              'Sincronización pausada por error de cuenta.',
+        );
+        return;
+      }
+
+      // Si /principal/interno/ devolvió HTML inválido sin materias ni error de auth
+      if (summary1.warnings.isNotEmpty) {
+        state = state.copyWith(
+          isSyncing: false,
+          lastSyncMessage: summary1.warnings.first,
+        );
+        return;
+      }
+
       final allNotifs = <DetectedNotification>[...summary1.notifications];
 
-      if (includeCycle2 && !summary1.authPaused && !summary1.isBaseline) {
+      if (includeCycle2 && !summary1.isBaseline) {
         final summary2 = await engine.runCycle2(
           loadCredentials: loadActiveCredentials,
           ignoreAuthPause: ignoreAuthPause,
           isCancelled: isCancelled,
         );
         if (isCancelled()) return;
+        if (summary2.networkErrorStatus != null) {
+          state = state.copyWith(
+            isSyncing: false,
+            lastSyncMessage: summary2.warnings.isNotEmpty
+                ? summary2.warnings.first
+                : 'Error de red durante Ciclo 2.',
+          );
+          reportServerStatus(summary2.networkErrorStatus!);
+          return;
+        }
         allNotifs.addAll(summary2.notifications);
       }
 
@@ -530,35 +617,30 @@ class AppSessionController extends Notifier<AppSessionState> {
       final globalNov = int.tryParse(globalNovRaw ?? '') ?? 0;
       if (isCancelled()) return;
 
-      final msg = summary1.authPaused
-          ? (summary1.authErrorMessage ??
-                'Sincronización pausada por error de cuenta.')
-          : summary1.isBaseline
+      final msg = summary1.isBaseline
           ? 'Estado inicial guardado. A partir de ahora te avisaremos de cada novedad.'
           : allNotifs.isEmpty
           ? 'Sin actividades nuevas.'
           : 'Se detectaron ${allNotifs.length} actividad(es) nueva(s).';
 
+      reportServerStatus(MielServerStatus.online);
+
+      final now = DateTime.now();
       state = state.copyWith(
         isSyncing: false,
         studentName: studentName,
         studentAvatarUrl: studentAvatarUrl,
         globalNovedadesBadge: globalNov,
-        authPausedReason: summary1.authPaused
-            ? summary1.authErrorMessage
-            : null,
-        clearAuthPausedReason: !summary1.authPaused,
+        clearAuthPausedReason: true,
         lastSyncMessage: msg,
-        lastSyncAt: DateTime.now(),
-        serverStatus: MielServerStatus.online,
-        lastOnlineSuccessAt: DateTime.now(),
+        lastSyncAt: now,
+        lastOnlineSuccessAt: now,
         clearServerDownSince: true,
       );
 
       // Precarga segura de solo lectura si está habilitada por el usuario
-      if (state.offlineModeEnabled &&
-          state.offlinePrefetchSafeModules &&
-          !summary1.authPaused) {
+      // (SyncEngine ya guardó principal:interno y los módulos que consultó)
+      if (state.offlineModeEnabled && state.offlinePrefetchSafeModules) {
         try {
           final prefetcher = await ref.read(offlinePrefetcherProvider.future);
           final activeSubjects = await db.getAllSubjects();
@@ -568,6 +650,7 @@ class AppSessionController extends Notifier<AppSessionState> {
                 .toList(),
             isCancelled: isCancelled,
             maxCacheMb: state.offlineCacheMaxMb,
+            skipInterno: true,
           );
         } catch (_) {}
       }
@@ -577,25 +660,73 @@ class AppSessionController extends Notifier<AppSessionState> {
       state = state.copyWith(
         isSyncing: false,
         lastSyncMessage: 'Error durante la sincronización: $e',
-        serverStatus: status,
-        serverDownSince: state.serverDownSince ?? DateTime.now(),
       );
+      reportServerStatus(status);
     }
   }
 
   void reportServerStatus(MielServerStatus status) {
-    if (state.serverStatus == status) return;
+    final previous = state.serverStatus;
     final now = DateTime.now();
-    state = state.copyWith(
-      serverStatus: status,
-      serverDownSince: status == MielServerStatus.online
-          ? null
-          : (state.serverDownSince ?? now),
-      clearServerDownSince: status == MielServerStatus.online,
-      lastOnlineSuccessAt: status == MielServerStatus.online
-          ? now
-          : state.lastOnlineSuccessAt,
-    );
+
+    if (status == MielServerStatus.online) {
+      _recoveryBackoffTimer?.cancel();
+      _recoveryBackoffTimer = null;
+      _recoveryBackoffAttempt = 0;
+
+      final recoveredFromOutage = previous == MielServerStatus.mielDown;
+      if (previous != status || state.serverDownSince != null) {
+        state = state.copyWith(
+          serverStatus: MielServerStatus.online,
+          clearServerDownSince: true,
+          lastOnlineSuccessAt: now,
+        );
+      }
+
+      if (recoveredFromOutage &&
+          state.isAuthenticated &&
+          state.notifyOnMielRecovery) {
+        unawaited(
+          ref.read(notificationServiceProvider).showMielRecoveredNotification(),
+        );
+      }
+      return;
+    }
+
+    if (previous != status) {
+      state = state.copyWith(
+        serverStatus: status,
+        serverDownSince: state.serverDownSince ?? now,
+      );
+    }
+
+    if (state.isAuthenticated && state.authPausedReason == null) {
+      _scheduleRecoveryBackoff();
+    }
+  }
+
+  void _scheduleRecoveryBackoff() {
+    if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST')) return;
+    if (_recoveryBackoffTimer?.isActive == true) return;
+
+    const backoffMinutes = <int>[1, 2, 5, 10];
+    final idx = _recoveryBackoffAttempt < backoffMinutes.length
+        ? _recoveryBackoffAttempt
+        : backoffMinutes.length - 1;
+    final cappedMinutes = backoffMinutes[idx] > state.syncIntervalMinutes
+        ? state.syncIntervalMinutes
+        : backoffMinutes[idx];
+    _recoveryBackoffAttempt++;
+
+    _recoveryBackoffTimer = Timer(Duration(minutes: cappedMinutes), () {
+      _recoveryBackoffTimer = null;
+      if (!state.isAuthenticated ||
+          state.serverStatus == MielServerStatus.online ||
+          state.authPausedReason != null) {
+        return;
+      }
+      unawaited(syncNow(includeCycle2: false));
+    });
   }
 
   Future<void> updateOfflineModeEnabled(bool enabled) async {
@@ -623,9 +754,26 @@ class AppSessionController extends Notifier<AppSessionState> {
   Future<void> updateOfflineCacheMaxMb(int maxMb) async {
     final safeMb = maxMb < 10 ? 10 : maxMb;
     final db = ref.read(databaseProvider);
+    final mediaService = ref.read(offlineMediaServiceProvider);
     await db.setSetting(SettingKeys.offlineCacheMaxMb, safeMb.toString());
-    await db.pruneOfflineCacheToQuota(maxCacheMb: safeMb);
+
+    final totalMaxBytes = safeMb * 1024 * 1024;
+    await mediaService.pruneToMaxBytes((totalMaxBytes * 0.6).round());
+    final mediaBytes = await mediaService.getTotalCachedMediaBytes();
+    await db.pruneOfflineCacheToQuota(
+      maxCacheMb: safeMb,
+      reservedBytes: mediaBytes,
+    );
     state = state.copyWith(offlineCacheMaxMb: safeMb);
+  }
+
+  Future<void> updateNotifyOnMielRecovery(bool enabled) async {
+    final db = ref.read(databaseProvider);
+    await db.setSetting(
+      SettingKeys.notifyOnMielRecovery,
+      enabled ? 'true' : 'false',
+    );
+    state = state.copyWith(notifyOnMielRecovery: enabled);
   }
 
   Future<void> clearOfflineCache() async {
@@ -635,7 +783,7 @@ class AppSessionController extends Notifier<AppSessionState> {
   }
 
   Future<void> retryConnection() async {
-    await syncNow(includeCycle2: true, ignoreAuthPause: true);
+    await syncNow(includeCycle2: true, ignoreAuthPause: false);
   }
 
   Future<void> updateSyncInterval(int minutes) async {
@@ -688,6 +836,9 @@ class AppSessionController extends Notifier<AppSessionState> {
     _desktopCycle1Timer?.cancel();
     _desktopCycle2Timer?.cancel();
     _desktopKeepAliveTimer?.cancel();
+    _recoveryBackoffTimer?.cancel();
+    _recoveryBackoffTimer = null;
+    _recoveryBackoffAttempt = 0;
     final db = ref.read(databaseProvider);
     final credsStore = ref.read(credentialsStoreProvider);
 
@@ -713,14 +864,22 @@ class AppSessionController extends Notifier<AppSessionState> {
     final preservedTheme = state.themeMode;
     final preservedAutostart = state.launchAtStartup;
     final preservedAutostartSupported = state.autostartSupported;
+    final preservedOfflineEnabled = state.offlineModeEnabled;
+    final preservedOfflineMaxMb = state.offlineCacheMaxMb;
+    final preservedOfflinePrefetch = state.offlinePrefetchSafeModules;
+    final preservedNotifyRecovery = state.notifyOnMielRecovery;
+
     final client = await ref.read(mielClientProvider.future);
     await client.clearSession();
     await credsStore.clear();
     await AndroidBackgroundWorker.cancelAll();
 
+    // Invariante #11: al cerrar sesión SIEMPRE se vacía el caché offline y media autenticada
+    await db.clearOfflineCache();
+    await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
+
     if (wipeLocalData) {
       await db.clearAllLocalData();
-      await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
       await db.setSetting(SettingKeys.themeMode, preservedTheme.name);
     }
 
@@ -730,6 +889,12 @@ class AppSessionController extends Notifier<AppSessionState> {
       themeMode: preservedTheme,
       launchAtStartup: preservedAutostart,
       autostartSupported: preservedAutostartSupported,
+      offlineModeEnabled: wipeLocalData ? false : preservedOfflineEnabled,
+      offlineCacheMaxMb: wipeLocalData ? 100 : preservedOfflineMaxMb,
+      offlinePrefetchSafeModules: wipeLocalData
+          ? false
+          : preservedOfflinePrefetch,
+      notifyOnMielRecovery: wipeLocalData ? true : preservedNotifyRecovery,
     );
   }
 
@@ -749,6 +914,7 @@ class AppSessionController extends Notifier<AppSessionState> {
           _desktopCycle1Timer?.cancel();
           _desktopCycle2Timer?.cancel();
           _desktopKeepAliveTimer?.cancel();
+          _recoveryBackoffTimer?.cancel();
           await _trayUnreadSub?.cancel();
           _trayUnreadSub = null;
         },
@@ -829,24 +995,61 @@ final subjectSnapshotsProvider =
           .watchSnapshotsForSubject(key.idComision, key.module);
     });
 
-/// Consulta en modo solo lectura `GET /principal/cursoDetalles/id/{idComision}` para el modal ⋮.
+/// Consulta en modo solo lectura `GET /principal/cursoDetalles/id/{idComision}` para el modal ⋮,
+/// con respaldo automático en `OfflinePageCache` cuando MIeL no responde (Fase 9).
 final courseDetailsProvider = FutureProvider.autoDispose
     .family<CourseDetails?, String>((ref, idComision) async {
+      final db = ref.read(databaseProvider);
+      var offlineEnabled = false;
+      var isAuthenticated = false;
+      var maxCacheMb = 100;
+      try {
+        final session = ref.read(appSessionProvider);
+        offlineEnabled = session.offlineModeEnabled;
+        isAuthenticated = session.isAuthenticated;
+        maxCacheMb = session.offlineCacheMaxMb;
+      } catch (_) {}
+
+      final cacheKey = 'cursoDetalles:$idComision';
+
       try {
         final client = await ref.read(mielClientProvider.future);
         final html = await client.fetchCursoDetallesHtml(idComision);
+        if (isLikelyLoginRedirectHtml(html) ||
+            isLikelyMielMaintenanceHtml(html)) {
+          throw const HttpException(
+            'MIeL no devolvió los detalles de la comisión.',
+          );
+        }
+
+        if (offlineEnabled && isAuthenticated && html.isNotEmpty) {
+          unawaited(
+            db.putOfflinePage(
+              cacheKey: cacheKey,
+              idComision: idComision,
+              module: 'docentes',
+              htmlContent: html,
+              maxCacheMb: maxCacheMb,
+            ),
+          );
+        }
+
         final details = parseCursoDetallesHtml(html, idComision);
         if (details.teachers.isNotEmpty) {
-          await ref
-              .read(databaseProvider)
-              .replaceTeachersForSubject(
-                idComision,
-                details.teachers,
-                DateTime.now(),
-              );
+          await db.replaceTeachersForSubject(
+            idComision,
+            details.teachers,
+            DateTime.now(),
+          );
         }
         return details;
       } catch (_) {
+        if (offlineEnabled && isAuthenticated) {
+          final cached = await db.getOfflinePage(cacheKey);
+          if (cached != null && cached.htmlContent.isNotEmpty) {
+            return parseCursoDetallesHtml(cached.htmlContent, idComision);
+          }
+        }
         return null;
       }
     });

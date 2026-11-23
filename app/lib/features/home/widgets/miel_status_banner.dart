@@ -50,13 +50,18 @@ class MielStatusBanner extends ConsumerWidget {
         ? 'Los servidores de MIeL no responden'
         : 'Sin conexión a internet';
 
-    final lastSyncText = session.lastOnlineSuccessAt != null
-        ? ' · Última actualización: ${_formatDateTime(session.lastOnlineSuccessAt!)}'
+    final lastSync = session.lastOnlineSuccessAt ?? session.lastSyncAt;
+    final lastSyncText = lastSync != null
+        ? ' · Última actualización: ${_formatDateTime(lastSync)}'
         : '';
 
-    final subtitle = isMielDown
-        ? 'Estás viendo copias locales guardadas en tu equipo$lastSyncText.'
-        : 'Estás en modo sin conexión consultando datos locales$lastSyncText.';
+    final subtitle = session.offlineModeEnabled
+        ? (isMielDown
+              ? 'Estás viendo copias locales guardadas en tu equipo$lastSyncText.'
+              : 'Estás en modo sin conexión consultando datos locales$lastSyncText.')
+        : (isMielDown
+              ? 'Solo se muestran datos básicos sincronizados. Activá el Modo sin conexión en Ajustes para conservar copias locales$lastSyncText.'
+              : 'Activá el Modo sin conexión en Ajustes para consultar copias locales sin internet$lastSyncText.');
 
     return Container(
       width: double.infinity,

@@ -1,12 +1,16 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/app_providers.dart';
+import '../../../core/models/miel_models.dart';
 import '../../../core/network/miel_client.dart';
+import '../../../core/network/miel_server_status_classifier.dart';
 import '../../../core/theme/libremiel_brand.dart';
 import '../../../core/theme/miel_theme.dart';
 import '../module_providers.dart';
@@ -556,8 +560,9 @@ class MielModuleEmptyView extends StatelessWidget {
   }
 }
 
-/// Vista de error con botón de reintento y apertura directa en MIeL web.
-class MielModuleErrorView extends StatelessWidget {
+/// Vista de error con botón de reintento, estado amigable ante caídas de MIeL
+/// (Fase 9) y apertura directa en MIeL web.
+class MielModuleErrorView extends ConsumerWidget {
   const MielModuleErrorView({
     super.key,
     required this.message,
@@ -570,25 +575,61 @@ class MielModuleErrorView extends StatelessWidget {
   final String? mielWebUrl;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final palette = MielPalette.of(context);
+    final session = ref.watch(appSessionProvider);
+    final isOffline = session.serverStatus != MielServerStatus.online;
+    final isMielDown = session.serverStatus == MielServerStatus.mielDown;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final String effectiveMessage;
+    if (isOffline) {
+      final baseMsg = isMielDown
+          ? 'Los servidores de MIeL no responden y esta sección no tiene una copia local guardada. Se habilitará automáticamente cuando MIeL vuelva a estar en línea.'
+          : 'No hay conexión a internet y esta sección no cuenta con una copia local guardada.';
+      effectiveMessage = session.offlineModeEnabled
+          ? baseMsg
+          : '$baseMsg\nTip: activá el Modo sin conexión en Ajustes para conservar copias locales de las secciones que visitás.';
+    } else {
+      effectiveMessage = message;
+    }
+
+    final bgColor = isOffline
+        ? (isMielDown
+              ? (isDark ? const Color(0xFF332200) : const Color(0xFFFFF8E1))
+              : (isDark ? const Color(0xFF1E2836) : const Color(0xFFE3F2FD)))
+        : palette.paleRedBackground;
+
+    final borderColor = isOffline
+        ? (isMielDown ? const Color(0xFFFFB300) : const Color(0xFF64B5F6))
+        : palette.paleRedBorder;
+
+    final iconColor = isOffline
+        ? (isMielDown ? const Color(0xFFF57C00) : const Color(0xFF1976D2))
+        : palette.badgeRed;
+
+    final iconData = isOffline
+        ? (isMielDown ? Icons.cloud_off_rounded : Icons.wifi_off_rounded)
+        : Icons.error_outline;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: palette.paleRedBackground,
+        color: bgColor,
         borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: palette.paleRedBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.error_outline, color: palette.badgeRed, size: 20),
+              Icon(iconData, color: iconColor, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  message,
+                  effectiveMessage,
                   style: TextStyle(fontSize: 13.5, color: palette.textPrimary),
                 ),
               ),
@@ -683,7 +724,22 @@ Future<void> triggerMielFileDownload(
   required String url,
   String? fallbackFileName,
   VoidCallback? onDownloaded,
+  FutureOr<void> Function(DownloadedFileResult result)? onDownloadedResult,
 }) async {
+  try {
+    final status = ref.read(appSessionProvider).serverStatus;
+    if (status != MielServerStatus.online) {
+      showMielStatusToast(
+        context,
+        message: status == MielServerStatus.mielDown
+            ? 'No se puede descargar: los servidores de MIeL no responden en este momento.'
+            : 'No se puede descargar: no tenés conexión a internet.',
+        isError: true,
+      );
+      return;
+    }
+  } catch (_) {}
+
   final messenger = ScaffoldMessenger.maybeOf(context);
   final label = (fallbackFileName != null && fallbackFileName.trim().isNotEmpty)
       ? fallbackFileName.trim()
@@ -728,6 +784,9 @@ Future<void> triggerMielFileDownload(
     }
 
     onDownloaded?.call();
+    if (onDownloadedResult != null) {
+      await onDownloadedResult(result);
+    }
     try {
       progressCtrl?.close();
     } catch (_) {}
@@ -786,12 +845,30 @@ Future<void> triggerMielFileDownload(
       });
     }
   } catch (e) {
+    final isNetErr =
+        e is DioException ||
+        e is SocketException ||
+        e is TimeoutException ||
+        e is HandshakeException ||
+        e is TlsException ||
+        e is HttpException;
+    if (isNetErr) {
+      try {
+        ref
+            .read(appSessionProvider.notifier)
+            .reportServerStatus(classifyMielNetworkError(e));
+      } catch (_) {}
+    }
+
     try {
       progressCtrl?.close();
     } catch (_) {}
     messenger?.clearSnackBars();
 
     if (messenger != null) {
+      final friendlyErr = isNetErr
+          ? 'No se pudo descargar: MIeL no responde o se perdió la conexión.'
+          : 'No se pudo descargar el archivo: $e';
       final errCtrl = messenger.showSnackBar(
         _buildMielDownloadSnackBar(
           leading: const Icon(
@@ -800,7 +877,7 @@ Future<void> triggerMielFileDownload(
             color: Color(0xFFEF5350),
           ),
           borderColor: const Color(0xFFEF5350),
-          message: 'No se pudo descargar el archivo: $e',
+          message: friendlyErr,
           onClose: messenger.clearSnackBars,
           actions: [
             TextButton(

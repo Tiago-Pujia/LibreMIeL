@@ -2,6 +2,21 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 
+/// Excepción lanzada cuando falta el manifiesto `SHA256SUMS.txt` o el hash
+/// esperado para el artefacto está ausente o mal formado.
+class MissingChecksumException implements Exception {
+  const MissingChecksumException([
+    this.message =
+        'No se encontró un hash SHA-256 oficial válido en SHA256SUMS.txt. '
+        'Se canceló la actualización por seguridad.',
+  ]);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// Excepción lanzada cuando el hash SHA-256 de un instalador descargado
 /// no coincide con el registrado oficialmente en `SHA256SUMS.txt`.
 class ChecksumMismatchException implements Exception {
@@ -24,6 +39,13 @@ class ChecksumMismatchException implements Exception {
 
 /// Utilidades de análisis y verificación de integridad criptográfica SHA-256.
 class Sha256Verifier {
+  static final RegExp _sha256HexPattern = RegExp(r'^[0-9a-f]{64}$');
+
+  /// Retorna `true` si [hash] es un digest SHA-256 hexadecimal válido de 64 caracteres.
+  static bool isValidSha256(String hash) {
+    return _sha256HexPattern.hasMatch(hash.trim().toLowerCase());
+  }
+
   /// Parsea el contenido de `SHA256SUMS.txt` en un mapa `nombreArchivo -> hashSha256`.
   /// Admite formato estándar de `sha256sum`: `<hash>  <archivo>` o `<hash> *<archivo>`.
   static Map<String, String> parseSha256Sums(String content) {
@@ -34,7 +56,6 @@ class Sha256Verifier {
       line = line.trim();
       if (line.isEmpty || line.startsWith('#')) continue;
 
-      // Buscar los primeros 64 caracteres hexadecimales
       final parts = line.split(RegExp(r'\s+'));
       if (parts.length >= 2) {
         final hash = parts[0].trim().toLowerCase();
@@ -42,7 +63,10 @@ class Sha256Verifier {
         if (fileName.startsWith('*')) {
           fileName = fileName.substring(1).trim();
         }
-        if (hash.length == 64 && fileName.isNotEmpty) {
+        if (fileName.startsWith('./')) {
+          fileName = fileName.substring(2).trim();
+        }
+        if (isValidSha256(hash) && fileName.isNotEmpty) {
           result[fileName] = hash;
         }
       }
@@ -58,17 +82,18 @@ class Sha256Verifier {
   }
 
   /// Verifica el archivo en disco contra [expectedHash].
-  /// Si el hash no coincide, elimina el archivo y lanza [ChecksumMismatchException].
+  /// Si [expectedHash] es vacío/inválido o no coincide, elimina el archivo y lanza excepción.
   static Future<void> verifyOrDelete(File file, String expectedHash) async {
     final expected = expectedHash.trim().toLowerCase();
+    if (!isValidSha256(expected)) {
+      await _deleteSafely(file);
+      throw const MissingChecksumException();
+    }
+
     final actual = await computeFileSha256(file);
 
     if (actual != expected) {
-      try {
-        if (await file.exists()) {
-          await file.delete();
-        }
-      } catch (_) {}
+      await _deleteSafely(file);
       throw ChecksumMismatchException(
         fileName: file.uri.pathSegments.isNotEmpty
             ? file.uri.pathSegments.last
@@ -77,5 +102,13 @@ class Sha256Verifier {
         actualHash: actual,
       );
     }
+  }
+
+  static Future<void> _deleteSafely(File file) async {
+    try {
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {}
   }
 }

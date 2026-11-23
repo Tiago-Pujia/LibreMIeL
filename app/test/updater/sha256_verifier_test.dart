@@ -75,5 +75,41 @@ a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90  LibreMIeL-0.2.
       // El archivo debe haber sido eliminado automáticamente por seguridad
       expect(testFile.existsSync(), isFalse);
     });
+
+    test('verifyOrDelete deletes file and throws MissingChecksumException on empty or invalid hash', () async {
+      final tempDir = Directory.systemTemp.createTempSync('sha_missing_');
+      addTearDown(() {
+        if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+      });
+
+      final f1 = File('${tempDir.path}/unverified1.bin')
+        ..writeAsStringSync('payload');
+      await expectLater(
+        Sha256Verifier.verifyOrDelete(f1, ''),
+        throwsA(isA<MissingChecksumException>()),
+      );
+      expect(f1.existsSync(), isFalse);
+
+      final f2 = File('${tempDir.path}/unverified2.bin')
+        ..writeAsStringSync('payload');
+      await expectLater(
+        Sha256Verifier.verifyOrDelete(f2, 'z' * 64),
+        throwsA(isA<MissingChecksumException>()),
+      );
+      expect(f2.existsSync(), isFalse);
+    });
+
+    test('parseSha256Sums ignores non-hex hashes and strips ./ prefix', () {
+      const sample = '''
+zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz  bad.bin
+5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03  ./LibreMIeL-0.2.0-linux-x64.AppImage
+''';
+      final map = Sha256Verifier.parseSha256Sums(sample);
+      expect(map.containsKey('bad.bin'), isFalse);
+      expect(
+        map['LibreMIeL-0.2.0-linux-x64.AppImage'],
+        '5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03',
+      );
+    });
   });
 }

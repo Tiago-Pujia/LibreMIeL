@@ -232,14 +232,21 @@ class SettingsScreen extends ConsumerWidget {
                           color: palette.linkAccent,
                         ),
                         title: Text(
-                          'Versión instalada: v${updater.currentVersion.isNotEmpty ? updater.currentVersion : "0.1.0+1"}',
+                          updater.currentVersion.isNotEmpty
+                              ? 'Versión instalada: v${updater.currentVersion}'
+                              : 'Versión instalada: comprobando…',
                         ),
                         subtitle: Text(
-                          updater.lastCheckedAt != null
-                              ? 'Última comprobación: ${_formatDateTime(updater.lastCheckedAt!)}'
-                              : 'Aún no se comprobó la versión.',
+                          updater.hasUpdate && updater.availableRelease != null
+                              ? 'Disponible v${updater.availableRelease!.version} — Tocá para actualizar.'
+                              : (updater.lastCheckedAt != null
+                                    ? 'Última comprobación: ${_formatDateTime(updater.lastCheckedAt!)}'
+                                    : 'Aún no se comprobó la versión.'),
                           style: TextStyle(color: palette.textMuted),
                         ),
+                        onTap: updater.hasUpdate
+                            ? () => UpdateDialog.show(context)
+                            : null,
                         trailing: updater.isChecking
                             ? const SizedBox(
                                 width: 20,
@@ -258,9 +265,11 @@ class SettingsScreen extends ConsumerWidget {
                                   color: palette.primary,
                                   borderRadius: BorderRadius.circular(3),
                                 ),
-                                child: const Text(
-                                  '¡Nueva versión!',
-                                  style: TextStyle(
+                                child: Text(
+                                  updater.isReadyToInstall
+                                      ? 'Lista para instalar'
+                                      : '¡Nueva versión!',
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -308,6 +317,10 @@ class SettingsScreen extends ConsumerWidget {
                         onTap: updater.isChecking
                             ? null
                             : () async {
+                                if (updater.isReadyToInstall) {
+                                  UpdateDialog.show(context);
+                                  return;
+                                }
                                 await updaterNotifier.checkForUpdates(
                                   manual: true,
                                 );
@@ -327,9 +340,9 @@ class SettingsScreen extends ConsumerWidget {
 
                 const SizedBox(height: 20),
 
-                // Modo sin conexión y contingencia (Fase 9)
+                // Modo sin conexión y contingencia
                 _SectionHeader(
-                  title: 'Modo sin conexión y contingencia (Fase 9)',
+                  title: 'Modo sin conexión y contingencia',
                   palette: palette,
                 ),
                 const SizedBox(height: 8),
@@ -349,6 +362,22 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                         value: session.offlineModeEnabled,
                         onChanged: controller.updateOfflineModeEnabled,
+                      ),
+                      Divider(height: 1, color: palette.divider),
+                      SwitchListTile(
+                        secondary: Icon(
+                          Icons.cloud_done_outlined,
+                          color: palette.linkAccent,
+                        ),
+                        title: const Text(
+                          'Avisar cuando MIeL vuelva a estar en línea',
+                        ),
+                        subtitle: Text(
+                          'Envía una notificación nativa al restablecerse los servidores de MIeL tras una caída.',
+                          style: TextStyle(color: palette.textMuted),
+                        ),
+                        value: session.notifyOnMielRecovery,
+                        onChanged: controller.updateNotifyOnMielRecovery,
                       ),
                       if (session.offlineModeEnabled) ...[
                         Divider(height: 1, color: palette.divider),
@@ -376,7 +405,7 @@ class SettingsScreen extends ConsumerWidget {
                             'Límite de almacenamiento del caché',
                           ),
                           subtitle: Text(
-                            'Purga automáticamente las páginas menos consultadas al superar la cuota.',
+                            'Purga automáticamente las páginas e imágenes menos consultadas al superar la cuota.',
                             style: TextStyle(color: palette.textMuted),
                           ),
                           trailing: DropdownButton<int>(

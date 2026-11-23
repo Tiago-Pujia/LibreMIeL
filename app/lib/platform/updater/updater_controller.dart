@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -18,6 +19,7 @@ class UpdaterState {
     this.progress,
     this.downloadedFile,
     this.errorMessage,
+    this.infoMessage,
     this.currentVersion = '',
     this.lastCheckedAt,
     this.isAutoCheckEnabled = true,
@@ -29,6 +31,7 @@ class UpdaterState {
   final UpdateProgress? progress;
   final File? downloadedFile;
   final String? errorMessage;
+  final String? infoMessage;
   final String currentVersion;
   final DateTime? lastCheckedAt;
   final bool isAutoCheckEnabled;
@@ -40,7 +43,12 @@ class UpdaterState {
   bool get isReadyToInstall => status == UpdateStatus.readyToInstall;
   bool get isInstalling => status == UpdateStatus.installing;
   bool get hasUpdate =>
-      status == UpdateStatus.updateAvailable && availableRelease != null;
+      availableRelease != null &&
+      (status == UpdateStatus.updateAvailable ||
+          status == UpdateStatus.downloading ||
+          status == UpdateStatus.verifyingChecksum ||
+          status == UpdateStatus.readyToInstall ||
+          status == UpdateStatus.installing);
 
   UpdaterState copyWith({
     UpdateStatus? status,
@@ -48,8 +56,11 @@ class UpdaterState {
     bool clearRelease = false,
     UpdateProgress? progress,
     File? downloadedFile,
+    bool clearDownloadedFile = false,
     String? errorMessage,
     bool clearError = false,
+    String? infoMessage,
+    bool clearInfo = false,
     String? currentVersion,
     DateTime? lastCheckedAt,
     bool? isAutoCheckEnabled,
@@ -61,8 +72,11 @@ class UpdaterState {
           ? null
           : (availableRelease ?? this.availableRelease),
       progress: progress ?? this.progress,
-      downloadedFile: downloadedFile ?? this.downloadedFile,
+      downloadedFile: clearDownloadedFile
+          ? null
+          : (downloadedFile ?? this.downloadedFile),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      infoMessage: clearInfo ? null : (infoMessage ?? this.infoMessage),
       currentVersion: currentVersion ?? this.currentVersion,
       lastCheckedAt: lastCheckedAt ?? this.lastCheckedAt,
       isAutoCheckEnabled: isAutoCheckEnabled ?? this.isAutoCheckEnabled,
@@ -81,6 +95,26 @@ final updateDownloaderProvider = Provider<UpdateDownloader>((ref) {
   return UpdateDownloader();
 });
 
+/// Proveedor inyectable del ejecutor de instalación (facilita tests).
+final updateInstallerCallbackProvider =
+    Provider<
+      Future<InstallLaunchResult> Function({
+        required File downloadedFile,
+        required ReleaseInfo release,
+        Future<void> Function()? beforeExit,
+      })
+    >((ref) {
+      return ({
+        required File downloadedFile,
+        required ReleaseInfo release,
+        Future<void> Function()? beforeExit,
+      }) => UpdateInstaller.install(
+        downloadedFile: downloadedFile,
+        release: release,
+        beforeExit: beforeExit,
+      );
+    });
+
 /// Controlador del actualizador automático.
 class UpdaterNotifier extends Notifier<UpdaterState> {
   CancelToken? _cancelToken;
@@ -98,28 +132,77 @@ class UpdaterNotifier extends Notifier<UpdaterState> {
     final db = ref.read(databaseProvider);
     final checker = ref.read(updateCheckerProvider);
 
+    SemVer? currentVer;
     String curVerStr = '';
     try {
-      final curVer = await checker.getCurrentVersion();
-      curVerStr = curVer.toString();
+      currentVer = await checker.getCurrentVersion();
+      curVerStr = currentVer.toString();
     } catch (_) {}
 
     final autoCheck = await db.getAutoCheckUpdates();
     final lastCheck = await db.getLastUpdateCheckAt();
     final skipped = await db.getSkippedReleaseVersion();
 
+    // Restaurar release cacheado si sigue siendo más nuevo que la versión instalada
+    ReleaseInfo? cachedRelease;
+    final rawCached = await db.getCachedReleaseJson();
+    if (rawCached != null && rawCached.isNotEmpty) {
+      cachedRelease = _parseAndValidateCachedRelease(
+        rawCached,
+        currentVer: currentVer,
+        skippedVersion: skipped,
+      );
+      if (cachedRelease == null && currentVer != null) {
+        await db.clearCachedReleaseJson();
+      }
+    }
+
     state = state.copyWith(
       currentVersion: curVerStr,
       isAutoCheckEnabled: autoCheck,
       lastCheckedAt: lastCheck,
       skippedVersion: skipped,
+      availableRelease: cachedRelease,
+      status: cachedRelease != null ? UpdateStatus.updateAvailable : null,
     );
+  }
+
+  ReleaseInfo? _parseAndValidateCachedRelease(
+    String rawJson, {
+    required SemVer? currentVer,
+    required String? skippedVersion,
+  }) {
+    try {
+      final decoded = jsonDecode(rawJson);
+      if (decoded is! Map<String, dynamic>) return null;
+      final info = ReleaseInfo.fromJson(decoded);
+      if (info.version.isEmpty ||
+          !Sha256Verifier.isValidSha256(info.expectedSha256) ||
+          !isTrustedGitHubDownloadUrl(info.downloadUrl)) {
+        return null;
+      }
+      final relVer = SemVer.tryParse(info.version);
+      if (relVer == null) return null;
+      if (currentVer != null && !relVer.isGreaterThan(currentVer)) {
+        return null;
+      }
+      if (skippedVersion != null &&
+          skippedVersion.isNotEmpty &&
+          (skippedVersion == relVer.toString() ||
+              skippedVersion == info.tagName ||
+              skippedVersion == 'v${relVer.toString()}')) {
+        return null;
+      }
+      return info;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Comprueba si hay una nueva versión disponible.
   /// Si [manual] es `false`, respeta la frecuencia mínima de 24 horas y [isAutoCheckEnabled].
   Future<void> checkForUpdates({bool manual = false}) async {
-    if (state.isChecking || state.isDownloading) return;
+    if (state.isChecking || state.isDownloading || state.isVerifying) return;
 
     final db = ref.read(databaseProvider);
     final checker = ref.read(updateCheckerProvider);
@@ -133,13 +216,16 @@ class UpdaterNotifier extends Notifier<UpdaterState> {
       if (lastCheck != null) {
         final elapsed = DateTime.now().difference(lastCheck);
         if (elapsed.inHours < 24) {
-          // Aún no transcurrieron 24 horas desde la última comprobación
           return;
         }
       }
     }
 
-    state = state.copyWith(status: UpdateStatus.checking, clearError: true);
+    state = state.copyWith(
+      status: UpdateStatus.checking,
+      clearError: true,
+      clearInfo: true,
+    );
 
     try {
       final cachedEtag = await db.getLastUpdateEtag();
@@ -158,24 +244,72 @@ class UpdaterNotifier extends Notifier<UpdaterState> {
         await db.setLastUpdateEtag(result.etag!);
       }
 
+      if (result.notModified) {
+        // 304 Not Modified: conservar release cacheado si todavía es aplicable
+        SemVer? currentVer;
+        try {
+          currentVer = await checker.getCurrentVersion();
+        } catch (_) {}
+
+        ReleaseInfo? restored = state.availableRelease;
+        if (restored == null) {
+          final rawCached = await db.getCachedReleaseJson();
+          if (rawCached != null && rawCached.isNotEmpty) {
+            restored = _parseAndValidateCachedRelease(
+              rawCached,
+              currentVer: currentVer,
+              skippedVersion: manual ? null : skipped,
+            );
+          }
+        }
+
+        if (restored != null) {
+          state = state.copyWith(
+            status: UpdateStatus.updateAvailable,
+            availableRelease: restored,
+            lastCheckedAt: now,
+          );
+          if (!manual) {
+            await _notifyReleaseOnce(db, notifService, restored);
+          }
+        } else {
+          state = state.copyWith(
+            status: manual ? UpdateStatus.upToDate : UpdateStatus.idle,
+            clearRelease: true,
+            clearDownloadedFile: true,
+            lastCheckedAt: now,
+          );
+        }
+        return;
+      }
+
       if (result.isNewVersionAvailable && result.releaseInfo != null) {
+        final info = result.releaseInfo!;
+        await db.setCachedReleaseJson(jsonEncode(info.toJson()));
+
+        final isSameDownloaded =
+            state.downloadedFile != null &&
+            state.availableRelease?.version == info.version &&
+            state.downloadedFile!.existsSync();
+
         state = state.copyWith(
-          status: UpdateStatus.updateAvailable,
-          availableRelease: result.releaseInfo,
+          status: isSameDownloaded
+              ? UpdateStatus.readyToInstall
+              : UpdateStatus.updateAvailable,
+          availableRelease: info,
+          clearDownloadedFile: !isSameDownloaded,
           lastCheckedAt: now,
         );
 
         if (!manual) {
-          await notifService.showUpdateNotification(
-            version: result.releaseInfo!.version,
-            releaseNotes: result.releaseInfo!.releaseNotes,
-            assetName: result.releaseInfo!.assetName,
-          );
+          await _notifyReleaseOnce(db, notifService, info);
         }
       } else {
+        await db.clearCachedReleaseJson();
         state = state.copyWith(
           status: manual ? UpdateStatus.upToDate : UpdateStatus.idle,
           clearRelease: true,
+          clearDownloadedFile: true,
           lastCheckedAt: now,
         );
       }
@@ -184,15 +318,33 @@ class UpdaterNotifier extends Notifier<UpdaterState> {
         status: UpdateStatus.error,
         errorMessage: e is GitHubRateLimitException
             ? 'Límite de consultas de GitHub API alcanzado. Probá más tarde.'
+            : e is MissingChecksumException
+            ? e.toString()
             : 'Error al comprobar actualizaciones: $e',
       );
     }
   }
 
+  /// Emite una notificación nativa única por versión (`app_update_<version>`).
+  Future<void> _notifyReleaseOnce(
+    dynamic db,
+    dynamic notifService,
+    ReleaseInfo info,
+  ) async {
+    final lastNotified = await db.getLastNotifiedReleaseVersion() as String?;
+    if (lastNotified == info.version) return;
+    await notifService.showUpdateNotification(
+      version: info.version,
+      releaseNotes: info.releaseNotes,
+      assetName: info.assetName,
+    );
+    await db.setLastNotifiedReleaseVersion(info.version);
+  }
+
   /// Descarga el artefacto y verifica su integridad SHA-256.
   Future<void> downloadUpdate() async {
     final release = state.availableRelease;
-    if (release == null || state.isDownloading) return;
+    if (release == null || state.isDownloading || state.isVerifying) return;
 
     final downloader = ref.read(updateDownloaderProvider);
 
@@ -203,6 +355,7 @@ class UpdaterNotifier extends Notifier<UpdaterState> {
       status: UpdateStatus.downloading,
       progress: const UpdateProgress(receivedBytes: 0, totalBytes: 0),
       clearError: true,
+      clearInfo: true,
     );
 
     try {
@@ -212,11 +365,16 @@ class UpdaterNotifier extends Notifier<UpdaterState> {
         onProgress: (p) {
           state = state.copyWith(progress: p);
         },
+        onVerifying: () {
+          state = state.copyWith(status: UpdateStatus.verifyingChecksum);
+        },
       );
 
       state = state.copyWith(
         status: UpdateStatus.readyToInstall,
         downloadedFile: file,
+        clearError: true,
+        clearInfo: true,
       );
     } catch (e) {
       if (_cancelToken?.isCancelled == true) {
@@ -226,7 +384,8 @@ class UpdaterNotifier extends Notifier<UpdaterState> {
 
       state = state.copyWith(
         status: UpdateStatus.error,
-        errorMessage: e is ChecksumMismatchException
+        errorMessage:
+            (e is ChecksumMismatchException || e is MissingChecksumException)
             ? e.toString()
             : 'Error al descargar la actualización: $e',
       );
@@ -237,12 +396,42 @@ class UpdaterNotifier extends Notifier<UpdaterState> {
   Future<void> installUpdate() async {
     final file = state.downloadedFile;
     final release = state.availableRelease;
-    if (file == null || release == null) return;
+    if (file == null || release == null || state.isInstalling) return;
 
-    state = state.copyWith(status: UpdateStatus.installing);
+    state = state.copyWith(
+      status: UpdateStatus.installing,
+      clearError: true,
+      clearInfo: true,
+    );
 
     try {
-      await UpdateInstaller.install(downloadedFile: file, release: release);
+      final installer = ref.read(updateInstallerCallbackProvider);
+      final result = await installer(
+        downloadedFile: file,
+        release: release,
+        beforeExit: () async {
+          try {
+            await ref.read(appSessionProvider.notifier).prepareForAppExit();
+          } catch (_) {}
+        },
+      );
+
+      switch (result) {
+        case InstallLaunchResult.launchedAndExiting:
+          break;
+        case InstallLaunchResult.needsAndroidInstallPermission:
+          state = state.copyWith(
+            status: UpdateStatus.readyToInstall,
+            infoMessage: 'Habilitá el permiso "Instalar apps desconocidas" para LibreMIeL en Ajustes y luego volvé a tocar "Instalar actualización".',
+          );
+          break;
+        case InstallLaunchResult.launchedExternalInstaller:
+          state = state.copyWith(
+            status: UpdateStatus.readyToInstall,
+            infoMessage: 'Se abrió el instalador del sistema. Seguí los pasos en pantalla para completar la actualización.',
+          );
+          break;
+      }
     } catch (e) {
       state = state.copyWith(
         status: UpdateStatus.error,
@@ -265,16 +454,23 @@ class UpdaterNotifier extends Notifier<UpdaterState> {
   Future<void> skipVersion(String version) async {
     final db = ref.read(databaseProvider);
     await db.setSkippedReleaseVersion(version);
+    await db.clearCachedReleaseJson();
     state = state.copyWith(
       status: UpdateStatus.idle,
       clearRelease: true,
+      clearDownloadedFile: true,
+      clearInfo: true,
       skippedVersion: version,
     );
   }
 
-  /// Descarta el aviso actual de actualización.
+  /// Descarta el aviso actual de actualización (sin olvidar que existe si vuelve a abrir Ajustes).
   void dismiss() {
-    state = state.copyWith(status: UpdateStatus.idle);
+    if (state.isReadyToInstall || state.availableRelease != null) {
+      state = state.copyWith(clearInfo: true);
+    } else {
+      state = state.copyWith(status: UpdateStatus.idle, clearInfo: true);
+    }
   }
 
   /// Modifica la preferencia de comprobación automática.

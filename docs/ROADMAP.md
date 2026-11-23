@@ -19,7 +19,7 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 | **Fase 6** | Buscador Global Offline | ⏳ Planificado | Búsqueda instantánea *full-text* (SQLite FTS5) sobre todas las materias sin conexión |
 | **Fase 7** | Integración con IA | ⏳ Planificado | Asistente de estudio *local-first* (Ollama/local o BYOK) sobre el material descargado de la cátedra |
 | **Fase 8** | Actualizador Automático en la App | ✅ Completado | Alertas de nuevos releases en GitHub y actualización automática/asistida por SO sin salir al navegador |
-| **Fase 9** | Modo Offline y Contingencia ante Caídas de MIeL | ⏳ Planificado | Navegación opcional sin conexión (Contenidos, Mensajería, Foros, Portafolio) con sesión activa y aviso de servidor caído |
+| **Fase 9** | Modo Offline y Contingencia ante Caídas de MIeL | ✅ Completado | Navegación opcional sin conexión (Contenidos, Mensajería, Foros, Portafolio) con sesión activa y aviso de servidor caído |
 
 ---
 

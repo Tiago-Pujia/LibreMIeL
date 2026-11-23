@@ -12,6 +12,7 @@ import '../../core/storage/app_database.dart';
 import '../../core/theme/libremiel_brand.dart';
 import '../../core/theme/miel_theme.dart';
 import '../../platform/notification_service.dart';
+import '../../platform/updater/updater_controller.dart';
 import '../feed/feed_screen.dart';
 import '../modules/module_providers.dart';
 import '../modules/module_reader_host.dart';
@@ -89,6 +90,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void _handleNotificationPayloadTap(NotificationTapPayload payload) {
     if (payload.module == 'app_update' ||
         payload.targetUrl.startsWith('libremiel://update')) {
+      final updater = ref.read(updaterProvider);
+      if (updater.availableRelease == null && !updater.isChecking) {
+        unawaited(
+          ref.read(updaterProvider.notifier).checkForUpdates(manual: true),
+        );
+      }
       UpdateDialog.show(context);
       return;
     }

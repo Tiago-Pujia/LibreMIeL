@@ -39,6 +39,10 @@ void main() {
       expect(SemVer.tryParse('abc'), isNull);
       expect(SemVer.tryParse('v'), isNull);
       expect(SemVer.tryParse('not.a.version'), isNull);
+      expect(SemVer.tryParse('1.abc.3'), isNull);
+      expect(SemVer.tryParse('1.2.xyz'), isNull);
+      expect(SemVer.tryParse('1.2.3.4'), isNull);
+      expect(SemVer.tryParse('1.0.0-'), isNull);
     });
 
     test('isGreaterThan and compareTo comparisons', () {
@@ -63,6 +67,35 @@ void main() {
       final v010pre = SemVer.parse('0.1.0-alpha');
       expect(v010.isGreaterThan(v010pre), isTrue);
       expect(v010pre.isGreaterThan(v010), isFalse);
+
+      // SemVer 2.0 numeric pre-release identifiers: beta.10 > beta.2
+      final beta2 = SemVer.parse('1.0.0-beta.2');
+      final beta10 = SemVer.parse('1.0.0-beta.10');
+      expect(beta10.isGreaterThan(beta2), isTrue);
+      expect(beta2.isGreaterThan(beta10), isFalse);
+    });
+
+    test('ReleaseInfo toJson/fromJson round-trip preserves all fields', () {
+      final orig = ReleaseInfo(
+        version: '0.2.0',
+        tagName: 'v0.2.0',
+        releaseNotes: 'Notas de prueba',
+        assetName: 'LibreMIeL-0.2.0-linux-x64.AppImage',
+        downloadUrl: 'https://github.com/Tiago-Pujia/LibreMIeL/releases/dl/app',
+        assetSize: 123456,
+        expectedSha256:
+            '5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03',
+        publishedAt: DateTime.utc(2026, 11, 22, 10, 0),
+      );
+      final restored = ReleaseInfo.fromJson(orig.toJson());
+      expect(restored.version, orig.version);
+      expect(restored.tagName, orig.tagName);
+      expect(restored.releaseNotes, orig.releaseNotes);
+      expect(restored.assetName, orig.assetName);
+      expect(restored.downloadUrl, orig.downloadUrl);
+      expect(restored.assetSize, orig.assetSize);
+      expect(restored.expectedSha256, orig.expectedSha256);
+      expect(restored.publishedAt, orig.publishedAt);
     });
 
     test('toString formats correctly', () {

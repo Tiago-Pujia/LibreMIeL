@@ -52,6 +52,18 @@ class TrackingInteractiveReader implements MielInteractiveReader {
     return '<html>Evaluaciones $idComision</html>';
   }
 
+  @override
+  Future<String> fetchEncuestasHtml(String idComision) async {
+    calls.add('fetchEncuestasHtml:$idComision');
+    return '<html>Encuestas $idComision</html>';
+  }
+
+  @override
+  Future<String> fetchAutoguiaHtml(String idComision) async {
+    calls.add('fetchAutoguiaHtml:$idComision');
+    return '<html>Autoguia $idComision</html>';
+  }
+
   // Métodos no usados por prefetcher (lanzan UnimplementedError si son llamados por error)
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -81,6 +93,8 @@ void main() {
     bool hasMensajeria = true,
     bool hasForo = true,
     bool hasEvaluacion = true,
+    bool hasEncuestas = false,
+    bool hasAutoguia = false,
   }) {
     return Subject(
       idComision: idComision,
@@ -91,9 +105,9 @@ void main() {
       hasContenidos: hasContenidos,
       hasForo: hasForo,
       hasMensajeria: hasMensajeria,
-      hasAutoguia: false,
+      hasAutoguia: hasAutoguia,
       hasChat: false,
-      hasEncuestas: false,
+      hasEncuestas: hasEncuestas,
       hasEvaluacion: hasEvaluacion,
       hasPortafolio: hasPortafolio,
       isHiddenInMiel: false,
@@ -126,7 +140,7 @@ void main() {
       expect(client.calls, isNot(contains('fetchContenidosHtml:100')));
     });
 
-    test('Fetches Contenidos when badge > 0 without side-effects', () async {
+    test('CRITICAL RULE 1 & 11: Never fetches Contenidos even when badge > 0 (avoids wiping muted/baseline badges)', () async {
       final s = makeSubject(
         idComision: '200',
         name: 'Bases de Datos',
@@ -137,11 +151,8 @@ void main() {
       final count = await prefetcher.prefetchSafeModules(activeSubjects: [s]);
 
       expect(count, greaterThan(0));
-      expect(client.calls, contains('fetchContenidosHtml:200'));
-
-      final cachedContenidos = await db.getOfflinePage('contenidos:200');
-      expect(cachedContenidos, isNotNull);
-      expect(cachedContenidos!.htmlContent, contains('Contenidos 200'));
+      expect(client.calls, isNot(contains('fetchContenidosHtml:200')));
+      expect(await db.getOfflinePage('contenidos:200'), isNull);
     });
 
     test('Precaches principal and safe modules in database', () async {
@@ -153,6 +164,8 @@ void main() {
         hasMensajeria: true,
         hasForo: true,
         hasEvaluacion: true,
+        hasEncuestas: true,
+        hasAutoguia: true,
       );
 
       await prefetcher.prefetchSafeModules(activeSubjects: [s]);
@@ -163,6 +176,17 @@ void main() {
       expect(await db.getOfflinePage('mensajeria:entrada:300:p1'), isNotNull);
       expect(await db.getOfflinePage('foro:temas:300'), isNotNull);
       expect(await db.getOfflinePage('evaluaciones:300'), isNotNull);
+      expect(await db.getOfflinePage('encuestas:300'), isNotNull);
+      expect(await db.getOfflinePage('autoguia:300'), isNotNull);
+    });
+
+    test('skipInterno avoids duplicate fetchInternoHtml call', () async {
+      final s = makeSubject(idComision: '350', name: 'Redes');
+      await prefetcher.prefetchSafeModules(
+        activeSubjects: [s],
+        skipInterno: true,
+      );
+      expect(client.calls, isNot(contains('fetchInternoHtml')));
     });
 
     test('Early termination on cancellation token', () async {

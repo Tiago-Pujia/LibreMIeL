@@ -42,13 +42,26 @@ class SemVer implements Comparable<SemVer> {
     }
 
     final segments = v.split('.');
-    if (segments.isEmpty) return null;
+    if (segments.isEmpty || segments.length > 3) return null;
 
     final maj = int.tryParse(segments[0]);
-    if (maj == null) return null;
+    if (maj == null || maj < 0) return null;
 
-    final min = segments.length > 1 ? int.tryParse(segments[1]) ?? 0 : 0;
-    final pat = segments.length > 2 ? int.tryParse(segments[2]) ?? 0 : 0;
+    var min = 0;
+    if (segments.length > 1) {
+      final parsedMin = int.tryParse(segments[1]);
+      if (parsedMin == null || parsedMin < 0) return null;
+      min = parsedMin;
+    }
+
+    var pat = 0;
+    if (segments.length > 2) {
+      final parsedPat = int.tryParse(segments[2]);
+      if (parsedPat == null || parsedPat < 0) return null;
+      pat = parsedPat;
+    }
+
+    if (pre != null && pre.isEmpty) return null;
 
     return SemVer(
       major: maj,
@@ -70,6 +83,31 @@ class SemVer implements Comparable<SemVer> {
   /// Retorna `true` si esta versión es estrictamente mayor que [other].
   bool isGreaterThan(SemVer other) => compareTo(other) > 0;
 
+  static int _comparePreRelease(String a, String b) {
+    final partsA = a.split('.');
+    final partsB = b.split('.');
+    final minLen = partsA.length < partsB.length
+        ? partsA.length
+        : partsB.length;
+
+    for (var i = 0; i < minLen; i++) {
+      final segA = partsA[i];
+      final segB = partsB[i];
+      if (segA == segB) continue;
+
+      final numA = int.tryParse(segA);
+      final numB = int.tryParse(segB);
+      if (numA != null && numB != null) {
+        return numA.compareTo(numB);
+      }
+      // Según SemVer 2.0.0 §11.4.3: identificadores numéricos tienen menor precedencia que alfanuméricos
+      if (numA != null && numB == null) return -1;
+      if (numA == null && numB != null) return 1;
+      return segA.compareTo(segB);
+    }
+    return partsA.length.compareTo(partsB.length);
+  }
+
   @override
   int compareTo(SemVer other) {
     if (major != other.major) return major.compareTo(other.major);
@@ -80,7 +118,7 @@ class SemVer implements Comparable<SemVer> {
     if (preRelease == null && other.preRelease != null) return 1;
     if (preRelease != null && other.preRelease == null) return -1;
     if (preRelease != null && other.preRelease != null) {
-      final preComp = preRelease!.compareTo(other.preRelease!);
+      final preComp = _comparePreRelease(preRelease!, other.preRelease!);
       if (preComp != 0) return preComp;
     }
 
@@ -139,6 +177,32 @@ class ReleaseInfo {
   final DateTime publishedAt;
   final bool isPrerelease;
 
+  Map<String, dynamic> toJson() => {
+    'version': version,
+    'tagName': tagName,
+    'releaseNotes': releaseNotes,
+    'assetName': assetName,
+    'downloadUrl': downloadUrl,
+    'assetSize': assetSize,
+    'expectedSha256': expectedSha256,
+    'publishedAt': publishedAt.toIso8601String(),
+    'isPrerelease': isPrerelease,
+  };
+
+  factory ReleaseInfo.fromJson(Map<String, dynamic> json) => ReleaseInfo(
+    version: json['version'] as String? ?? '',
+    tagName: json['tagName'] as String? ?? '',
+    releaseNotes: json['releaseNotes'] as String? ?? '',
+    assetName: json['assetName'] as String? ?? '',
+    downloadUrl: json['downloadUrl'] as String? ?? '',
+    assetSize: (json['assetSize'] as num?)?.toInt() ?? 0,
+    expectedSha256: json['expectedSha256'] as String? ?? '',
+    publishedAt:
+        DateTime.tryParse(json['publishedAt'] as String? ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    isPrerelease: json['isPrerelease'] == true,
+  );
+
   String get formattedSize {
     if (assetSize <= 0) return '';
     if (assetSize < 1024 * 1024) {
@@ -187,6 +251,18 @@ enum UpdateStatus {
   readyToInstall,
   installing,
   error,
+}
+
+/// Resultado de invocar el instalador nativo del sistema operativo.
+enum InstallLaunchResult {
+  /// Se lanzó la actualización in-place y el proceso saldrá para reiniciarse.
+  launchedAndExiting,
+
+  /// Se abrió un instalador externo (APK Android, DMG macOS, paquete Linux o ZIP).
+  launchedExternalInstaller,
+
+  /// En Android falta el permiso `REQUEST_INSTALL_PACKAGES`; se abrió Ajustes del sistema.
+  needsAndroidInstallPermission,
 }
 
 /// Tipo de distribución instalada en Linux.

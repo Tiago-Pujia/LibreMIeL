@@ -13,74 +13,84 @@ class UpdateInstaller {
   );
 
   /// Ejecuta el proceso de instalación según el sistema operativo.
-  static Future<void> install({
+  static Future<InstallLaunchResult> install({
     required File downloadedFile,
     required ReleaseInfo release,
+    Future<void> Function()? beforeExit,
   }) async {
-    if (kIsWeb) return;
+    if (kIsWeb) return InstallLaunchResult.launchedExternalInstaller;
 
     if (Platform.isWindows) {
-      await _installWindows(downloadedFile);
+      return _installWindows(downloadedFile, beforeExit: beforeExit);
     } else if (Platform.isAndroid) {
-      await _installAndroid(downloadedFile);
+      return _installAndroid(downloadedFile);
     } else if (Platform.isLinux) {
-      await _installLinux(downloadedFile);
+      return _installLinux(downloadedFile, beforeExit: beforeExit);
     } else if (Platform.isMacOS) {
-      await _installMacOs(downloadedFile);
+      return _installMacOs(downloadedFile);
     }
+    return InstallLaunchResult.launchedExternalInstaller;
   }
 
-  static Future<void> _installWindows(File file) async {
+  static Future<InstallLaunchResult> _installWindows(
+    File file, {
+    Future<void> Function()? beforeExit,
+  }) async {
     if (file.path.toLowerCase().endsWith('.exe')) {
-      // Ejecución silenciosa con relanzamiento automático de Inno Setup
+      // Ejecución silenciosa con Inno Setup: CloseApplications cierra instancias
+      // residuales y la entrada `[Run] Check: WizardSilent` relanza una sola vez.
       await Process.start(file.path, [
         '/SILENT',
         '/CLOSEAPPLICATIONS',
-        '/RESTARTAPPLICATIONS',
       ], mode: ProcessStartMode.detached);
+      if (beforeExit != null) {
+        try {
+          await beforeExit();
+        } catch (_) {}
+      }
       exit(0);
     } else {
       // Portable zip: abrir la carpeta que lo contiene
       await Process.start('explorer.exe', ['/select,', file.path]);
+      return InstallLaunchResult.launchedExternalInstaller;
     }
   }
 
-  static Future<void> _installAndroid(File file) async {
+  static Future<InstallLaunchResult> _installAndroid(File file) async {
     final canInstall =
         await _androidChannel.invokeMethod<bool>('canRequestPackageInstalls') ??
         true;
 
     if (!canInstall) {
       await _androidChannel.invokeMethod('openInstallPermissionSettings');
-      // No continuar hasta que el usuario conceda el permiso
-      return;
+      return InstallLaunchResult.needsAndroidInstallPermission;
     }
 
     await _androidChannel.invokeMethod('installApk', {'apkPath': file.path});
+    return InstallLaunchResult.launchedExternalInstaller;
   }
 
-  static Future<void> _installLinux(File file) async {
+  static Future<InstallLaunchResult> _installLinux(
+    File file, {
+    Future<void> Function()? beforeExit,
+  }) async {
     final kind = AssetResolver.detectLinuxInstallKind();
 
     if (kind == LinuxInstallKind.appImage) {
       final appImagePath = Platform.environment['APPIMAGE'];
       if (appImagePath != null && appImagePath.isNotEmpty) {
-        // 1. Dar permisos de ejecución al nuevo AppImage
-        await Process.run('chmod', ['+x', file.path]);
+        await replaceAppImageAtomically(
+          downloadedFile: file,
+          targetAppImagePath: appImagePath,
+        );
 
-        // 2. Reemplazo atómico del AppImage actual
-        final target = File(appImagePath);
-        try {
-          // En Linux se puede renombrar sobre el archivo en ejecución de forma atómica
-          await file.rename(target.path);
-        } catch (_) {
-          // Si están en distintos filesystems (ej. /tmp vs /home), copiar y reemplazar
-          await file.copy(target.path);
-          await Process.run('chmod', ['+x', target.path]);
+        // Relanzar el nuevo AppImage desacoplado
+        await Process.start(appImagePath, [], mode: ProcessStartMode.detached);
+        if (beforeExit != null) {
+          try {
+            await beforeExit();
+          } catch (_) {}
         }
-
-        // 3. Relanzar el nuevo AppImage desacoplado
-        await Process.start(target.path, [], mode: ProcessStartMode.detached);
         exit(0);
       }
     }
@@ -96,9 +106,49 @@ class UpdateInstaller {
         file.parent.path,
       ], mode: ProcessStartMode.detached);
     }
+    return InstallLaunchResult.launchedExternalInstaller;
   }
 
-  static Future<void> _installMacOs(File file) async {
+  /// Reemplaza un AppImage de forma atómica incluso entre distintos sistemas de
+  /// archivos (`/tmp` vs `/home`) sin escribir jamás sobre el archivo montado
+  /// en ejecución (evita `ETXTBSY` y corrupción de SquashFS).
+  @visibleForTesting
+  static Future<void> replaceAppImageAtomically({
+    required File downloadedFile,
+    required String targetAppImagePath,
+  }) async {
+    await Process.run('chmod', ['+x', downloadedFile.path]);
+
+    final target = File(targetAppImagePath);
+    try {
+      await downloadedFile.rename(target.path);
+    } on FileSystemException {
+      // Distintos filesystems (EXDEV): copiar a archivo temporal en el MISMO
+      // directorio destino, marcar ejecutable y renombrar atómicamente.
+      final staged = File(
+        '${target.path}.update.${DateTime.now().millisecondsSinceEpoch}.new',
+      );
+      try {
+        await downloadedFile.copy(staged.path);
+        await Process.run('chmod', ['+x', staged.path]);
+        await staged.rename(target.path);
+        try {
+          if (await downloadedFile.exists()) {
+            await downloadedFile.delete();
+          }
+        } catch (_) {}
+      } catch (_) {
+        try {
+          if (await staged.exists()) {
+            await staged.delete();
+          }
+        } catch (_) {}
+        rethrow;
+      }
+    }
+  }
+
+  static Future<InstallLaunchResult> _installMacOs(File file) async {
     if (file.path.toLowerCase().endsWith('.dmg')) {
       await Process.start('open', [file.path], mode: ProcessStartMode.detached);
     } else {
@@ -108,5 +158,6 @@ class UpdateInstaller {
         file.path,
       ], mode: ProcessStartMode.detached);
     }
+    return InstallLaunchResult.launchedExternalInstaller;
   }
 }

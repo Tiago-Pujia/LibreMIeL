@@ -27,7 +27,40 @@ class UpdateDialog extends ConsumerWidget {
     final controller = ref.read(updaterProvider.notifier);
     final release = state.availableRelease;
 
-    if (release == null && !state.isChecking) {
+    if (release == null && state.isChecking) {
+      return AlertDialog(
+        backgroundColor: palette.cardBackground,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: BorderSide(color: palette.cardBorder),
+        ),
+        title: Text(
+          'Buscando actualizaciones…',
+          style: TextStyle(color: palette.textPrimary),
+        ),
+        content: Row(
+          children: [
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: palette.primary,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                'Consultando GitHub Releases…',
+                style: TextStyle(color: palette.textPrimary),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (release == null) {
       return AlertDialog(
         backgroundColor: palette.cardBackground,
         shape: RoundedRectangleBorder(
@@ -135,7 +168,7 @@ class UpdateDialog extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(3),
                               ),
                               child: Text(
-                                'v${release?.version ?? ""}',
+                                'v${release.version}',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -170,7 +203,7 @@ class UpdateDialog extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        release?.assetName ?? 'Artefacto de actualización',
+                        release.assetName,
                         style: TextStyle(
                           fontSize: 13,
                           fontFamily: 'monospace',
@@ -179,8 +212,7 @@ class UpdateDialog extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (release != null &&
-                        release.formattedSize.isNotEmpty) ...[
+                    if (release.formattedSize.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       Text(
                         release.formattedSize,
@@ -217,8 +249,8 @@ class UpdateDialog extends ConsumerWidget {
                   ),
                   child: SingleChildScrollView(
                     child: Text(
-                      release?.releaseNotes.trim().isNotEmpty == true
-                          ? release!.releaseNotes.trim()
+                      release.releaseNotes.trim().isNotEmpty
+                          ? release.releaseNotes.trim()
                           : 'No se detallaron notas para este release.',
                       style: TextStyle(
                         fontSize: 13,
@@ -232,7 +264,9 @@ class UpdateDialog extends ConsumerWidget {
               const SizedBox(height: 16),
 
               // Sección de progreso y estado
-              if (state.isDownloading || state.isVerifying) ...[
+              if (state.isDownloading ||
+                  state.isVerifying ||
+                  state.isInstalling) ...[
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -240,9 +274,11 @@ class UpdateDialog extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          state.isVerifying
-                              ? 'Verificando firma criptográfica SHA-256...'
-                              : 'Descargando actualización...',
+                          state.isInstalling
+                              ? 'Iniciando instalador…'
+                              : state.isVerifying
+                              ? 'Verificando firma criptográfica SHA-256…'
+                              : 'Descargando actualización…',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -261,7 +297,7 @@ class UpdateDialog extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                      value: state.isVerifying
+                      value: (state.isVerifying || state.isInstalling)
                           ? null
                           : state.progress?.fraction,
                       backgroundColor: palette.cardBorder,
@@ -282,15 +318,18 @@ class UpdateDialog extends ConsumerWidget {
                   child: Row(
                     children: [
                       Icon(
-                        Icons.check_circle_outline,
+                        state.infoMessage != null
+                            ? Icons.info_outline
+                            : Icons.check_circle_outline,
                         color: palette.primary,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Descarga completada y verificada contra SHA256SUMS.txt. '
-                          'Lista para instalar.',
+                          state.infoMessage ??
+                              'Descarga completada y verificada contra SHA256SUMS.txt. '
+                                  'Lista para instalar.',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -353,6 +392,14 @@ class UpdateDialog extends ConsumerWidget {
                       onPressed: controller.cancelDownload,
                       child: const Text('Cancelar descarga'),
                     ),
+                  ] else if (state.isVerifying || state.isInstalling) ...[
+                    TextButton(
+                      onPressed: null,
+                      child: Text(
+                        state.isVerifying ? 'Verificando…' : 'Instalando…',
+                        style: TextStyle(color: palette.textMuted),
+                      ),
+                    ),
                   ] else if (state.isReadyToInstall) ...[
                     TextButton(
                       onPressed: () {
@@ -373,21 +420,20 @@ class UpdateDialog extends ConsumerWidget {
                         ),
                       ),
                       icon: const Icon(Icons.install_desktop, size: 18),
-                      label: const Text('Instalar y reiniciar'),
+                      label: const Text('Instalar actualización'),
                       onPressed: controller.installUpdate,
                     ),
                   ] else ...[
-                    if (release != null)
-                      TextButton(
-                        onPressed: () {
-                          controller.skipVersion(release.version);
-                          Navigator.of(context).pop();
-                        },
-                        child: Text(
-                          'Omitir versión',
-                          style: TextStyle(color: palette.textMuted),
-                        ),
+                    TextButton(
+                      onPressed: () {
+                        controller.skipVersion(release.version);
+                        Navigator.of(context).pop();
+                      },
+                      child: Text(
+                        'Omitir versión',
+                        style: TextStyle(color: palette.textMuted),
                       ),
+                    ),
                     TextButton(
                       onPressed: () {
                         controller.dismiss();

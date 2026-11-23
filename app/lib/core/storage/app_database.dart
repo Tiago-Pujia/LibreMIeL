@@ -143,10 +143,14 @@ class SettingKeys {
   static const String lastUpdateCheckAt = 'last_update_check_at';
   static const String lastUpdateEtag = 'last_update_etag';
   static const String skippedReleaseVersion = 'skipped_release_version';
+  static const String lastNotifiedReleaseVersion =
+      'last_notified_release_version';
+  static const String cachedReleaseJson = 'cached_release_json';
   static const String offlineModeEnabled = 'offline_mode_enabled';
   static const String offlinePrefetchSafeModules =
       'offline_prefetch_safe_modules';
   static const String offlineCacheMaxMb = 'offline_cache_max_mb';
+  static const String notifyOnMielRecovery = 'notify_on_miel_recovery';
 }
 
 @DriftDatabase(
@@ -312,6 +316,26 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> setSkippedReleaseVersion(String version) async {
     await setSetting(SettingKeys.skippedReleaseVersion, version);
+  }
+
+  Future<String?> getLastNotifiedReleaseVersion() async {
+    return await getSetting(SettingKeys.lastNotifiedReleaseVersion);
+  }
+
+  Future<void> setLastNotifiedReleaseVersion(String version) async {
+    await setSetting(SettingKeys.lastNotifiedReleaseVersion, version);
+  }
+
+  Future<String?> getCachedReleaseJson() async {
+    return await getSetting(SettingKeys.cachedReleaseJson);
+  }
+
+  Future<void> setCachedReleaseJson(String json) async {
+    await setSetting(SettingKeys.cachedReleaseJson, json);
+  }
+
+  Future<void> clearCachedReleaseJson() async {
+    await deleteSetting(SettingKeys.cachedReleaseJson);
   }
 
   // --- Subjects ---
@@ -783,6 +807,7 @@ class AppDatabase extends _$AppDatabase {
     required String module,
     required String htmlContent,
     int maxCacheMb = 100,
+    int reservedBytes = 0,
   }) async {
     final now = DateTime.now();
     final sizeBytes = BigInt.from(utf8.encode(htmlContent).length);
@@ -797,7 +822,10 @@ class AppDatabase extends _$AppDatabase {
         lastAccessedAt: Value(now),
       ),
     );
-    await pruneOfflineCacheToQuota(maxCacheMb: maxCacheMb);
+    await pruneOfflineCacheToQuota(
+      maxCacheMb: maxCacheMb,
+      reservedBytes: reservedBytes,
+    );
   }
 
   Future<OfflinePageCacheData?> getOfflinePage(String cacheKey) async {
@@ -827,8 +855,12 @@ class AppDatabase extends _$AppDatabase {
     await delete(offlinePageCache).go();
   }
 
-  Future<void> pruneOfflineCacheToQuota({int maxCacheMb = 100}) async {
-    final maxBytes = maxCacheMb * 1024 * 1024;
+  Future<void> pruneOfflineCacheToQuota({
+    int maxCacheMb = 100,
+    int reservedBytes = 0,
+  }) async {
+    final rawBudget = (maxCacheMb * 1024 * 1024) - reservedBytes;
+    final maxBytes = rawBudget < 0 ? 0 : rawBudget;
     var total = await getOfflineCacheTotalBytes();
     if (total <= maxBytes) return;
 
@@ -856,6 +888,11 @@ class AppDatabase extends _$AppDatabase {
   Future<int> getOfflineCacheMaxMb() async {
     final raw = await getSetting(SettingKeys.offlineCacheMaxMb);
     return int.tryParse(raw ?? '') ?? 100;
+  }
+
+  Future<bool> getNotifyOnMielRecovery() async {
+    final raw = await getSetting(SettingKeys.notifyOnMielRecovery);
+    return raw != 'false';
   }
 
   /// Borra todos los datos locales al cerrar sesión.
