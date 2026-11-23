@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Hexágono de LibreMIeL (silueta monocromática para barra de estado) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M12,2.2 L20.5,7.1 L20.5,16.9 L12,21.8 L3.5,16.9 L3.5,7.1 Z" />
+    <!-- Campana de novedades -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,7.2 C9.9,7.2 8.3,8.8 8.3,10.9 L8.3,13.6 L7.1,15.0 L16.9,15.0 L15.7,13.6 L15.7,10.9 C15.7,8.8 14.1,7.2 12,7.2 Z M12,17.2 C13.0,17.2 13.8,16.5 13.9,15.6 L10.1,15.6 C10.2,16.5 11.0,17.2 12,17.2 Z" />
+</vector>

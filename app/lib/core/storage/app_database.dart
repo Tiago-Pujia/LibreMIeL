@@ -151,6 +151,14 @@ class SettingKeys {
       'offline_prefetch_safe_modules';
   static const String offlineCacheMaxMb = 'offline_cache_max_mb';
   static const String notifyOnMielRecovery = 'notify_on_miel_recovery';
+  static const String mielOutageDetectedAt = 'miel_outage_detected_at';
+}
+
+/// Configura SQLite en modo WAL y con `busy_timeout` para permitir acceso
+/// concurrente seguro entre la app principal y el worker de Android (`WorkManager`).
+void _configureSqliteConnection(dynamic database) {
+  database.execute('PRAGMA journal_mode = WAL;');
+  database.execute('PRAGMA busy_timeout = 5000;');
 }
 
 @DriftDatabase(
@@ -166,7 +174,22 @@ class SettingKeys {
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
-    : super(executor ?? driftDatabase(name: 'libremiel'));
+    : super(
+        executor ??
+            driftDatabase(
+              name: 'libremiel',
+              native: const DriftNativeOptions(
+                shareAcrossIsolates: true,
+                setup: _configureSqliteConnection,
+              ),
+            ),
+      );
+
+  /// Fuerza la actualización de los streams reactivos locales tras cambios
+  /// escritos desde otro motor Flutter (ej. `WorkManager` en Android).
+  void notifyExternalTableUpdates() {
+    markTablesUpdated({notificationLogs, subjects, appSettings});
+  }
 
   @override
   int get schemaVersion => 6;

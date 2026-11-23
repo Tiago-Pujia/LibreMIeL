@@ -79,20 +79,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 if (!kIsWeb && Platform.isAndroid) ...[
                   const SizedBox(height: 8),
-                  _MielPanel(
-                    palette: palette,
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.battery_charging_full,
-                        color: palette.linkAccent,
-                      ),
-                      title: const Text('Optimización de batería en Android'),
-                      subtitle: Text(
-                        'Para recibir notificaciones con la app cerrada, configurá la batería de LibreMIeL en "Sin restricciones" (especialmente en dispositivos Samsung / Xiaomi).',
-                        style: TextStyle(color: palette.textMuted),
-                      ),
-                    ),
-                  ),
+                  _AndroidBackgroundHealthSection(palette: palette),
                 ],
 
                 const SizedBox(height: 20),
@@ -654,6 +641,143 @@ class _OfflineCacheStatsTileState
       trailing: OutlinedButton(
         onPressed: _loading ? null : _clearCache,
         child: const Text('Vaciar caché'),
+      ),
+    );
+  }
+}
+
+class _AndroidBackgroundHealthSection extends ConsumerStatefulWidget {
+  const _AndroidBackgroundHealthSection({required this.palette});
+
+  final MielPalette palette;
+
+  @override
+  ConsumerState<_AndroidBackgroundHealthSection> createState() =>
+      _AndroidBackgroundHealthSectionState();
+}
+
+class _AndroidBackgroundHealthSectionState
+    extends ConsumerState<_AndroidBackgroundHealthSection>
+    with WidgetsBindingObserver {
+  bool? _ignoringBattery;
+  bool? _notificationsEnabled;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshStatus();
+    }
+  }
+
+  Future<void> _refreshStatus() async {
+    final androidSystem = ref.read(androidSystemServiceProvider);
+    final notifService = ref.read(notificationServiceProvider);
+    final results = await Future.wait<bool?>([
+      androidSystem.isIgnoringBatteryOptimizations(),
+      notifService.areNotificationsEnabled(),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _ignoringBattery = results[0];
+      _notificationsEnabled = results[1];
+      _loading = false;
+    });
+  }
+
+  Future<void> _requestBatteryExemption() async {
+    final androidSystem = ref.read(androidSystemServiceProvider);
+    await androidSystem.requestIgnoreBatteryOptimizations();
+  }
+
+  Future<void> _openNotificationSettings() async {
+    final androidSystem = ref.read(androidSystemServiceProvider);
+    await androidSystem.openAppNotificationSettings();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = widget.palette;
+    final batteryOk = _ignoringBattery == true;
+    final notifEnabled = _notificationsEnabled;
+
+    final batterySubtitle = _loading
+        ? 'Consultando configuración de energía del dispositivo…'
+        : batteryOk
+        ? 'Sin restricciones (activo). LibreMIeL puede sincronizar en segundo plano con la app cerrada.'
+        : 'Optimización activa. Tocá para configurar en "Sin restricciones" y evitar retrasos en Samsung / Xiaomi / Motorola.';
+
+    final notifSubtitle = _loading
+        ? 'Consultando permiso de notificaciones del sistema…'
+        : notifEnabled == false
+        ? 'Las notificaciones de Android están desactivadas. Tocá para habilitarlas y configurar los canales.'
+        : 'Gestioná sonidos, vibración y canales ("Novedades de MIeL" y "Sistema y actualizaciones") en Android.';
+
+    return _MielPanel(
+      palette: palette,
+      child: Column(
+        children: [
+          ListTile(
+            leading: Icon(
+              batteryOk
+                  ? Icons.battery_charging_full
+                  : Icons.battery_alert_outlined,
+              color: batteryOk ? palette.linkAccent : Colors.orange.shade700,
+            ),
+            title: const Text('Optimización de batería en Android'),
+            subtitle: Text(
+              batterySubtitle,
+              style: TextStyle(color: palette.textMuted),
+            ),
+            trailing: _loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : batteryOk
+                ? Icon(Icons.check_circle, color: palette.linkAccent)
+                : const Icon(Icons.chevron_right),
+            onTap: _requestBatteryExemption,
+          ),
+          Divider(height: 1, color: palette.divider),
+          ListTile(
+            leading: Icon(
+              notifEnabled == false
+                  ? Icons.notifications_off_outlined
+                  : Icons.notifications_active_outlined,
+              color: notifEnabled == false
+                  ? Colors.orange.shade700
+                  : palette.linkAccent,
+            ),
+            title: const Text('Notificaciones y canales en Android'),
+            subtitle: Text(
+              notifSubtitle,
+              style: TextStyle(color: palette.textMuted),
+            ),
+            trailing: _loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.chevron_right),
+            onTap: _openNotificationSettings,
+          ),
+        ],
       ),
     );
   }

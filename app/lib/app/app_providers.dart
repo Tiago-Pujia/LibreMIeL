@@ -11,6 +11,7 @@ import '../core/parsers/miel_parsers.dart';
 import '../core/storage/app_database.dart';
 import '../core/sync/sync_engine.dart';
 import '../platform/android_background_worker.dart';
+import '../platform/android_system_service.dart';
 import '../platform/autostart_service.dart';
 import '../platform/desktop_tray_service.dart';
 import '../platform/file_download_service.dart';
@@ -46,6 +47,10 @@ final credentialsStoreProvider = Provider<SecureCredentialsStore>((ref) {
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService();
+});
+
+final androidSystemServiceProvider = Provider<AndroidSystemService>((ref) {
+  return const AndroidSystemService();
 });
 
 final autostartServiceProvider = Provider<AutostartService>((ref) {
@@ -623,6 +628,7 @@ class AppSessionController extends Notifier<AppSessionState> {
           ? 'Sin actividades nuevas.'
           : 'Se detectaron ${allNotifs.length} actividad(es) nueva(s).';
 
+      await db.deleteSetting(SettingKeys.mielOutageDetectedAt);
       reportServerStatus(MielServerStatus.online);
 
       final now = DateTime.now();
@@ -683,6 +689,15 @@ class AppSessionController extends Notifier<AppSessionState> {
         );
       }
 
+      if (recoveredFromOutage && state.isAuthenticated) {
+        unawaited(
+          ref
+              .read(databaseProvider)
+              .deleteSetting(SettingKeys.mielOutageDetectedAt)
+              .catchError((_) {}),
+        );
+      }
+
       if (recoveredFromOutage &&
           state.isAuthenticated &&
           state.notifyOnMielRecovery) {
@@ -691,6 +706,20 @@ class AppSessionController extends Notifier<AppSessionState> {
         );
       }
       return;
+    }
+
+    if (status == MielServerStatus.mielDown &&
+        previous != MielServerStatus.mielDown &&
+        state.isAuthenticated) {
+      unawaited(
+        ref
+            .read(databaseProvider)
+            .setSetting(
+              SettingKeys.mielOutageDetectedAt,
+              (state.serverDownSince ?? now).toIso8601String(),
+            )
+            .catchError((_) {}),
+      );
     }
 
     if (previous != status) {
@@ -794,7 +823,7 @@ class AppSessionController extends Notifier<AppSessionState> {
       safeMinutes.toString(),
     );
     state = state.copyWith(syncIntervalMinutes: safeMinutes);
-    await _startBackgroundSchedulers(safeMinutes);
+    await _startBackgroundSchedulers(safeMinutes, intervalChanged: true);
   }
 
   Future<void> updateForumSyncMode(ForumSyncMode mode) async {
@@ -873,6 +902,7 @@ class AppSessionController extends Notifier<AppSessionState> {
     await client.clearSession();
     await credsStore.clear();
     await AndroidBackgroundWorker.cancelAll();
+    await db.deleteSetting(SettingKeys.mielOutageDetectedAt);
 
     // Invariante #11: al cerrar sesión SIEMPRE se vacía el caché offline y media autenticada
     await db.clearOfflineCache();
@@ -898,12 +928,16 @@ class AppSessionController extends Notifier<AppSessionState> {
     );
   }
 
-  Future<void> _startBackgroundSchedulers(int intervalMinutes) async {
+  Future<void> _startBackgroundSchedulers(
+    int intervalMinutes, {
+    bool intervalChanged = false,
+  }) async {
     if (kIsWeb) return;
 
     if (Platform.isAndroid) {
       await AndroidBackgroundWorker.initializeAndSchedule(
         intervalMinutes: intervalMinutes,
+        updateExisting: intervalChanged,
       );
       return;
     }

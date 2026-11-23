@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -37,7 +40,8 @@ class HomeShell extends ConsumerStatefulWidget {
   ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends ConsumerState<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell>
+    with WidgetsBindingObserver {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   _ShellSection _section = _ShellSection.home;
@@ -51,34 +55,46 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _notifTapSub = NotificationService.onNotificationTapped.stream.listen((
       payload,
     ) {
       if (!mounted) return;
-      _handleNotificationPayloadTap(payload);
+      unawaited(_handleNotificationPayloadTap(payload));
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkInitialNotification();
+      unawaited(_checkInitialNotification());
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _notifTapSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !kIsWeb && Platform.isAndroid) {
+      // WorkManager ejecuta en un motor Flutter independiente: al volver a
+      // primer plano notificamos a Drift para refrescar streams de novedades y materias.
+      ref.read(databaseProvider).notifyExternalTableUpdates();
+    }
   }
 
   Future<void> _checkInitialNotification() async {
     final details = await ref
         .read(notificationServiceProvider)
         .getLaunchDetails();
+    if (!mounted) return;
     if (details != null && details.didNotificationLaunchApp) {
       final raw = details.notificationResponse?.payload;
       if (raw != null && raw.isNotEmpty) {
         try {
           final decoded = jsonDecode(raw);
           if (decoded is Map<String, dynamic>) {
-            _handleNotificationPayloadTap(
+            await _handleNotificationPayloadTap(
               NotificationTapPayload.fromJson(decoded),
             );
           }
@@ -87,7 +103,20 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     }
   }
 
-  void _handleNotificationPayloadTap(NotificationTapPayload payload) {
+  String? _extractForoTopicId(String targetUrl) {
+    if (targetUrl.isEmpty) return null;
+    final match = RegExp(
+      r'/(?:idTema|tema)/(\d+)',
+      caseSensitive: false,
+    ).firstMatch(targetUrl);
+    return match?.group(1);
+  }
+
+  Future<void> _handleNotificationPayloadTap(
+    NotificationTapPayload payload,
+  ) async {
+    if (!mounted) return;
+
     if (payload.module == 'app_update' ||
         payload.targetUrl.startsWith('libremiel://update')) {
       final updater = ref.read(updaterProvider);
@@ -107,7 +136,18 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       return;
     }
 
-    final subjects = ref.read(subjectsStreamProvider).value ?? [];
+    var subjects = ref.read(subjectsStreamProvider).value ?? const <Subject>[];
+    if (subjects.isEmpty) {
+      // En arranques en frío (app cerrada) el StreamProvider puede no haber
+      // emitido todavía: consultar SQLite directamente para no perder el toque.
+      try {
+        subjects = await ref.read(databaseProvider).getAllSubjects();
+      } catch (_) {
+        subjects = const <Subject>[];
+      }
+      if (!mounted) return;
+    }
+
     final tool = switch (payload.module) {
       'contenidos' => MielToolKind.contenidos,
       'portafolio' => MielToolKind.portafolio,
@@ -118,7 +158,18 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     };
 
     if (tool != null) {
-      _openModuleById(subjects, payload.idComision, tool);
+      final topicId = tool == MielToolKind.foro
+          ? _extractForoTopicId(payload.targetUrl)
+          : null;
+      final opened = _openModuleById(
+        subjects,
+        payload.idComision,
+        tool,
+        foroTopicId: topicId,
+      );
+      if (!opened) {
+        _goNovedades();
+      }
     } else {
       _goNovedades();
     }
@@ -169,26 +220,28 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     );
   }
 
-  void _openModule(Subject subject, MielToolKind tool) {
+  void _openModule(Subject subject, MielToolKind tool, {String? foroTopicId}) {
     setState(() {
       _section = _ShellSection.moduleDraft;
       _activeSubjectId = subject.idComision;
       _activeTool = tool;
       _activeModuleSectionIndex = defaultSectionIndexForTool(tool);
       _moduleSectionNavTick++;
-      _activeForoTopicId = null;
+      _activeForoTopicId = tool == MielToolKind.foro ? foroTopicId : null;
     });
     _closeDrawerIfOpen();
   }
 
-  void _openModuleById(
+  bool _openModuleById(
     List<Subject> subjects,
     String idComision,
-    MielToolKind tool,
-  ) {
+    MielToolKind tool, {
+    String? foroTopicId,
+  }) {
     final match = subjects.where((s) => s.idComision == idComision).firstOrNull;
-    if (match == null) return;
-    _openModule(match, tool);
+    if (match == null) return false;
+    _openModule(match, tool, foroTopicId: foroTopicId);
+    return true;
   }
 
   void _closeDrawerIfOpen() {
@@ -279,121 +332,143 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ),
     };
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: palette.pageBackground,
-      drawer: hasDesktopSidebar
-          ? null
-          : Drawer(
-              width: 248,
-              backgroundColor: palette.sidebarBackground,
-              shape: const RoundedRectangleBorder(),
-              child: SafeArea(child: sidebarWidget),
-            ),
-      body: Column(
-        children: [
-          // Encabezado doble fiel a MIeL (#encabezado = barra de marca + #menu-principal)
-          _MielDoubleHeader(
-            isMobileHeader: isMobileHeader,
-            hasDesktopSidebar: hasDesktopSidebar,
-            section: effectiveSection,
-            session: session,
-            subjects: subjects,
-            activeSubject: activeSubject,
-            activeTool: _activeTool,
-            unreadAlertsCount: unreadCount,
-            onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-            onGoHome: _goHome,
-            onGoNovedades: _goNovedades,
-            onOpenProfile: () => _openUserProfile(session, subjects),
-            onSelectSubject: (subject) {
-              final tools = subject.enabledTools;
-              final nextTool = tools.contains(_activeTool)
-                  ? _activeTool
-                  : (tools.isNotEmpty ? tools.first : MielToolKind.contenidos);
-              _openModule(subject, nextTool);
-            },
-            onSelectTool: (tool) {
-              if (activeSubject != null) {
-                _openModule(activeSubject, tool);
-              }
-            },
-            onSyncNow: () => ref
-                .read(appSessionProvider.notifier)
-                .syncNow(includeCycle2: true),
-            onToggleTheme: () => ref
-                .read(appSessionProvider.notifier)
-                .toggleThemeMode(Theme.of(context).brightness),
-            onLogout: () => ref.read(appSessionProvider.notifier).logout(),
-          ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final overlayStyle = SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarColor: palette.pageBackground,
+      systemNavigationBarIconBrightness: isDark
+          ? Brightness.light
+          : Brightness.dark,
+      systemNavigationBarDividerColor: Colors.transparent,
+    );
 
-          // Banner de alerta de servidor caído o sin conexión (Fase 9)
-          const MielStatusBanner(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: palette.pageBackground,
+        drawer: hasDesktopSidebar
+            ? null
+            : Drawer(
+                width: 248,
+                backgroundColor: palette.sidebarBackground,
+                shape: const RoundedRectangleBorder(),
+                child: SafeArea(child: sidebarWidget),
+              ),
+        body: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              // Encabezado doble fiel a MIeL (#encabezado = barra de marca + #menu-principal)
+              _MielDoubleHeader(
+                isMobileHeader: isMobileHeader,
+                hasDesktopSidebar: hasDesktopSidebar,
+                section: effectiveSection,
+                session: session,
+                subjects: subjects,
+                activeSubject: activeSubject,
+                activeTool: _activeTool,
+                unreadAlertsCount: unreadCount,
+                onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+                onGoHome: _goHome,
+                onGoNovedades: _goNovedades,
+                onOpenProfile: () => _openUserProfile(session, subjects),
+                onSelectSubject: (subject) {
+                  final tools = subject.enabledTools;
+                  final nextTool = tools.contains(_activeTool)
+                      ? _activeTool
+                      : (tools.isNotEmpty
+                            ? tools.first
+                            : MielToolKind.contenidos);
+                  _openModule(subject, nextTool);
+                },
+                onSelectTool: (tool) {
+                  if (activeSubject != null) {
+                    _openModule(activeSubject, tool);
+                  }
+                },
+                onSyncNow: () => ref
+                    .read(appSessionProvider.notifier)
+                    .syncNow(includeCycle2: true),
+                onToggleTheme: () => ref
+                    .read(appSessionProvider.notifier)
+                    .toggleThemeMode(Theme.of(context).brightness),
+                onLogout: () => ref.read(appSessionProvider.notifier).logout(),
+              ),
 
-          // Banner de alerta crítica si la autenticación fue pausada (estado 1/2/3)
-          if (session.authPausedReason != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: palette.paleRedBackground,
-                border: Border(
-                  bottom: BorderSide(color: palette.paleRedBorder),
+              // Banner de alerta de servidor caído o sin conexión (Fase 9)
+              const MielStatusBanner(),
+
+              // Banner de alerta crítica si la autenticación fue pausada (estado 1/2/3)
+              if (session.authPausedReason != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: palette.paleRedBackground,
+                    border: Border(
+                      bottom: BorderSide(color: palette.paleRedBorder),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 20,
+                        color: palette.badgeRed,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Sincronización pausada: ${session.authPausedReason}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: palette.textPrimary,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            ref.read(appSessionProvider.notifier).logout(),
+                        child: Text(
+                          'Actualizar clave',
+                          style: TextStyle(
+                            color: palette.badgeRed,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Cuerpo: Sidebar fijo izquierdo (230px en >992px) + contenido principal
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (hasDesktopSidebar)
+                      Container(
+                        width: 230,
+                        decoration: BoxDecoration(
+                          color: palette.sidebarBackground,
+                          border: Border(
+                            right: BorderSide(color: palette.sidebarBorder),
+                          ),
+                        ),
+                        child: sidebarWidget,
+                      ),
+                    Expanded(child: mainView),
+                  ],
                 ),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    size: 20,
-                    color: palette.badgeRed,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Sincronización pausada: ${session.authPausedReason}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: palette.textPrimary,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () =>
-                        ref.read(appSessionProvider.notifier).logout(),
-                    child: Text(
-                      'Actualizar clave',
-                      style: TextStyle(
-                        color: palette.badgeRed,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // Cuerpo: Sidebar fijo izquierdo (230px en >992px) + contenido principal
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (hasDesktopSidebar)
-                  Container(
-                    width: 230,
-                    decoration: BoxDecoration(
-                      color: palette.sidebarBackground,
-                      border: Border(
-                        right: BorderSide(color: palette.sidebarBorder),
-                      ),
-                    ),
-                    child: sidebarWidget,
-                  ),
-                Expanded(child: mainView),
-              ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

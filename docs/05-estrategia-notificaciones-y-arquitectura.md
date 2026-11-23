@@ -84,21 +84,24 @@ Como MIeL **no envía cabeceras CORS** (`Access-Control-Allow-Origin` ausente) y
     > **Ajustes > Aplicaciones > LibreMIeL > Batería de la aplicación > Seleccionar "Sin restricciones"**.
 - **Permisos y mitigaciones en la aplicación:**
   - `WAKE_LOCK`: Garantiza que durante el sondeo HTTP de fondo la CPU no se suspenda a mitad de la respuesta de MIeL.
-  - `POST_NOTIFICATIONS`: Solicitado explícitamente en Android 13+ (API 33+).
-  - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`: Facilita la exención de ahorro energético desde la pantalla de Ajustes.
+  - `POST_NOTIFICATIONS`: Solicitado explícitamente en Android 13+ (API 33+) únicamente desde primer plano (`requestPermissions: true`); el worker headless de `WorkManager` inicializa con `requestPermissions: false` para no requerir `Activity`.
+  - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`: Integrado con el `MethodChannel` nativo (`MainActivity.kt`) y la pantalla de **Ajustes**, que muestra el estado real (`Sin restricciones` vs `Optimización activa`) y abre el diálogo/ajustes del sistema con fallbacks por OEM.
   - `RECEIVE_BOOT_COMPLETED`: Reprograma las tareas periódicas tras reiniciar el teléfono.
-  - Inicialización temprana: `Workmanager().initialize(...)` se ejecuta en `main()` antes de `runApp()`, asegurando que el dispatcher de fondo responda inmediatamente incluso ante aperturas en frío (*cold starts*).
+  - **Programación sin reinicio del temporizador:** `WorkManager` se inicializa una única vez (`AndroidBackgroundWorker.ensureInitialized()`) y usa `ExistingPeriodicWorkPolicy.keep` en cada arranque (reservando `ExistingPeriodicWorkPolicy.update` únicamente cuando el usuario cambia el intervalo en Ajustes).
+  - **SQLite concurrente y recuperación en segundo plano:** `AppDatabase` opera con `PRAGMA journal_mode = WAL`, `PRAGMA busy_timeout = 5000` y `shareAcrossIsolates: true`, refrescando streams en `HomeShell` al volver a primer plano (`AppLifecycleState.resumed`). Además, el worker persiste caídas de MIeL (`miel_outage_detected_at`) para emitir el aviso de recuperación incluso con la app cerrada.
 
-### Estética y Navegación Profunda de Notificaciones
+### Estética, Canales y Navegación Profunda de Notificaciones
 - **Estética enriquecida:**
+  - **Ícono de barra de estado:** VectorDrawable monocromático blanco (`drawable/ic_stat_libremiel.xml`, protegido con `raw/keep.xml`), evitando círculos sólidos al renderizar en Android.
   - **Título:** Remitente en negrita (`ROGER, MATIAS ALEJANDRO (Docente)` o `Corrección • ...`) siguiendo la convención de apps de chat modernas.
   - **Cuerpo (`BigTextStyleInformation`):** Asunto del mensaje o detalle de la novedad con soporte expandible y emoji de adjunto (`📎`).
   - **SubText / Encabezado:** Nombre de la comisión o materia académica (*Fundamentos de Sistemas Embebidos*), evitando saturar el título.
-  - **Acento institucional:** Color verde esmeralda `#009674` (`_mielEmerald`) para iconos, badges y LEDs de notificación.
-  - **Categorización y agrupación:** `AndroidNotificationCategory.message`, `social` y `event`, con `groupKey` por comisión para no dispersar avisos en el panel del teléfono.
+  - **Acento institucional:** Color verde esmeralda `#009674` (`_mielEmerald`) para iconos, badges y LEDs de notificación (`ledOnMs: 1000`, `ledOffMs: 500`).
+  - **Canales separados:** `libremiel_updates` (*Novedades de MIeL*, importancia alta) para actividad académica y `libremiel_system` (*Sistema y actualizaciones*, importancia normal) para nuevas versiones y recuperación de MIeL.
+  - **Categorización, IDs deterministas y agrupación:** `AndroidNotificationCategory.message`, `social` y `event`, IDs deterministas FNV-1a de 31 bits entre isolates, y `groupKey` por comisión con notificación resumen silenciosa (`setAsGroupSummary: true`, `InboxStyleInformation`) cuando llegan 2 o más novedades de una misma materia.
 - **Navegación nativa al pulsar la notificación:**
   - Al pulsar la notificación, **LibreMIeL no redirige al navegador web externo**.
-  - A través de `NotificationTapPayload` y el stream `NotificationService.onNotificationTapped` (o `getLaunchDetails()` si la app estaba cerrada), LibreMIeL abre internamente la comisión y la herramienta específica (`mensajeria`, `contenidos`, `portafolio`, `foro` o `evaluacion`).
+  - A través de `NotificationTapPayload` y el stream `NotificationService.onNotificationTapped` (o `getLaunchDetails()` si la app estaba cerrada, con fallback directo a SQLite si `subjectsStreamProvider` aún está cargando), LibreMIeL abre internamente la comisión, la herramienta específica (`mensajeria`, `contenidos`, `portafolio`, `foro` —incluyendo el `idTema` si viene en la URL— o `evaluacion`), o el panel de Novedades si la comisión no se encuentra.
 
 
 ---

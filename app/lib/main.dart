@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:workmanager/workmanager.dart';
 
 import 'app/app_providers.dart';
 import 'core/theme/miel_theme.dart';
@@ -15,7 +14,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (!kIsWeb && Platform.isAndroid) {
     try {
-      await Workmanager().initialize(libremielBackgroundCallbackDispatcher);
+      await AndroidBackgroundWorker.ensureInitialized();
     } catch (_) {}
   }
   runApp(const ProviderScope(child: LibreMielApp()));

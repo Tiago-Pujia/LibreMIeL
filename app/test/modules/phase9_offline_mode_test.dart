@@ -435,9 +435,16 @@ void main() {
       final notif = _MockNotifService();
       when(() => notif.showMielRecoveredNotification())
           .thenAnswer((_) async {});
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(() => db.close());
+      await db.setSetting(
+        SettingKeys.mielOutageDetectedAt,
+        DateTime(2026, 11, 23, 14, 0).toIso8601String(),
+      );
 
       final container = ProviderContainer(
         overrides: [
+          databaseProvider.overrideWithValue(db),
           notificationServiceProvider.overrideWithValue(notif),
           appSessionProvider.overrideWith(
             () => TestableSessionController(
@@ -457,10 +464,13 @@ void main() {
           .read(appSessionProvider.notifier)
           .reportServerStatus(MielServerStatus.online);
 
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
       expect(
         container.read(appSessionProvider).serverStatus,
         MielServerStatus.online,
       );
+      expect(await db.getSetting(SettingKeys.mielOutageDetectedAt), isNull);
       verify(() => notif.showMielRecoveredNotification()).called(1);
     });
 

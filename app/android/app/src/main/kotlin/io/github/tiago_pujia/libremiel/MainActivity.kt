@@ -1,8 +1,11 @@
 package io.github.tiago_pujia.libremiel
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.annotation.NonNull
 import androidx.core.content.FileProvider
@@ -13,6 +16,7 @@ import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val updaterChannel = "io.github.tiago_pujia.libremiel/updater"
+    private val androidSystemChannel = "io.github.tiago_pujia.libremiel/android_system"
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -76,5 +80,74 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, androidSystemChannel).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isIgnoringBatteryOptimizations" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+                        result.success(pm?.isIgnoringBatteryOptimizations(packageName) ?: false)
+                    } else {
+                        result.success(true)
+                    }
+                }
+                "requestIgnoreBatteryOptimizations" -> {
+                    result.success(openBatteryOptimizationSettings())
+                }
+                "openAppNotificationSettings" -> {
+                    result.success(openNotificationSettings())
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    @SuppressLint("BatteryLife")
+    private fun openBatteryOptimizationSettings(): Boolean {
+        val candidates = mutableListOf<Intent>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            candidates.add(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+            )
+            candidates.add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        }
+        candidates.add(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:$packageName")
+            }
+        )
+        return launchFirstResolvableIntent(candidates)
+    }
+
+    private fun openNotificationSettings(): Boolean {
+        val candidates = mutableListOf<Intent>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            candidates.add(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                }
+            )
+        }
+        candidates.add(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:$packageName")
+            }
+        )
+        return launchFirstResolvableIntent(candidates)
+    }
+
+    private fun launchFirstResolvableIntent(intents: List<Intent>): Boolean {
+        for (intent in intents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+                return true
+            } catch (_: Exception) {
+                // Probar siguiente fallback si el OEM bloquea este Intent.
+            }
+        }
+        return false
     }
 }
