@@ -22,6 +22,8 @@ import '../core/network/miel_server_status_classifier.dart';
 import '../core/storage/offline_media_service.dart';
 import '../core/sync/offline_prefetcher.dart';
 import '../core/theme/miel_theme.dart';
+import '../features/navigation/draft_dirty_registry.dart';
+import '../features/navigation/navigation_history_controller.dart';
 import '../platform/updater/updater_controller.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -126,6 +128,8 @@ class AppSessionState {
     this.offlineCacheMaxMb = 100,
     this.offlinePrefetchSafeModules = false,
     this.notifyOnMielRecovery = true,
+    this.uiZoomScale = 1.0,
+    this.showBrowserNavControls = false,
   });
 
   final bool isChecking;
@@ -150,6 +154,8 @@ class AppSessionState {
   final int offlineCacheMaxMb;
   final bool offlinePrefetchSafeModules;
   final bool notifyOnMielRecovery;
+  final double uiZoomScale;
+  final bool showBrowserNavControls;
 
   AppSessionState copyWith({
     bool? isChecking,
@@ -176,6 +182,8 @@ class AppSessionState {
     int? offlineCacheMaxMb,
     bool? offlinePrefetchSafeModules,
     bool? notifyOnMielRecovery,
+    double? uiZoomScale,
+    bool? showBrowserNavControls,
   }) {
     return AppSessionState(
       isChecking: isChecking ?? this.isChecking,
@@ -205,6 +213,9 @@ class AppSessionState {
       offlinePrefetchSafeModules:
           offlinePrefetchSafeModules ?? this.offlinePrefetchSafeModules,
       notifyOnMielRecovery: notifyOnMielRecovery ?? this.notifyOnMielRecovery,
+      uiZoomScale: uiZoomScale ?? this.uiZoomScale,
+      showBrowserNavControls:
+          showBrowserNavControls ?? this.showBrowserNavControls,
     );
   }
 }
@@ -357,6 +368,10 @@ class AppSessionController extends Notifier<AppSessionState> {
         await db.clearAccountData();
         await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
         await widgetService.clearSnapshot();
+        try {
+          ref.read(navigationHistoryProvider.notifier).reset();
+          ref.read(draftDirtyRegistryProvider).clearAll();
+        } catch (_) {}
         await db.setSetting(SettingKeys.accountUsername, currentUser);
       }
     }
@@ -374,6 +389,8 @@ class AppSessionController extends Notifier<AppSessionState> {
     final offlineCacheMaxMb = await db.getOfflineCacheMaxMb();
     final offlinePrefetch = await db.getOfflinePrefetchSafeModules();
     final notifyOnMielRecovery = await db.getNotifyOnMielRecovery();
+    final uiZoomScale = await db.getUiZoomScale();
+    final showBrowserNavControls = await db.getShowBrowserNavControls();
 
     state = state.copyWith(
       isChecking: false,
@@ -394,6 +411,8 @@ class AppSessionController extends Notifier<AppSessionState> {
       offlineCacheMaxMb: offlineCacheMaxMb,
       offlinePrefetchSafeModules: offlinePrefetch,
       notifyOnMielRecovery: notifyOnMielRecovery,
+      uiZoomScale: uiZoomScale,
+      showBrowserNavControls: showBrowserNavControls,
     );
 
     if (authenticated) {
@@ -544,6 +563,10 @@ class AppSessionController extends Notifier<AppSessionState> {
       await db.clearAccountData();
       await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
       await ref.read(androidWidgetServiceProvider).clearSnapshot();
+      try {
+        ref.read(navigationHistoryProvider.notifier).reset();
+        ref.read(draftDirtyRegistryProvider).clearAll();
+      } catch (_) {}
     }
     await db.setSetting(SettingKeys.accountUsername, normalizedUser);
 
@@ -894,6 +917,30 @@ class AppSessionController extends Notifier<AppSessionState> {
     state = state.copyWith(notifyOnMielRecovery: enabled);
   }
 
+  Future<void> updateUiZoomScale(double scale) async {
+    final clamped = (scale.clamp(0.8, 1.5) * 10).round() / 10.0;
+    state = state.copyWith(uiZoomScale: clamped);
+    final db = ref.read(databaseProvider);
+    await db.setSetting(SettingKeys.uiZoomScale, clamped.toString());
+  }
+
+  Future<void> stepUiZoomScale(double delta) async {
+    await updateUiZoomScale(state.uiZoomScale + delta);
+  }
+
+  Future<void> resetUiZoomScale() async {
+    await updateUiZoomScale(1.0);
+  }
+
+  Future<void> updateShowBrowserNavControls(bool enabled) async {
+    state = state.copyWith(showBrowserNavControls: enabled);
+    final db = ref.read(databaseProvider);
+    await db.setSetting(
+      SettingKeys.showBrowserNavControls,
+      enabled ? 'true' : 'false',
+    );
+  }
+
   Future<void> clearOfflineCache() async {
     final db = ref.read(databaseProvider);
     await db.clearOfflineCache();
@@ -987,6 +1034,8 @@ class AppSessionController extends Notifier<AppSessionState> {
     final preservedOfflineMaxMb = state.offlineCacheMaxMb;
     final preservedOfflinePrefetch = state.offlinePrefetchSafeModules;
     final preservedNotifyRecovery = state.notifyOnMielRecovery;
+    final preservedZoom = state.uiZoomScale;
+    final preservedNavControls = state.showBrowserNavControls;
 
     final client = await ref.read(mielClientProvider.future);
     await client.clearSession();
@@ -994,10 +1043,15 @@ class AppSessionController extends Notifier<AppSessionState> {
     await AndroidBackgroundWorker.cancelAll();
     await db.deleteSetting(SettingKeys.mielOutageDetectedAt);
 
-    // Invariante #11: al cerrar sesión SIEMPRE se vacía el caché offline, media autenticada y widgets
+    // Invariante #11 y #12: al cerrar sesión SIEMPRE se vacía el caché offline,
+    // media autenticada, widgets, historial y borradores
     await db.clearOfflineCache();
     await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
     await ref.read(androidWidgetServiceProvider).clearSnapshot();
+    try {
+      ref.read(navigationHistoryProvider.notifier).reset();
+      ref.read(draftDirtyRegistryProvider).clearAll();
+    } catch (_) {}
 
     if (wipeLocalData) {
       await db.clearAllLocalData();
@@ -1016,6 +1070,8 @@ class AppSessionController extends Notifier<AppSessionState> {
           ? false
           : preservedOfflinePrefetch,
       notifyOnMielRecovery: wipeLocalData ? true : preservedNotifyRecovery,
+      uiZoomScale: wipeLocalData ? 1.0 : preservedZoom,
+      showBrowserNavControls: wipeLocalData ? false : preservedNavControls,
     );
   }
 

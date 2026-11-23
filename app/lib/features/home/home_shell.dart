@@ -22,13 +22,18 @@ import '../modules/module_providers.dart';
 import '../modules/module_reader_host.dart';
 import '../modules/module_sections.dart';
 import '../modules/widgets/module_state_views.dart';
+import '../navigation/browser_find_bar.dart';
+import '../navigation/browser_find_controller.dart';
+import '../navigation/browser_navigation_host.dart';
+import '../navigation/browser_zoom_viewport.dart';
+import '../navigation/draft_dirty_registry.dart';
+import '../navigation/navigation_history_controller.dart';
+import '../navigation/navigation_history_entry.dart';
 import '../settings/settings_screen.dart';
 import '../subjects/miel_home_view.dart';
 import '../downloads/bulk_download_sheet.dart';
 import '../updates/update_dialog.dart';
 import 'widgets/miel_status_banner.dart';
-
-enum _ShellSection { home, novedades, ajustes, moduleDraft }
 
 /// Shell principal de LibreMIeL fiel al layout de MIeL UNLaM:
 /// - Fila 1: Barra de marca superior (`#FFFFFF` / `#121212`) con usuario y links.
@@ -45,12 +50,13 @@ class _HomeShellState extends ConsumerState<HomeShell>
     with WidgetsBindingObserver {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  _ShellSection _section = _ShellSection.home;
-  String? _activeSubjectId;
-  MielToolKind _activeTool = MielToolKind.contenidos;
-  int _activeModuleSectionIndex = 0;
+  final ScrollController _contentScrollController = ScrollController();
+  final FocusNode _nativeSearchFocusNode = FocusNode(
+    debugLabel: 'NativeSearchFocus',
+  );
   int _moduleSectionNavTick = 0;
-  String? _activeForoTopicId;
+  int _findFocusTick = 0;
+
   StreamSubscription<NotificationTapPayload>? _notifTapSub;
   StreamSubscription<NotificationTapPayload>? _widgetTapSub;
 
@@ -81,6 +87,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
     WidgetsBinding.instance.removeObserver(this);
     _notifTapSub?.cancel();
     _widgetTapSub?.cancel();
+    _contentScrollController.dispose();
+    _nativeSearchFocusNode.dispose();
     super.dispose();
   }
 
@@ -210,28 +218,114 @@ class _HomeShellState extends ConsumerState<HomeShell>
     }
   }
 
-  void _goHome() {
-    setState(() {
-      _section = _ShellSection.home;
-      _activeForoTopicId = null;
-    });
+  Future<void> _navigateTo(
+    NavigationHistoryEntry next, {
+    bool replace = false,
+  }) async {
+    final canProceed = await confirmDiscardDirtyDraftsIfNeeded(
+      context,
+      ref.read(draftDirtyRegistryProvider),
+    );
+    if (!canProceed) return;
+
+    if (_contentScrollController.hasClients) {
+      ref
+          .read(navigationHistoryProvider.notifier)
+          .saveScrollOffset(_contentScrollController.offset);
+    }
+    ref.read(browserFindProvider.notifier).close();
+
+    ref
+        .read(navigationHistoryProvider.notifier)
+        .navigateTo(next, replace: replace);
     _closeDrawerIfOpen();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_contentScrollController.hasClients) {
+        _contentScrollController.jumpTo(next.scrollOffset);
+      }
+    });
+  }
+
+  Future<void> _goBack() async {
+    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+      _closeDrawerIfOpen();
+      return;
+    }
+    if (ref.read(browserFindProvider).isOpen) {
+      ref.read(browserFindProvider.notifier).close();
+      return;
+    }
+    final canProceed = await confirmDiscardDirtyDraftsIfNeeded(
+      context,
+      ref.read(draftDirtyRegistryProvider),
+    );
+    if (!canProceed) return;
+
+    if (_contentScrollController.hasClients) {
+      ref
+          .read(navigationHistoryProvider.notifier)
+          .saveScrollOffset(_contentScrollController.offset);
+    }
+    ref.read(browserFindProvider.notifier).close();
+
+    final prev = ref.read(navigationHistoryProvider.notifier).goBack();
+    if (prev != null) {
+      markBfCacheRestoreKeys([prev.locationKey]);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_contentScrollController.hasClients) {
+          _contentScrollController.jumpTo(prev.scrollOffset);
+        }
+      });
+    }
+  }
+
+  Future<void> _goForward() async {
+    final canProceed = await confirmDiscardDirtyDraftsIfNeeded(
+      context,
+      ref.read(draftDirtyRegistryProvider),
+    );
+    if (!canProceed) return;
+
+    if (_contentScrollController.hasClients) {
+      ref
+          .read(navigationHistoryProvider.notifier)
+          .saveScrollOffset(_contentScrollController.offset);
+    }
+    ref.read(browserFindProvider.notifier).close();
+
+    final next = ref.read(navigationHistoryProvider.notifier).goForward();
+    if (next != null) {
+      markBfCacheRestoreKeys([next.locationKey]);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_contentScrollController.hasClients) {
+          _contentScrollController.jumpTo(next.scrollOffset);
+        }
+      });
+    }
+  }
+
+  void _reloadActiveRoute({bool forceLive = false}) {
+    final current = ref.read(navigationHistoryProvider).current;
+    if (forceLive) {
+      markForceLiveCacheKeys([current.locationKey]);
+    }
+    invalidateRouteProviders(ref, current, forceLive: forceLive);
+  }
+
+  void _goHome() {
+    _navigateTo(const NavigationHistoryEntry.home());
   }
 
   void _goNovedades() {
-    setState(() {
-      _section = _ShellSection.novedades;
-      _activeForoTopicId = null;
-    });
-    _closeDrawerIfOpen();
+    _navigateTo(const NavigationHistoryEntry.novedades());
   }
 
   void _goAjustes() {
-    setState(() {
-      _section = _ShellSection.ajustes;
-      _activeForoTopicId = null;
-    });
-    _closeDrawerIfOpen();
+    _navigateTo(const NavigationHistoryEntry.ajustes());
   }
 
   void _openUserProfile(AppSessionState session, List<Subject> subjects) {
@@ -255,16 +349,24 @@ class _HomeShellState extends ConsumerState<HomeShell>
     );
   }
 
-  void _openModule(Subject subject, MielToolKind tool, {String? foroTopicId}) {
-    setState(() {
-      _section = _ShellSection.moduleDraft;
-      _activeSubjectId = subject.idComision;
-      _activeTool = tool;
-      _activeModuleSectionIndex = defaultSectionIndexForTool(tool);
-      _moduleSectionNavTick++;
-      _activeForoTopicId = tool == MielToolKind.foro ? foroTopicId : null;
-    });
-    _closeDrawerIfOpen();
+  void _openModule(
+    Subject subject,
+    MielToolKind tool, {
+    String? foroTopicId,
+    PortfolioPractice? portafolioPractice,
+    MensajeriaViewRouteState? mensajeriaState,
+  }) {
+    _moduleSectionNavTick++;
+    _navigateTo(
+      NavigationHistoryEntry.module(
+        subjectId: subject.idComision,
+        tool: tool,
+        moduleSectionIndex: defaultSectionIndexForTool(tool),
+        foroTopicId: tool == MielToolKind.foro ? foroTopicId : null,
+        portafolioPractice: portafolioPractice,
+        mensajeriaState: mensajeriaState ?? const MensajeriaViewRouteState(),
+      ),
+    );
   }
 
   bool _openModuleById(
@@ -299,44 +401,60 @@ class _HomeShellState extends ConsumerState<HomeShell>
     final session = ref.watch(appSessionProvider);
     final subjects = ref.watch(subjectsStreamProvider).value ?? const [];
     final unreadCount = ref.watch(unreadNotificationsCountProvider).value ?? 0;
+    final historyState = ref.watch(navigationHistoryProvider);
+    final currentEntry = historyState.current;
+    final findState = ref.watch(browserFindProvider);
 
     final width = MediaQuery.sizeOf(context).width;
     final hasDesktopSidebar = width > 992;
     final isMobileHeader = width <= 600;
 
     Subject? activeSubject;
-    if (_section == _ShellSection.moduleDraft && _activeSubjectId != null) {
+    if (currentEntry.section == BrowserShellSection.module &&
+        currentEntry.subjectId != null) {
       activeSubject = subjects
-          .where((s) => s.idComision == _activeSubjectId)
+          .where((s) => s.idComision == currentEntry.subjectId)
           .firstOrNull;
     }
 
     final effectiveSection =
-        (_section == _ShellSection.moduleDraft && activeSubject == null)
-        ? _ShellSection.home
-        : _section;
+        (currentEntry.section == BrowserShellSection.module &&
+            activeSubject == null)
+        ? BrowserShellSection.home
+        : currentEntry.section;
+
+    final activeTool = currentEntry.tool;
+    final activeModuleSectionIndex = currentEntry.moduleSectionIndex;
+    final activeForoTopicId = currentEntry.foroTopicId;
 
     final sidebarWidget = _MielSidebar(
       section: effectiveSection,
       activeSubject: activeSubject,
-      activeTool: _activeTool,
-      activeModuleSectionIndex: _activeModuleSectionIndex,
-      activeForoTopicId: _activeForoTopicId,
+      activeTool: activeTool,
+      activeModuleSectionIndex: activeModuleSectionIndex,
+      activeForoTopicId: activeForoTopicId,
       unreadAlertsCount: unreadCount,
       onSelectHome: _goHome,
       onSelectNovedades: _goNovedades,
       onSelectAjustes: _goAjustes,
       onSelectModuleSection: (idx) {
-        setState(() {
-          _activeModuleSectionIndex = idx;
-          _moduleSectionNavTick++;
-          _activeForoTopicId = null;
-        });
-        _closeDrawerIfOpen();
+        _moduleSectionNavTick++;
+        _navigateTo(
+          currentEntry.copyWith(
+            moduleSectionIndex: idx,
+            clearForoTopicId: true,
+            clearPortafolioPractice: true,
+          ),
+        );
       },
       onSelectForoTopic: (topicId) {
-        setState(() => _activeForoTopicId = topicId);
-        _closeDrawerIfOpen();
+        _navigateTo(
+          currentEntry.copyWith(
+            tool: MielToolKind.foro,
+            foroTopicId: topicId,
+            clearForoTopicId: topicId == null,
+          ),
+        );
       },
       onOpenBulkDownload: () {
         _closeDrawerIfOpen();
@@ -346,24 +464,53 @@ class _HomeShellState extends ConsumerState<HomeShell>
     );
 
     final mainView = switch (effectiveSection) {
-      _ShellSection.home => MielHomeView(
+      BrowserShellSection.home => MielHomeView(
         onOpenModule: _openModule,
         onOpenNotifications: _goNovedades,
+        scrollController: _contentScrollController,
+        inPageFindQuery: findState.query,
       ),
-      _ShellSection.novedades => FeedScreen(
+      BrowserShellSection.novedades => FeedScreen(
         onOpenSubjectModule: (idComision, tool) =>
             _openModuleById(subjects, idComision, tool),
+        scrollController: _contentScrollController,
+        inPageFindQuery: findState.query,
       ),
-      _ShellSection.ajustes => const SettingsScreen(),
-      _ShellSection.moduleDraft => ModuleReaderHost(
+      BrowserShellSection.ajustes => const SettingsScreen(),
+      BrowserShellSection.module => ModuleReaderHost(
         subject: activeSubject!,
-        tool: _activeTool,
-        sectionIndex: _activeModuleSectionIndex,
+        tool: activeTool,
+        sectionIndex: activeModuleSectionIndex,
         sectionResetTick: _moduleSectionNavTick,
-        selectedForoTopicId: _activeForoTopicId,
+        selectedForoTopicId: activeForoTopicId,
         onSelectForoTopic: (topicId) {
-          setState(() => _activeForoTopicId = topicId);
+          _navigateTo(
+            currentEntry.copyWith(
+              tool: MielToolKind.foro,
+              foroTopicId: topicId,
+              clearForoTopicId: topicId == null,
+            ),
+          );
         },
+        mensajeriaState: currentEntry.mensajeriaState,
+        onMensajeriaStateChanged: (nextState) {
+          _navigateTo(currentEntry.copyWith(mensajeriaState: nextState));
+        },
+        selectedPortafolioPractice: currentEntry.portafolioPractice,
+        hasControlledPortafolioPractice:
+            currentEntry.portafolioPractice != null,
+        onSelectPortafolioPractice: (practice) {
+          _navigateTo(
+            currentEntry.copyWith(
+              portafolioPractice: practice,
+              clearPortafolioPractice: practice == null,
+            ),
+          );
+        },
+        scrollController: _contentScrollController,
+        inPageFindQuery: findState.query,
+        nativeSearchFocusNode: _nativeSearchFocusNode,
+        findFocusTick: _findFocusTick,
       ),
     };
 
@@ -378,111 +525,130 @@ class _HomeShellState extends ConsumerState<HomeShell>
       systemNavigationBarDividerColor: Colors.transparent,
     );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlayStyle,
-      child: Scaffold(
-        key: _scaffoldKey,
-        backgroundColor: palette.pageBackground,
-        drawer: hasDesktopSidebar
-            ? null
-            : Drawer(
-                width: 248,
-                backgroundColor: palette.sidebarBackground,
-                shape: const RoundedRectangleBorder(),
-                child: SafeArea(child: sidebarWidget),
-              ),
-        body: SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              // Encabezado doble fiel a MIeL (#encabezado = barra de marca + #menu-principal)
-              _MielDoubleHeader(
-                isMobileHeader: isMobileHeader,
-                hasDesktopSidebar: hasDesktopSidebar,
-                section: effectiveSection,
-                session: session,
-                subjects: subjects,
-                activeSubject: activeSubject,
-                activeTool: _activeTool,
-                unreadAlertsCount: unreadCount,
-                onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-                onGoHome: _goHome,
-                onGoNovedades: _goNovedades,
-                onOpenProfile: () => _openUserProfile(session, subjects),
-                onSelectSubject: (subject) {
-                  final tools = subject.enabledTools;
-                  final nextTool = tools.contains(_activeTool)
-                      ? _activeTool
-                      : (tools.isNotEmpty
-                            ? tools.first
-                            : MielToolKind.contenidos);
-                  _openModule(subject, nextTool);
-                },
-                onSelectTool: (tool) {
-                  if (activeSubject != null) {
-                    _openModule(activeSubject, tool);
-                  }
-                },
-                onSyncNow: () => ref
-                    .read(appSessionProvider.notifier)
-                    .syncNow(includeCycle2: true),
-                onToggleTheme: () => ref
-                    .read(appSessionProvider.notifier)
-                    .toggleThemeMode(Theme.of(context).brightness),
-                onLogout: () => ref.read(appSessionProvider.notifier).logout(),
-              ),
+    final contentArea = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (findState.isOpen)
+          BrowserFindBar(
+            initialQuery: findState.query,
+            onQueryChanged: (query) {
+              ref.read(browserFindProvider.notifier).setQuery(query);
+            },
+            onClose: () {
+              ref.read(browserFindProvider.notifier).close();
+            },
+          ),
+        Expanded(child: mainView),
+      ],
+    );
 
-              // Banner de alerta de servidor caído o sin conexión (Fase 9)
-              const MielStatusBanner(),
+    final scaffold = Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: palette.pageBackground,
+      drawer: hasDesktopSidebar
+          ? null
+          : Drawer(
+              width: 248,
+              backgroundColor: palette.sidebarBackground,
+              shape: const RoundedRectangleBorder(),
+              child: SafeArea(child: sidebarWidget),
+            ),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            _MielDoubleHeader(
+              isMobileHeader: isMobileHeader,
+              hasDesktopSidebar: hasDesktopSidebar,
+              section: effectiveSection,
+              session: session,
+              subjects: subjects,
+              activeSubject: activeSubject,
+              activeTool: activeTool,
+              unreadAlertsCount: unreadCount,
+              canGoBack: historyState.canGoBack,
+              canGoForward: historyState.canGoForward,
+              onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+              onGoHome: _goHome,
+              onGoNovedades: _goNovedades,
+              onGoBack: _goBack,
+              onGoForward: _goForward,
+              onReload: ({bool forceLive = false}) =>
+                  _reloadActiveRoute(forceLive: forceLive),
+              onOpenProfile: () => _openUserProfile(session, subjects),
+              onSelectSubject: (subject) {
+                final tools = subject.enabledTools;
+                final nextTool = tools.contains(activeTool)
+                    ? activeTool
+                    : (tools.isNotEmpty
+                          ? tools.first
+                          : MielToolKind.contenidos);
+                _openModule(subject, nextTool);
+              },
+              onSelectTool: (tool) {
+                if (activeSubject != null) {
+                  _openModule(activeSubject, tool);
+                }
+              },
+              onSyncNow: () => ref
+                  .read(appSessionProvider.notifier)
+                  .syncNow(includeCycle2: true),
+              onToggleTheme: () => ref
+                  .read(appSessionProvider.notifier)
+                  .toggleThemeMode(Theme.of(context).brightness),
+              onLogout: () => ref.read(appSessionProvider.notifier).logout(),
+            ),
 
-              // Banner de alerta crítica si la autenticación fue pausada (estado 1/2/3)
-              if (session.authPausedReason != null)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: palette.paleRedBackground,
-                    border: Border(
-                      bottom: BorderSide(color: palette.paleRedBorder),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 20,
-                        color: palette.badgeRed,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Sincronización pausada: ${session.authPausedReason}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () =>
-                            ref.read(appSessionProvider.notifier).logout(),
-                        child: Text(
-                          'Actualizar clave',
-                          style: TextStyle(
-                            color: palette.badgeRed,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
+            const MielStatusBanner(),
+
+            if (session.authPausedReason != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: palette.paleRedBackground,
+                  border: Border(
+                    bottom: BorderSide(color: palette.paleRedBorder),
                   ),
                 ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 20,
+                      color: palette.badgeRed,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Sincronización pausada: ${session.authPausedReason}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: palette.textPrimary,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () =>
+                          ref.read(appSessionProvider.notifier).logout(),
+                      child: Text(
+                        'Actualizar clave',
+                        style: TextStyle(
+                          color: palette.badgeRed,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-              // Cuerpo: Sidebar fijo izquierdo (230px en >992px) + contenido principal
-              Expanded(
+            Expanded(
+              child: BrowserZoomViewport(
+                zoomScale: session.uiZoomScale,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -497,12 +663,71 @@ class _HomeShellState extends ConsumerState<HomeShell>
                         ),
                         child: sidebarWidget,
                       ),
-                    Expanded(child: mainView),
+                    Expanded(child: contentArea),
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+            _closeDrawerIfOpen();
+            return;
+          }
+          if (ref.read(browserFindProvider).isOpen) {
+            ref.read(browserFindProvider.notifier).close();
+            return;
+          }
+          final canProceed = await confirmDiscardDirtyDraftsIfNeeded(
+            context,
+            ref.read(draftDirtyRegistryProvider),
+          );
+          if (!canProceed) return;
+
+          if (ref.read(navigationHistoryProvider).canGoBack) {
+            await _goBack();
+            return;
+          }
+          if (context.mounted) {
+            SystemNavigator.pop();
+          }
+        },
+        child: BrowserNavigationHost(
+          onBack: _goBack,
+          onForward: _goForward,
+          onReload: ({bool forceLive = false}) =>
+              _reloadActiveRoute(forceLive: forceLive),
+          onEscape: () {
+            if (ref.read(browserFindProvider).isOpen) {
+              ref.read(browserFindProvider.notifier).close();
+              return;
+            }
+            if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+              _closeDrawerIfOpen();
+              return;
+            }
+          },
+          onFindInPage: () {
+            ref.read(browserFindProvider.notifier).open();
+            _findFocusTick++;
+            _nativeSearchFocusNode.requestFocus();
+          },
+          onGoHome: _goHome,
+          onStepZoom: (delta) =>
+              ref.read(appSessionProvider.notifier).stepUiZoomScale(delta),
+          onResetZoom: () =>
+              ref.read(appSessionProvider.notifier).resetUiZoomScale(),
+          contentScrollController: _contentScrollController,
+          child: scaffold,
         ),
       ),
     );
@@ -522,9 +747,14 @@ class _MielDoubleHeader extends StatelessWidget {
     required this.activeSubject,
     required this.activeTool,
     required this.unreadAlertsCount,
+    required this.canGoBack,
+    required this.canGoForward,
     required this.onOpenDrawer,
     required this.onGoHome,
     required this.onGoNovedades,
+    required this.onGoBack,
+    required this.onGoForward,
+    required this.onReload,
     required this.onOpenProfile,
     required this.onSelectSubject,
     required this.onSelectTool,
@@ -535,15 +765,20 @@ class _MielDoubleHeader extends StatelessWidget {
 
   final bool isMobileHeader;
   final bool hasDesktopSidebar;
-  final _ShellSection section;
+  final BrowserShellSection section;
   final AppSessionState session;
   final List<Subject> subjects;
   final Subject? activeSubject;
   final MielToolKind activeTool;
   final int unreadAlertsCount;
+  final bool canGoBack;
+  final bool canGoForward;
   final VoidCallback onOpenDrawer;
   final VoidCallback onGoHome;
   final VoidCallback onGoNovedades;
+  final VoidCallback onGoBack;
+  final VoidCallback onGoForward;
+  final void Function({bool forceLive}) onReload;
   final VoidCallback onOpenProfile;
   final ValueChanged<Subject> onSelectSubject;
   final ValueChanged<MielToolKind> onSelectTool;
@@ -646,12 +881,33 @@ class _MielDoubleHeader extends StatelessWidget {
                   icon: Icons.menu,
                   onTap: onOpenDrawer,
                 ),
+              if (session.showBrowserNavControls) ...[
+                _NavIconAction(
+                  tooltip: canGoBack
+                      ? 'Atrás (Alt+← / Mouse 4)'
+                      : 'Atrás (deshabilitado)',
+                  icon: Icons.arrow_back,
+                  onTap: canGoBack ? onGoBack : null,
+                ),
+                _NavIconAction(
+                  tooltip: canGoForward
+                      ? 'Adelante (Alt+→ / Mouse 5)'
+                      : 'Adelante (deshabilitado)',
+                  icon: Icons.arrow_forward,
+                  onTap: canGoForward ? onGoForward : null,
+                ),
+                _NavIconAction(
+                  tooltip: 'Recargar (F5 / Ctrl+R) [Shift = bypass caché]',
+                  icon: Icons.refresh,
+                  onTap: () => onReload(forceLive: false),
+                ),
+              ],
               _NavIconAction(
                 tooltip: 'Menú principal (Materias activas)',
                 icon: Icons.home,
                 onTap: onGoHome,
               ),
-              if (section == _ShellSection.moduleDraft &&
+              if (section == BrowserShellSection.module &&
                   activeSubject != null) ...[
                 _SubjectBreadcrumbDropdown(
                   activeSubject: activeSubject!,
@@ -667,10 +923,10 @@ class _MielDoubleHeader extends StatelessWidget {
               ] else if (!isMobileHeader) ...[
                 _NavTextAction(
                   label: switch (section) {
-                    _ShellSection.home => 'Menú principal',
-                    _ShellSection.novedades => 'Notificaciones',
-                    _ShellSection.ajustes => 'Ajustes',
-                    _ShellSection.moduleDraft => 'Menú principal',
+                    BrowserShellSection.home => 'Menú principal',
+                    BrowserShellSection.novedades => 'Notificaciones',
+                    BrowserShellSection.ajustes => 'Ajustes',
+                    BrowserShellSection.module => 'Menú principal',
                   },
                   onTap: onGoHome,
                 ),
@@ -719,6 +975,12 @@ class _MielDoubleHeader extends StatelessWidget {
             ],
           ),
         ),
+        if (session.showBrowserNavControls && session.isSyncing)
+          LinearProgressIndicator(
+            minHeight: 2,
+            backgroundColor: palette.primary,
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
       ],
     );
   }
@@ -902,12 +1164,18 @@ class _HoverableGreenNavTileState extends State<_HoverableGreenNavTile> {
   @override
   Widget build(BuildContext context) {
     Widget content = MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      onEnter: (_) {
+        if (widget.onTap != null) setState(() => _hovered = true);
+      },
+      onExit: (_) {
+        if (widget.onTap != null) setState(() => _hovered = false);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 110),
-        color: _hovered
+        color: _hovered && widget.onTap != null
             ? Colors.black.withValues(alpha: 0.18)
             : Colors.transparent,
         child: widget.onTap != null
@@ -928,15 +1196,11 @@ class _HoverableGreenNavTileState extends State<_HoverableGreenNavTile> {
 }
 
 class _NavIconAction extends StatelessWidget {
-  const _NavIconAction({
-    required this.tooltip,
-    required this.icon,
-    required this.onTap,
-  });
+  const _NavIconAction({required this.tooltip, required this.icon, this.onTap});
 
   final String tooltip;
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -946,7 +1210,11 @@ class _NavIconAction extends StatelessWidget {
       child: SizedBox(
         height: 40,
         width: 40,
-        child: Icon(icon, size: 21, color: Colors.white),
+        child: Icon(
+          icon,
+          size: 21,
+          color: onTap != null ? Colors.white : Colors.white38,
+        ),
       ),
     );
   }
@@ -1144,7 +1412,7 @@ class _MielSidebar extends ConsumerWidget {
     required this.onOpenExternal,
   });
 
-  final _ShellSection section;
+  final BrowserShellSection section;
   final Subject? activeSubject;
   final MielToolKind activeTool;
   final int activeModuleSectionIndex;
@@ -1163,7 +1431,7 @@ class _MielSidebar extends ConsumerWidget {
     final palette = MielPalette.of(context);
 
     // Dentro de un módulo (Fase 2), el sidebar replica el sub-menú del módulo en MIeL
-    if (section == _ShellSection.moduleDraft && activeSubject != null) {
+    if (section == BrowserShellSection.module && activeSubject != null) {
       final items = mielSectionsForTool(activeTool);
 
       // En Foros, listar los temas abiertos de la materia (en vivo o desde caché local)
@@ -1264,7 +1532,7 @@ class _MielSidebar extends ConsumerWidget {
               _SidebarItem(
                 icon: Icons.home,
                 label: 'Materias Activas',
-                selected: section == _ShellSection.home,
+                selected: section == BrowserShellSection.home,
                 onTap: onSelectHome,
               ),
               const SizedBox(height: 22),
@@ -1273,13 +1541,13 @@ class _MielSidebar extends ConsumerWidget {
               _SidebarItem(
                 icon: Icons.tune,
                 label: 'Ajustes',
-                selected: section == _ShellSection.ajustes,
+                selected: section == BrowserShellSection.ajustes,
                 onTap: onSelectAjustes,
               ),
               _SidebarItem(
                 icon: Icons.notifications_active,
                 label: 'Notificaciones',
-                selected: section == _ShellSection.novedades,
+                selected: section == BrowserShellSection.novedades,
                 badgeCount: unreadAlertsCount,
                 onTap: onSelectNovedades,
               ),

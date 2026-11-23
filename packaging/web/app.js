@@ -288,7 +288,7 @@
     if (!release || typeof release !== "object") return;
 
     const rawTag = String(release.tag_name || "").trim();
-    const cleanVersion = rawTag.replace(/^v/i, "") || "0.2.0";
+    const cleanVersion = rawTag.replace(/^v/i, "") || "0.2.1";
     const displayTag = rawTag.startsWith("v") ? rawTag : `v${cleanVersion}`;
 
     const versionPill = document.getElementById("header-version-pill");

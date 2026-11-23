@@ -4,9 +4,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_providers.dart';
 import '../../core/models/miel_models.dart';
+import '../../core/network/miel_client.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/libremiel_brand.dart';
 import '../../core/theme/miel_theme.dart';
+import '../navigation/miel_context_menu.dart';
 import '../modules/widgets/module_state_views.dart';
 
 /// Pantalla inicial fiel a `/principal/interno/` de MIeL ("Materias activas").
@@ -15,10 +17,14 @@ class MielHomeView extends ConsumerStatefulWidget {
     super.key,
     required this.onOpenModule,
     required this.onOpenNotifications,
+    this.scrollController,
+    this.inPageFindQuery = '',
   });
 
   final void Function(Subject subject, MielToolKind tool) onOpenModule;
   final VoidCallback onOpenNotifications;
+  final ScrollController? scrollController;
+  final String inPageFindQuery;
 
   @override
   ConsumerState<MielHomeView> createState() => _MielHomeViewState();
@@ -99,6 +105,7 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
               .read(appSessionProvider.notifier)
               .syncNow(includeCycle2: true),
           child: SingleChildScrollView(
+            controller: widget.scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.fromLTRB(
               horizontalPadding,
@@ -276,12 +283,34 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                       );
                     }
 
-                    final visible = subjects
+                    var visible = subjects
                         .where((s) => !s.isEffectivelyHidden)
                         .toList();
-                    final hidden = subjects
+                    var hidden = subjects
                         .where((s) => s.isEffectivelyHidden)
                         .toList();
+
+                    final q = widget.inPageFindQuery.trim().toLowerCase();
+                    if (q.isNotEmpty) {
+                      visible = visible
+                          .where(
+                            (s) =>
+                                s.name.toLowerCase().contains(q) ||
+                                s.subjectCode.toLowerCase().contains(q) ||
+                                s.commissionCode.toLowerCase().contains(q) ||
+                                s.idComision.toLowerCase().contains(q),
+                          )
+                          .toList();
+                      hidden = hidden
+                          .where(
+                            (s) =>
+                                s.name.toLowerCase().contains(q) ||
+                                s.subjectCode.toLowerCase().contains(q) ||
+                                s.commissionCode.toLowerCase().contains(q) ||
+                                s.idComision.toLowerCase().contains(q),
+                          )
+                          .toList();
+                    }
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -567,12 +596,18 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 for (final tool in tools)
-                  _MielToolTile(
-                    tool: tool,
-                    badgeCount: widget.subject.badgeFor(tool),
-                    width: 86,
-                    height: 74,
-                    onTap: () => widget.onOpenModule(tool),
+                  MielWebActionTarget(
+                    url:
+                        '$kMielBaseUrl${tool.pathForCommission(widget.subject.idComision)}',
+                    title: '${widget.subject.name} · ${tool.fullLabel}',
+                    onTrigger: () => widget.onOpenModule(tool),
+                    child: _MielToolTile(
+                      tool: tool,
+                      badgeCount: widget.subject.badgeFor(tool),
+                      width: 86,
+                      height: 74,
+                      onTap: () => widget.onOpenModule(tool),
+                    ),
                   ),
               ],
             ),
@@ -634,12 +669,18 @@ class _MielSubjectCardState extends State<_MielSubjectCard> {
               return Wrap(
                 children: [
                   for (final tool in tools)
-                    _MielToolTile(
-                      tool: tool,
-                      badgeCount: widget.subject.badgeFor(tool),
-                      width: tileWidth,
-                      height: 70,
-                      onTap: () => widget.onOpenModule(tool),
+                    MielWebActionTarget(
+                      url:
+                          '$kMielBaseUrl${tool.pathForCommission(widget.subject.idComision)}',
+                      title: '${widget.subject.name} · ${tool.fullLabel}',
+                      onTrigger: () => widget.onOpenModule(tool),
+                      child: _MielToolTile(
+                        tool: tool,
+                        badgeCount: widget.subject.badgeFor(tool),
+                        width: tileWidth,
+                        height: 70,
+                        onTap: () => widget.onOpenModule(tool),
+                      ),
                     ),
                 ],
               );

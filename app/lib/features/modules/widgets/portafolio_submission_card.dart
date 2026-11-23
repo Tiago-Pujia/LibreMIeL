@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../core/models/miel_models.dart';
 import '../../../core/theme/miel_theme.dart';
+import '../../navigation/draft_dirty_registry.dart';
 import '../module_providers.dart';
 import 'module_state_views.dart';
 
@@ -40,12 +41,31 @@ class _PortafolioSubmissionCardState
   String? _attachmentName;
   bool _submitting = false;
 
+  String get _dirtyKey =>
+      'portafolio_submission_${widget.idComision}_${widget.idPractica}';
+
   @override
   void initState() {
     super.initState();
     _selectedTutorId = widget.formMeta.tutors.isNotEmpty
         ? widget.formMeta.tutors.first.id
         : '0';
+    _observationsController.addListener(_syncDirtyState);
+    _linkController.addListener(_syncDirtyState);
+  }
+
+  void _syncDirtyState() {
+    final isDirty =
+        _observationsController.text.trim().isNotEmpty ||
+        _linkController.text.trim().isNotEmpty ||
+        _attachmentPath != null;
+    ref
+        .read(draftDirtyRegistryProvider)
+        .setDirty(
+          _dirtyKey,
+          isDirty: isDirty,
+          label: 'la entrega de ${widget.practiceTitle}',
+        );
   }
 
   @override
@@ -53,6 +73,11 @@ class _PortafolioSubmissionCardState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.idPractica != widget.idPractica ||
         oldWidget.idComision != widget.idComision) {
+      ref
+          .read(draftDirtyRegistryProvider)
+          .clearOwner(
+            'portafolio_submission_${oldWidget.idComision}_${oldWidget.idPractica}',
+          );
       _observationsController.clear();
       _linkController.clear();
       _attachmentPath = null;
@@ -63,8 +88,19 @@ class _PortafolioSubmissionCardState
     }
   }
 
+  DraftDirtyRegistry? _dirtyRegistry;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _dirtyRegistry = ref.read(draftDirtyRegistryProvider);
+  }
+
   @override
   void dispose() {
+    _observationsController.removeListener(_syncDirtyState);
+    _linkController.removeListener(_syncDirtyState);
+    _dirtyRegistry?.clearOwner(_dirtyKey);
     _observationsController.dispose();
     _linkController.dispose();
     super.dispose();
@@ -80,6 +116,7 @@ class _PortafolioSubmissionCardState
         _attachmentPath = picked.path;
         _attachmentName = picked.name;
       });
+      _syncDirtyState();
     }
   }
 
@@ -173,6 +210,7 @@ class _PortafolioSubmissionCardState
         _attachmentPath = null;
         _attachmentName = null;
       });
+      ref.read(draftDirtyRegistryProvider).clearOwner(_dirtyKey);
       showMielStatusToast(
         context,
         message: 'Entrega enviada correctamente a MIeL.',

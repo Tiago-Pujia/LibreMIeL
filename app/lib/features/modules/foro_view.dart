@@ -10,6 +10,8 @@ import '../../core/parsers/text_normalizer.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/libremiel_brand.dart';
 import '../../core/theme/miel_theme.dart';
+import '../navigation/draft_dirty_registry.dart';
+import '../navigation/miel_context_menu.dart';
 import 'module_providers.dart';
 import 'widgets/miel_file_icon.dart';
 import 'widgets/miel_rich_text.dart';
@@ -25,18 +27,34 @@ class ForoView extends ConsumerStatefulWidget {
     required this.subject,
     required this.selectedTopicId,
     required this.onSelectTopic,
+    this.externalScrollController,
+    this.inPageFindQuery = '',
+    this.searchFocusNode,
+    this.findFocusTick = 0,
   });
 
   final Subject subject;
   final String? selectedTopicId;
   final ValueChanged<String?> onSelectTopic;
+  final ScrollController? externalScrollController;
+  final String inPageFindQuery;
+  final FocusNode? searchFocusNode;
+  final int findFocusTick;
 
   @override
   ConsumerState<ForoView> createState() => _ForoViewState();
 }
 
 class _ForoViewState extends ConsumerState<ForoView> {
-  final ScrollController _scrollController = ScrollController();
+  ScrollController? _internalScrollController;
+  ScrollController get _effectiveScrollController =>
+      widget.externalScrollController ??
+      (_internalScrollController ??= ScrollController());
+
+  FocusNode? _internalSearchFocusNode;
+  FocusNode get _effectiveSearchFocusNode =>
+      widget.searchFocusNode ?? (_internalSearchFocusNode ??= FocusNode());
+
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _newMessageController = TextEditingController();
   final TextEditingController _replyController = TextEditingController();
@@ -66,11 +84,62 @@ class _ForoViewState extends ConsumerState<ForoView> {
   String? _flashedMessageId;
   Timer? _flashTimer;
 
+  String get _newMessageDirtyKey =>
+      'foro_new_${widget.subject.idComision}_${widget.selectedTopicId ?? "thread"}';
+  String get _replyDirtyKey =>
+      'foro_reply_${widget.subject.idComision}_${widget.selectedTopicId ?? "thread"}_${_replyTargetMessage?.id ?? ""}';
+
+  @override
+  void initState() {
+    super.initState();
+    _newMessageController.addListener(_syncNewMessageDirty);
+    _replyController.addListener(_syncReplyDirty);
+  }
+
+  void _syncNewMessageDirty() {
+    final isDirty =
+        _showNewMessageComposer &&
+        (_newMessageController.text.trim().isNotEmpty ||
+            _newMessageAttachmentPath != null);
+    ref
+        .read(draftDirtyRegistryProvider)
+        .setDirty(
+          _newMessageDirtyKey,
+          isDirty: isDirty,
+          label: 'el nuevo mensaje del foro',
+        );
+  }
+
+  void _syncReplyDirty() {
+    final isDirty =
+        _replyTargetMessage != null &&
+        (_replyController.text.trim().isNotEmpty ||
+            _replyAttachmentPath != null);
+    ref
+        .read(draftDirtyRegistryProvider)
+        .setDirty(
+          _replyDirtyKey,
+          isDirty: isDirty,
+          label: 'la respuesta al mensaje del foro',
+        );
+  }
+
   @override
   void didUpdateWidget(covariant ForoView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.findFocusTick != oldWidget.findFocusTick &&
+        widget.findFocusTick > 0) {
+      if (widget.selectedTopicId != null) {
+        _effectiveSearchFocusNode.requestFocus();
+      }
+    }
     if (oldWidget.selectedTopicId != widget.selectedTopicId ||
         oldWidget.subject.idComision != widget.subject.idComision) {
+      ref
+          .read(draftDirtyRegistryProvider)
+          .clearOwner(
+            'foro_new_${oldWidget.subject.idComision}_${oldWidget.selectedTopicId ?? "thread"}',
+          );
       _threadSearchQuery = '';
       _searchController.clear();
       _reverseOrder = false;
@@ -92,10 +161,23 @@ class _ForoViewState extends ConsumerState<ForoView> {
     }
   }
 
+  DraftDirtyRegistry? _dirtyRegistry;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _dirtyRegistry = ref.read(draftDirtyRegistryProvider);
+  }
+
   @override
   void dispose() {
     _flashTimer?.cancel();
-    _scrollController.dispose();
+    _newMessageController.removeListener(_syncNewMessageDirty);
+    _replyController.removeListener(_syncReplyDirty);
+    _dirtyRegistry?.clearOwner(_newMessageDirtyKey);
+    _dirtyRegistry?.clearOwner(_replyDirtyKey);
+    _internalScrollController?.dispose();
+    _internalSearchFocusNode?.dispose();
     _searchController.dispose();
     _newMessageController.dispose();
     _replyController.dispose();
@@ -107,9 +189,9 @@ class _ForoViewState extends ConsumerState<ForoView> {
   }
 
   void _scrollToBottom() {
-    if (!_scrollController.hasClients) return;
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
+    if (!_effectiveScrollController.hasClients) return;
+    _effectiveScrollController.animateTo(
+      _effectiveScrollController.position.maxScrollExtent,
       duration: const Duration(milliseconds: 350),
       curve: Curves.easeOutCubic,
     );
@@ -238,6 +320,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
         _newMessageAttachmentPath = null;
         _newMessageAttachmentName = null;
       });
+      ref.read(draftDirtyRegistryProvider).clearOwner(_newMessageDirtyKey);
       ref.invalidate(
         foroMensajesProvider((
           idComision: widget.subject.idComision,
@@ -297,6 +380,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
         _replyAttachmentPath = null;
         _replyAttachmentName = null;
       });
+      ref.read(draftDirtyRegistryProvider).clearOwner(_replyDirtyKey);
       ref.invalidate(
         foroMensajesProvider((
           idComision: widget.subject.idComision,
@@ -324,7 +408,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
         final hPad = isCompact ? 16.0 : 26.0;
 
         return SingleChildScrollView(
-          controller: _scrollController,
+          controller: _effectiveScrollController,
           padding: EdgeInsets.fromLTRB(hPad, 18, hPad, 36),
           child: widget.selectedTopicId == null
               ? _buildTemasAbiertosList(context, isCompact)
@@ -385,9 +469,23 @@ class _ForoViewState extends ConsumerState<ForoView> {
             onRetry: () => ref.invalidate(foroTemasProvider(idComision)),
           ),
           data: (topics) {
-            if (topics.isEmpty) {
-              return const MielModuleEmptyView(
-                message: 'No hay temas abiertos en el foro de esta comisión.',
+            var effectiveTopics = topics;
+            final q = widget.inPageFindQuery.trim().toLowerCase();
+            if (q.isNotEmpty) {
+              effectiveTopics = topics
+                  .where(
+                    (t) =>
+                        t.title.toLowerCase().contains(q) ||
+                        t.description.toLowerCase().contains(q),
+                  )
+                  .toList();
+            }
+
+            if (effectiveTopics.isEmpty) {
+              return MielModuleEmptyView(
+                message: q.isNotEmpty
+                    ? 'No hay temas que coincidan con "$q".'
+                    : 'No hay temas abiertos en el foro de esta comisión.',
                 icon: Icons.forum_outlined,
               );
             }
@@ -399,7 +497,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final topic in topics)
+                for (final topic in effectiveTopics)
                   _buildTopicRow(
                     palette: palette,
                     topic: topic,
@@ -422,15 +520,27 @@ class _ForoViewState extends ConsumerState<ForoView> {
         ? 0
         : topic.unreadBadge;
 
-    return _ForumTopicTile(
-      palette: palette,
-      topic: topic,
-      effectiveUnread: effectiveUnread,
-      publicIndigo: publicIndigo,
-      onTap: () {
+    final targetUrl = topic.url.isNotEmpty
+        ? resolveMielUrl(topic.url)
+        : '$kMielBaseUrl/forov2/mensajes/comision/${widget.subject.idComision}/tema/${topic.idTema}';
+
+    return MielWebActionTarget(
+      url: targetUrl,
+      title: topic.title,
+      onTrigger: () {
         _locallyReadTopicIds.add(topic.idTema);
         widget.onSelectTopic(topic.idTema);
       },
+      child: _ForumTopicTile(
+        palette: palette,
+        topic: topic,
+        effectiveUnread: effectiveUnread,
+        publicIndigo: publicIndigo,
+        onTap: () {
+          _locallyReadTopicIds.add(topic.idTema);
+          widget.onSelectTopic(topic.idTema);
+        },
+      ),
     );
   }
 
@@ -594,6 +704,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
             children: [
               MielSearchBarField(
                 controller: _searchController,
+                focusNode: _effectiveSearchFocusNode,
                 query: _threadSearchQuery,
                 hintText: 'Ingrese el texto buscado...',
                 onChanged: (v) => setState(() => _threadSearchQuery = v),
@@ -622,6 +733,7 @@ class _ForoViewState extends ConsumerState<ForoView> {
               Expanded(
                 child: MielSearchBarField(
                   controller: _searchController,
+                  focusNode: _effectiveSearchFocusNode,
                   query: _threadSearchQuery,
                   hintText: 'Ingrese el texto buscado...',
                   onChanged: (v) => setState(() => _threadSearchQuery = v),
