@@ -85,6 +85,7 @@ flutter:
     - assets/icons/tray_icon.ico
     - assets/icons/tray_icon_unread.png
     - assets/icons/tray_icon_unread.ico
+    - assets/images/logo-unlam-blanco-34.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

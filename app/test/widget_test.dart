@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libremiel/app/app_providers.dart';
 import 'package:libremiel/core/models/miel_models.dart';
 import 'package:libremiel/core/storage/app_database.dart';
+import 'package:libremiel/core/theme/libremiel_brand.dart';
 import 'package:libremiel/core/theme/miel_theme.dart';
 import 'package:libremiel/features/auth/login_screen.dart';
 import 'package:libremiel/features/home/home_shell.dart';
@@ -397,7 +398,10 @@ void main() {
       expect(find.text('Limpiar'), findsOneWidget);
       expect(find.byIcon(Icons.notifications_active), findsWidgets);
       expect(find.byIcon(Icons.chevron_right), findsWidgets);
-      expect(find.text('Ver notificaciones'), findsNothing); // En móvil no sobrecarga con texto redundante
+      expect(
+        find.text('Ver notificaciones'),
+        findsNothing,
+      ); // En móvil no sobrecarga con texto redundante
 
       // 2. Encuadre SafeArea inferior:
       // El contenido scrollable / body de HomeShell no invade los 48dp inferiores (844 - 48 = 796dp)
@@ -415,4 +419,46 @@ void main() {
       await tester.pumpAndSettle();
     },
   );
+
+  testWidgets(
+    'LibreMielMark renderiza el logo de UNLaM a la izquierda del logo de LibreMIeL',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildMielDarkTheme(),
+          home: const Scaffold(
+            body: Center(
+              child: LibreMielMark(size: 34),
+            ),
+          ),
+        ),
+      );
+
+      // Debe encontrar ambas imágenes: logo de la UNLaM y logo de LibreMIeL
+      final unlamFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/logo-unlam-blanco-34.png',
+      );
+      final libremielFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/icons/libremiel.png',
+      );
+
+      expect(unlamFinder, findsOneWidget);
+      expect(libremielFinder, findsOneWidget);
+      expect(find.text('LibreMIeL'), findsOneWidget);
+
+      // Verificar que el logo de la UNLaM está posicionado a la izquierda del logo de LibreMIeL
+      final unlamTopLeft = tester.getTopLeft(unlamFinder);
+      final libremielTopLeft = tester.getTopLeft(libremielFinder);
+      expect(unlamTopLeft.dx, lessThan(libremielTopLeft.dx));
+    },
+  );
 }
+

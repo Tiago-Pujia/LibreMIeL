@@ -1,16 +1,19 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Emblema de LibreMIeL usando la imagen personalizada (`assets/icons/libremiel.png`).
+/// Emblema de LibreMIeL acompañado del logo institucional de UNLaM a su izquierda
+/// (`assets/images/logo-unlam-blanco-34.png`) y el isotipo de LibreMIeL (`assets/icons/libremiel.png`).
 class LibreMielMark extends StatelessWidget {
   const LibreMielMark({
     super.key,
     this.size = 36,
     this.showWordmark = true,
+    this.showUnlamLogo = true,
     this.lightText = false,
   });
 
   final double size;
   final bool showWordmark;
+  final bool showUnlamLogo;
   final bool lightText;
 
   @override
@@ -22,7 +25,20 @@ class LibreMielMark extends StatelessWidget {
 
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        if (showUnlamLogo) ...[
+          Image.asset(
+            'assets/images/logo-unlam-blanco-34.png',
+            height: size,
+            width: size * (95 / 34),
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.medium,
+            color: lightText || isDark ? null : wordColor,
+            semanticLabel: 'Logo UNLaM',
+          ),
+          SizedBox(width: (size * 0.38).roundToDouble()),
+        ],
         ClipOval(
           child: Image.asset(
             'assets/icons/libremiel.png',
