@@ -660,6 +660,27 @@ class AppDatabase extends _$AppDatabase {
     return query.watch().map((rows) => rows.length);
   }
 
+  Future<int> getUnreadNotificationsCount() async {
+    final count =
+        await (selectOnly(notificationLogs)
+              ..addColumns([notificationLogs.id.count()])
+              ..where(notificationLogs.isRead.equals(false)))
+            .getSingle();
+    return count.read(notificationLogs.id.count()) ?? 0;
+  }
+
+  Future<List<NotificationLog>> getRecentNotifications({int limit = 5}) {
+    if (limit <= 0) return Future.value(const <NotificationLog>[]);
+    return (select(notificationLogs)
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.isRead),
+            (t) => OrderingTerm.desc(t.createdAt),
+            (t) => OrderingTerm.desc(t.id),
+          ])
+          ..limit(limit))
+        .get();
+  }
+
   Future<void> markNotificationRead(int id, {bool isRead = true}) async {
     await (update(notificationLogs)..where((t) => t.id.equals(id))).write(
       NotificationLogsCompanion(isRead: Value(isRead)),

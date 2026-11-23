@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_bg">#FF181A19</color>
+    <color name="widget_bg_border">#FF333333</color>
+    <color name="widget_surface">#FF222524</color>
+    <color name="widget_card_bg">#FF262626</color>
+    <color name="widget_card_border">#FF343434</color>
+    <color name="widget_unread_bg">#FF23332B</color>
+    <color name="widget_unread_border">#FF128268</color>
+    <color name="widget_chip_bg">#FF222B27</color>
+    <color name="widget_chip_border">#FF2F4A3F</color>
+
+    <color name="widget_primary">#FF128268</color>
+    <color name="widget_primary_dark">#FF0E6853</color>
+    <color name="widget_link_accent">#FF7BCEB9</color>
+    <color name="widget_badge_red">#FFEA4A3E</color>
+
+    <color name="widget_text_primary">#FFEEEEEE</color>
+    <color name="widget_text_secondary">#FFDDDDDD</color>
+    <color name="widget_text_muted">#FF9E9E9E</color>
+    <color name="widget_divider">#FF3A3A3A</color>
+
+    <color name="widget_status_online_bg">#FF19332B</color>
+    <color name="widget_status_online_text">#FF7BCEB9</color>
+    <color name="widget_status_down_bg">#FF332200</color>
+    <color name="widget_status_down_text">#FFFFD54F</color>
+    <color name="widget_status_offline_bg">#FF1E2836</color>
+    <color name="widget_status_offline_text">#FF90CAF9</color>
+    <color name="widget_status_auth_bg">#FF482929</color>
+    <color name="widget_status_auth_text">#FFFF8A80</color>
+</resources>

@@ -1,6 +1,6 @@
 # Estado del Proyecto — LibreMIeL
 
-*Última actualización: 22 de noviembre de 2026*
+*Última actualización: 23 de noviembre de 2026*
 
 Este tablero resume el avance de **LibreMIeL** por fase y componente.
 
@@ -31,6 +31,9 @@ Este tablero resume el avance de **LibreMIeL** por fase y componente.
 | **Fase 7 — Integración con IA** | Asistente de estudio *local-first* (Ollama/local o BYOK) | ⏳ Pendiente | Resúmenes, preguntas con citas sobre apuntes/foros descargados y guías de estudio sin servidor central. Ver [`ROADMAP.md`](ROADMAP.md#fase-7--integración-con-ia-asistente-de-estudio) |
 | **Fase 8 — Actualizador automático** | Alertas de releases y actualización in-app multiplataforma | ✅ Completado | Detección vía GitHub Releases API (`ETag`), cliente HTTP aislado, notificación nativa + diálogo in-app, verificación criptográfica obligatoria contra `SHA256SUMS.txt` y actualización automática/asistida por SO (Windows Inno Setup, Android FileProvider, Linux AppImage/paquetes y macOS). Ver [`ROADMAP.md`](ROADMAP.md#fase-8--actualizador-automático-en-la-app) |
 | **Fase 9 — Modo offline y contingencia** | Navegación sin conexión y detección de caídas de MIeL | ✅ Completado | Caché local opcional bajo sesión autenticada (`Drift v6` con LRU), clasificador determinista de caídas de red, banner global `MielStatusBanner`, precargador seguro (`OfflinePrefetcher` sin efectos colaterales), fallback automático en todos los lectores y ajustes dedicados. Ver [`ROADMAP.md`](ROADMAP.md#fase-9--modo-offline-y-contingencia-ante-caídas-de-miel) |
+| **Fase 10 — App Widget Android** | Widgets nativos de pantalla de inicio (`RemoteViews`) | ✅ Completado | `AppWidgetProvider` en Kotlin + layouts XML (`2×2` compacto y `4×2` feed/materias), actualización desde `WorkManager`/`syncNow`, *deep-linking* vía `HomeShell` y limpieza al cerrar sesión. Ver [`ROADMAP.md`](ROADMAP.md#fase-10--app-widget-en-pantalla-de-inicio-android-estado--completado) |
+| **Fase 11 — Soporte iOS / iPadOS** | Target `app/ios/`, adaptación móvil/tablet y `.ipa` en CI/CD | ⏳ Pendiente | Scaffolding `app/ios/`, permisos (`Info.plist`, Keychain, `Files`), `BGAppRefreshTask`, UI iPhone/iPad, compilación `.ipa` en GitHub Actions (`macos-latest`) y distribución vía AltStore/SideStore o TestFlight/App Store. Ver [`ROADMAP.md`](ROADMAP.md#fase-11--soporte-para-ios-e-ipados-iphone--ipad-estado--pendiente) |
+| **Fase 12 — Navegación tipo navegador** | Historial Back/Forward, `Mouse 4/5`, `F5` y atajos web | ⏳ Pendiente | Pila unificada en `HomeShell` (`Mouse 4/5`, `Alt+←/→`, Android `PopScope`), recarga contextual (`F5`/`Ctrl+R`), `Ctrl+F`, zoom, *bfcache* y protección de borradores/efectos colaterales. Ver [`ROADMAP.md`](ROADMAP.md#fase-12--navegación-y-experiencia-tipo-navegador-web-estado--pendiente) |
 
 ---
 

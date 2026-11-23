@@ -20,7 +20,7 @@ Este archivo concentra el contexto operativo, las invariantes técnicas y las re
 Antes de editar código, revisá únicamente el documento que corresponde a tu tarea:
 
 1. **Estado actual del proyecto:** [`STATUS.md`](STATUS.md)
-2. **Próximas fases y roadmap técnico (Fases 3 a 9):** [`ROADMAP.md`](ROADMAP.md)
+2. **Próximas fases y roadmap técnico (Fases 3 a 12):** [`ROADMAP.md`](ROADMAP.md)
 3. **Protocolo de login, sesión, cookies y CORS:** [`02-arquitectura-y-sesion-miel.md`](02-arquitectura-y-sesion-miel.md)
 4. **Panel `/principal/interno/`, badges y módulos extra:** [`03-panel-principal-y-modulos.md`](03-panel-principal-y-modulos.md)
 5. **Endpoints exactos, DOM y efectos colaterales (4 módulos clave):** [`04-modulos-clave-endpoints-y-dom.md`](04-modulos-clave-endpoints-y-dom.md)
@@ -63,6 +63,9 @@ Antes de editar código, revisá únicamente el documento que corresponde a tu t
 11. **Invariantes del modo offline ante caídas de MIeL (Fase 9):**
    - El acceso sin conexión es **opcional** y está restringido estrictamente a sesiones ya autenticadas (`isAuthenticated == true` y `account_username` válido), debiendo vaciarse en `clearAccountData()` al cerrar sesión o cambiar de cuenta.
    - Una caída de MIeL (`5xx`, `SocketException`, *timeout*) **jamás** debe interpretarse como credenciales inválidas (`estado != 0`) ni cerrar la sesión; debe activar el aviso explícito de servidor caído y usar únicamente caché poblado sin violar las reglas 1, 2 y 3 (sin precarga ciega de `Contenidos`, `verEntrada` ni `forov2/mensajes`).
+12. **Invariantes de navegación tipo navegador web (Fase 12):**
+   - Retroceder o avanzar por el historial (`Mouse 4`/`Mouse 5`, `Alt+←/→`, `Cmd+[/]`, Android `PopScope`) debe restaurar estado/scroll desde sesión o caché sin disparar peticiones HTTP ocultas que violen las reglas 1, 2 y 3; únicamente `F5` / `Ctrl+R` o una acción explícita recarga desde MIeL.
+   - La captura de atajos globales debe respetar campos `EditableText` enfocados, cerrar primero capas modales abiertas (`Esc`/`PopScope`), pedir confirmación antes de descartar borradores activos sin enviar y limpiar toda la pila de historial al ejecutar `logout()` o `clearAccountData()`.
 
 ---
 

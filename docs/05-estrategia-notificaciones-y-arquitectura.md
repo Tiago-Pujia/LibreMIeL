@@ -103,6 +103,13 @@ Como MIeL **no envía cabeceras CORS** (`Access-Control-Allow-Origin` ausente) y
   - Al pulsar la notificación, **LibreMIeL no redirige al navegador web externo**.
   - A través de `NotificationTapPayload` y el stream `NotificationService.onNotificationTapped` (o `getLaunchDetails()` si la app estaba cerrada, con fallback directo a SQLite si `subjectsStreamProvider` aún está cargando), LibreMIeL abre internamente la comisión, la herramienta específica (`mensajeria`, `contenidos`, `portafolio`, `foro` —incluyendo el `idTema` si viene en la URL— o `evaluacion`), o el panel de Novedades si la comisión no se encuentra.
 
+### App Widgets nativos en Android *(Fase 10 — ✅ Completado)*
+- Sobre la infraestructura de `WorkManager` (`runAndroidBackgroundSyncTask`), `SyncEngine.runCycle1` y navegación profunda de `HomeShell`, se implementaron **App Widgets** nativos (`AppWidgetProvider` + `RemoteViews` XML adaptativos):
+  - Formato compacto `2×2` / `4×1` (`MielCompactWidgetProvider`) y feed/materias `4×2` (`MielFeedWidgetProvider`).
+  - Puente nativo local `libremiel_android_widget` (`FlutterPlugin` + `MethodChannel`) para ambos engines (`MainActivity` y `WorkManager`).
+  - Botón de refresco manual con `OneTimeWorkRequest` (`libremiel_widget_refresh`), deep-linking directo con `NotificationTapPayload` y marcado automático de lectura.
+  - Vaciado síncrono obligatorio de `SharedPreferences` al cerrar sesión o cambiar de cuenta (**Invariante #11**). Ver [`ROADMAP.md`](ROADMAP.md#fase-10--app-widget-en-pantalla-de-inicio-android-estado--completado).
+
 
 ---
 

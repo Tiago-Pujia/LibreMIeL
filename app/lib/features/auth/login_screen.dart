@@ -156,7 +156,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       bottom: false,
                       child: Row(
                         children: [
-                          LibreMielMark(size: isWide ? 36 : 30, lightText: true),
+                          LibreMielMark(
+                            size: isWide ? 36 : 30,
+                            lightText: true,
+                          ),
                           if (isWide) ...[
                             const SizedBox(width: 14),
                             Container(
@@ -196,7 +199,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ? Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Expanded(flex: 6, child: _buildHeroTitles()),
+                                    Expanded(
+                                      flex: 6,
+                                      child: _buildHeroTitles(),
+                                    ),
                                     const SizedBox(width: 48),
                                     ConstrainedBox(
                                       constraints: const BoxConstraints(

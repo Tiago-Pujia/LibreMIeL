@@ -1,0 +1,19 @@
+name: libremiel_android_widget
+description: "Puente nativo Android para App Widgets de LibreMIeL."
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.14.0
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: io.github.tiago_pujia.libremiel.widget_bridge
+        pluginClass: LibreMielWidgetBridgePlugin

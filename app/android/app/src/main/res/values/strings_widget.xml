@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_compact_name">LibreMIeL — Resumen</string>
+    <string name="widget_compact_description">Novedades sin leer, última actividad, estado de MIeL y sincronización</string>
+    <string name="widget_feed_name">LibreMIeL — Novedades y Materias</string>
+    <string name="widget_feed_description">Últimas novedades académicas, materias con badges pendientes y acceso rápido</string>
+    <string name="widget_signed_out_title">Sesión cerrada</string>
+    <string name="widget_signed_out_subtitle">Tocá para iniciar sesión en LibreMIeL</string>
+    <string name="widget_refresh_cd">Sincronizar novedades</string>
+</resources>

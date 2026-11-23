@@ -21,22 +21,25 @@ int deterministicNotificationId(String key) {
   return positive == 0 ? 1 : positive;
 }
 
-/// Payload estructurado para responder al toque de una notificación nativa.
+/// Payload estructurado para responder al toque de una notificación nativa o widget.
 class NotificationTapPayload {
   const NotificationTapPayload({
     required this.idComision,
     required this.module,
     required this.targetUrl,
+    this.notificationId,
   });
 
   final String idComision;
   final String module;
   final String targetUrl;
+  final int? notificationId;
 
   Map<String, dynamic> toJson() => {
     'idComision': idComision,
     'module': module,
     'targetUrl': targetUrl,
+    if (notificationId != null) 'notificationId': notificationId,
   };
 
   factory NotificationTapPayload.fromJson(Map<String, dynamic> json) =>
@@ -44,6 +47,7 @@ class NotificationTapPayload {
         idComision: json['idComision'] as String? ?? '',
         module: json['module'] as String? ?? '',
         targetUrl: json['targetUrl'] as String? ?? '',
+        notificationId: (json['notificationId'] as num?)?.toInt(),
       );
 }
 

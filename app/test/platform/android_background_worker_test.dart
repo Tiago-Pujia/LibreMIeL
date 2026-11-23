@@ -4,6 +4,7 @@ import 'package:libremiel/core/models/miel_models.dart';
 import 'package:libremiel/core/storage/app_database.dart';
 import 'package:libremiel/core/sync/sync_engine.dart';
 import 'package:libremiel/platform/android_background_worker.dart';
+import 'package:libremiel/platform/android_widget_service.dart';
 import 'package:libremiel/platform/notification_service.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -11,7 +12,16 @@ class MockSyncEngine extends Mock implements SyncEngine {}
 
 class MockNotificationService extends Mock implements NotificationService {}
 
+class MockAndroidWidgetService extends Mock implements AndroidWidgetService {}
+
+class FakeAppDatabase extends Fake implements AppDatabase {}
+
 void main() {
+  setUpAll(() {
+    registerFallbackValue(MielServerStatus.online);
+    registerFallbackValue(FakeAppDatabase());
+  });
+
   group('runAndroidBackgroundSyncTask', () {
     late AppDatabase db;
     late MockSyncEngine mockEngine;
@@ -200,5 +210,89 @@ void main() {
         verifyNever(() => mockNotifications.showMielRecoveredNotification());
       },
     );
+
+    test('kAndroidWidgetRefreshTaskName ejecuta runCycle1 y sincroniza widget con estado del servidor', () async {
+      final mockWidget = MockAndroidWidgetService();
+      when(
+        () => mockWidget.syncFromDatabase(
+          database: any(named: 'database'),
+          isAuthenticated: any(named: 'isAuthenticated'),
+          serverStatus: any(named: 'serverStatus'),
+          authPaused: any(named: 'authPaused'),
+          lastSyncAt: any(named: 'lastSyncAt'),
+          lastOnlineSuccessAt: any(named: 'lastOnlineSuccessAt'),
+        ),
+      ).thenAnswer((_) async {});
+
+      when(
+        () => mockEngine.runCycle1(
+          loadCredentials: any(named: 'loadCredentials'),
+        ),
+      ).thenAnswer(
+        (_) async => const SyncRunSummary(
+          cycle: 1,
+          isBaseline: false,
+          notifications: [],
+          networkErrorStatus: MielServerStatus.mielDown,
+        ),
+      );
+
+      final ok = await runAndroidBackgroundSyncTask(
+        taskName: kAndroidWidgetRefreshTaskName,
+        database: db,
+        notifications: mockNotifications,
+        engine: mockEngine,
+        loadCredentials: fakeCreds,
+        widgetService: mockWidget,
+        nowProvider: () => DateTime(2026, 11, 23, 16, 0),
+      );
+
+      expect(ok, isTrue);
+      verify(
+        () => mockEngine.runCycle1(
+          loadCredentials: any(named: 'loadCredentials'),
+        ),
+      ).called(1);
+      verify(
+        () => mockWidget.syncFromDatabase(
+          database: db,
+          isAuthenticated: true,
+          serverStatus: MielServerStatus.mielDown,
+          authPaused: false,
+          lastSyncAt: null,
+          lastOnlineSuccessAt: null,
+        ),
+      ).called(1);
+    });
+
+    test('limpia el widget en segundo plano si no existen credenciales ni cuenta activa', () async {
+      final mockWidget = MockAndroidWidgetService();
+      when(() => mockWidget.clearSnapshot()).thenAnswer((_) async {});
+
+      when(
+        () => mockEngine.runCycle1(
+          loadCredentials: any(named: 'loadCredentials'),
+        ),
+      ).thenAnswer(
+        (_) async => const SyncRunSummary(
+          cycle: 1,
+          isBaseline: false,
+          notifications: [],
+          authPaused: true,
+        ),
+      );
+
+      final ok = await runAndroidBackgroundSyncTask(
+        taskName: kAndroidCycle1TaskName,
+        database: db,
+        notifications: mockNotifications,
+        engine: mockEngine,
+        loadCredentials: () async => null,
+        widgetService: mockWidget,
+      );
+
+      expect(ok, isTrue);
+      verify(() => mockWidget.clearSnapshot()).called(1);
+    });
   });
 }

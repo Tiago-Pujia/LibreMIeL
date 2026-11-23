@@ -12,6 +12,7 @@ import '../core/storage/app_database.dart';
 import '../core/sync/sync_engine.dart';
 import '../platform/android_background_worker.dart';
 import '../platform/android_system_service.dart';
+import '../platform/android_widget_service.dart';
 import '../platform/autostart_service.dart';
 import '../platform/desktop_tray_service.dart';
 import '../platform/file_download_service.dart';
@@ -51,6 +52,10 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 
 final androidSystemServiceProvider = Provider<AndroidSystemService>((ref) {
   return const AndroidSystemService();
+});
+
+final androidWidgetServiceProvider = Provider<AndroidWidgetService>((ref) {
+  return const AndroidWidgetService();
 });
 
 final autostartServiceProvider = Provider<AutostartService>((ref) {
@@ -209,8 +214,11 @@ class AppSessionController extends Notifier<AppSessionState> {
   Timer? _desktopCycle2Timer;
   Timer? _desktopKeepAliveTimer;
   Timer? _recoveryBackoffTimer;
+  Timer? _androidWidgetDebounceTimer;
   int _recoveryBackoffAttempt = 0;
   StreamSubscription<int>? _trayUnreadSub;
+  StreamSubscription<int>? _androidWidgetUnreadSub;
+  StreamSubscription<List<Subject>>? _androidWidgetSubjectsSub;
   DesktopTrayService? _trayService;
   MielCredentials? _memoryCredentials;
   Future<bool>? _reloginInFlight;
@@ -223,7 +231,10 @@ class AppSessionController extends Notifier<AppSessionState> {
       _desktopCycle2Timer?.cancel();
       _desktopKeepAliveTimer?.cancel();
       _recoveryBackoffTimer?.cancel();
+      _androidWidgetDebounceTimer?.cancel();
       _trayUnreadSub?.cancel();
+      _androidWidgetUnreadSub?.cancel();
+      _androidWidgetSubjectsSub?.cancel();
       _trayService?.dispose();
     });
     Future.microtask(_bootstrap);
@@ -236,10 +247,67 @@ class AppSessionController extends Notifier<AppSessionState> {
     _desktopCycle2Timer?.cancel();
     _desktopKeepAliveTimer?.cancel();
     _recoveryBackoffTimer?.cancel();
+    _androidWidgetDebounceTimer?.cancel();
     await _trayUnreadSub?.cancel();
     _trayUnreadSub = null;
+    await _androidWidgetUnreadSub?.cancel();
+    _androidWidgetUnreadSub = null;
+    await _androidWidgetSubjectsSub?.cancel();
+    _androidWidgetSubjectsSub = null;
     await _trayService?.dispose();
     _trayService = null;
+  }
+
+  Future<void> syncAndroidWidgetFromDb() async {
+    final widgetService = ref.read(androidWidgetServiceProvider);
+    if (!widgetService.isSupported) return;
+    final db = ref.read(databaseProvider);
+    try {
+      await widgetService.syncFromDatabase(
+        database: db,
+        isAuthenticated: state.isAuthenticated,
+        serverStatus: state.serverStatus,
+        authPaused:
+            state.authPausedReason != null &&
+            state.authPausedReason!.isNotEmpty,
+        lastSyncAt: state.lastSyncAt,
+        lastOnlineSuccessAt: state.lastOnlineSuccessAt,
+      );
+    } catch (_) {}
+  }
+
+  void _scheduleAndroidWidgetRefreshFromStreams() {
+    if (!state.isAuthenticated) return;
+    final widgetService = ref.read(androidWidgetServiceProvider);
+    if (!widgetService.isSupported) return;
+    _androidWidgetDebounceTimer?.cancel();
+    _androidWidgetDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _androidWidgetDebounceTimer = null;
+      if (state.isAuthenticated) {
+        unawaited(syncAndroidWidgetFromDb());
+      }
+    });
+  }
+
+  void _startAndroidWidgetObservers() {
+    final widgetService = ref.read(androidWidgetServiceProvider);
+    if (!widgetService.isSupported) return;
+    final db = ref.read(databaseProvider);
+    _androidWidgetUnreadSub ??= db.watchUnreadNotificationsCount().listen((_) {
+      _scheduleAndroidWidgetRefreshFromStreams();
+    });
+    _androidWidgetSubjectsSub ??= db.watchAllSubjects().listen((_) {
+      _scheduleAndroidWidgetRefreshFromStreams();
+    });
+  }
+
+  Future<void> _stopAndroidWidgetObservers() async {
+    _androidWidgetDebounceTimer?.cancel();
+    _androidWidgetDebounceTimer = null;
+    await _androidWidgetUnreadSub?.cancel();
+    _androidWidgetUnreadSub = null;
+    await _androidWidgetSubjectsSub?.cancel();
+    _androidWidgetSubjectsSub = null;
   }
 
   ThemeMode _parseThemeMode(String? raw) {
@@ -252,10 +320,14 @@ class AppSessionController extends Notifier<AppSessionState> {
     final db = ref.read(databaseProvider);
     final credsStore = ref.read(credentialsStoreProvider);
     final notifService = ref.read(notificationServiceProvider);
+    final widgetService = ref.read(androidWidgetServiceProvider);
     final autostart = ref.read(autostartServiceProvider);
 
     try {
       await notifService.initialize();
+    } catch (_) {}
+    try {
+      await widgetService.initialize();
     } catch (_) {}
 
     final interval = await db.getSyncIntervalMinutes();
@@ -284,6 +356,7 @@ class AppSessionController extends Notifier<AppSessionState> {
       } else if (storedUser != currentUser) {
         await db.clearAccountData();
         await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
+        await widgetService.clearSnapshot();
         await db.setSetting(SettingKeys.accountUsername, currentUser);
       }
     }
@@ -324,10 +397,14 @@ class AppSessionController extends Notifier<AppSessionState> {
     );
 
     if (authenticated) {
+      _startAndroidWidgetObservers();
+      unawaited(syncAndroidWidgetFromDb());
       await _startBackgroundSchedulers(interval);
       if (pausedReason == null || pausedReason.isEmpty) {
         unawaited(syncNow(includeCycle2: false));
       }
+    } else {
+      unawaited(widgetService.clearSnapshot());
     }
 
     // Comprobar actualizaciones de la app en segundo plano (respetando frecuencia de 24h)
@@ -466,6 +543,7 @@ class AppSessionController extends Notifier<AppSessionState> {
     if (isDifferentAccount) {
       await db.clearAccountData();
       await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
+      await ref.read(androidWidgetServiceProvider).clearSnapshot();
     }
     await db.setSetting(SettingKeys.accountUsername, normalizedUser);
 
@@ -518,6 +596,7 @@ class AppSessionController extends Notifier<AppSessionState> {
       notifyOnMielRecovery: notifyOnMielRecovery,
     );
 
+    _startAndroidWidgetObservers();
     await _startBackgroundSchedulers(state.syncIntervalMinutes);
     await syncNow(includeCycle2: true, ignoreAuthPause: true);
     return result;
@@ -668,6 +747,10 @@ class AppSessionController extends Notifier<AppSessionState> {
         lastSyncMessage: 'Error durante la sincronización: $e',
       );
       reportServerStatus(status);
+    } finally {
+      if (!isCancelled() && !state.isSyncing) {
+        unawaited(syncAndroidWidgetFromDb());
+      }
     }
   }
 
@@ -705,6 +788,9 @@ class AppSessionController extends Notifier<AppSessionState> {
           ref.read(notificationServiceProvider).showMielRecoveredNotification(),
         );
       }
+      if (previous != status && state.isAuthenticated) {
+        unawaited(syncAndroidWidgetFromDb());
+      }
       return;
     }
 
@@ -727,6 +813,9 @@ class AppSessionController extends Notifier<AppSessionState> {
         serverStatus: status,
         serverDownSince: state.serverDownSince ?? now,
       );
+      if (state.isAuthenticated) {
+        unawaited(syncAndroidWidgetFromDb());
+      }
     }
 
     if (state.isAuthenticated && state.authPausedReason == null) {
@@ -868,6 +957,7 @@ class AppSessionController extends Notifier<AppSessionState> {
     _recoveryBackoffTimer?.cancel();
     _recoveryBackoffTimer = null;
     _recoveryBackoffAttempt = 0;
+    await _stopAndroidWidgetObservers();
     final db = ref.read(databaseProvider);
     final credsStore = ref.read(credentialsStoreProvider);
 
@@ -904,9 +994,10 @@ class AppSessionController extends Notifier<AppSessionState> {
     await AndroidBackgroundWorker.cancelAll();
     await db.deleteSetting(SettingKeys.mielOutageDetectedAt);
 
-    // Invariante #11: al cerrar sesión SIEMPRE se vacía el caché offline y media autenticada
+    // Invariante #11: al cerrar sesión SIEMPRE se vacía el caché offline, media autenticada y widgets
     await db.clearOfflineCache();
     await ref.read(offlineMediaServiceProvider).clearAllCachedMedia();
+    await ref.read(androidWidgetServiceProvider).clearSnapshot();
 
     if (wipeLocalData) {
       await db.clearAllLocalData();

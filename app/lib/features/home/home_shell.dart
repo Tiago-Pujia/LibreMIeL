@@ -14,6 +14,7 @@ import '../../core/network/miel_client.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/libremiel_brand.dart';
 import '../../core/theme/miel_theme.dart';
+import '../../platform/android_widget_service.dart';
 import '../../platform/notification_service.dart';
 import '../../platform/updater/updater_controller.dart';
 import '../feed/feed_screen.dart';
@@ -51,6 +52,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
   int _moduleSectionNavTick = 0;
   String? _activeForoTopicId;
   StreamSubscription<NotificationTapPayload>? _notifTapSub;
+  StreamSubscription<NotificationTapPayload>? _widgetTapSub;
 
   @override
   void initState() {
@@ -62,6 +64,13 @@ class _HomeShellState extends ConsumerState<HomeShell>
       if (!mounted) return;
       unawaited(_handleNotificationPayloadTap(payload));
     });
+    _widgetTapSub = AndroidWidgetService.onWidgetTapped.stream.listen((
+      payload,
+    ) {
+      if (!mounted) return;
+      unawaited(_handleNotificationPayloadTap(payload));
+    });
+    unawaited(ref.read(androidWidgetServiceProvider).initialize());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_checkInitialNotification());
     });
@@ -71,6 +80,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _notifTapSub?.cancel();
+    _widgetTapSub?.cancel();
     super.dispose();
   }
 
@@ -80,6 +90,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
       // WorkManager ejecuta en un motor Flutter independiente: al volver a
       // primer plano notificamos a Drift para refrescar streams de novedades y materias.
       ref.read(databaseProvider).notifyExternalTableUpdates();
+      unawaited(
+        ref.read(appSessionProvider.notifier).syncAndroidWidgetFromDb(),
+      );
     }
   }
 
@@ -97,10 +110,17 @@ class _HomeShellState extends ConsumerState<HomeShell>
             await _handleNotificationPayloadTap(
               NotificationTapPayload.fromJson(decoded),
             );
+            return;
           }
         } catch (_) {}
       }
     }
+
+    final widgetPayload = await ref
+        .read(androidWidgetServiceProvider)
+        .consumeInitialTapPayload();
+    if (!mounted || widgetPayload == null) return;
+    await _handleNotificationPayloadTap(widgetPayload);
   }
 
   String? _extractForoTopicId(String targetUrl) {
@@ -117,6 +137,15 @@ class _HomeShellState extends ConsumerState<HomeShell>
   ) async {
     if (!mounted) return;
 
+    if (payload.notificationId != null) {
+      unawaited(
+        ref
+            .read(databaseProvider)
+            .markNotificationRead(payload.notificationId!)
+            .catchError((_) {}),
+      );
+    }
+
     if (payload.module == 'app_update' ||
         payload.targetUrl.startsWith('libremiel://update')) {
       final updater = ref.read(updaterProvider);
@@ -129,7 +158,13 @@ class _HomeShellState extends ConsumerState<HomeShell>
       return;
     }
 
-    if (payload.idComision.isEmpty ||
+    if (payload.module == 'home' || payload.idComision == 'home') {
+      _goHome();
+      return;
+    }
+
+    if (payload.module == 'novedades' ||
+        payload.idComision.isEmpty ||
         payload.idComision == 'global' ||
         payload.idComision == 'sistema') {
       _goNovedades();
@@ -152,7 +187,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
       'contenidos' => MielToolKind.contenidos,
       'portafolio' => MielToolKind.portafolio,
       'mensajeria' => MielToolKind.mensajeria,
-      'foros' => MielToolKind.foro,
+      'foros' || 'foro' => MielToolKind.foro,
       'evaluacion' => MielToolKind.evaluacion,
       _ => null,
     };

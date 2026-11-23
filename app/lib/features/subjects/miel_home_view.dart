@@ -159,7 +159,9 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                               width: 28,
                               height: 28,
                               decoration: BoxDecoration(
-                                color: palette.linkAccent.withValues(alpha: 0.15),
+                                color: palette.linkAccent.withValues(
+                                  alpha: 0.15,
+                                ),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(

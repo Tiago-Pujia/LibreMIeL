@@ -426,11 +426,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: buildMielDarkTheme(),
-          home: const Scaffold(
-            body: Center(
-              child: LibreMielMark(size: 34),
-            ),
-          ),
+          home: const Scaffold(body: Center(child: LibreMielMark(size: 34))),
         ),
       );
 
@@ -461,4 +457,3 @@ void main() {
     },
   );
 }
-

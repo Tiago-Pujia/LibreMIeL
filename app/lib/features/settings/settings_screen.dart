@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../app/app_providers.dart';
 import '../../core/models/miel_models.dart';
 import '../../core/theme/miel_theme.dart';
+import '../../platform/android_widget_service.dart';
 import '../../platform/updater/update_models.dart';
 import '../../platform/updater/updater_controller.dart';
 import '../updates/update_dialog.dart';
@@ -708,6 +709,48 @@ class _AndroidBackgroundHealthSectionState
     await androidSystem.openAppNotificationSettings();
   }
 
+  Future<void> _openWidgetPickerDialog() async {
+    final widgetService = ref.read(androidWidgetServiceProvider);
+    await ref.read(appSessionProvider.notifier).syncAndroidWidgetFromDb();
+    final pinSupported = await widgetService.isPinWidgetSupported();
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Widgets en pantalla de inicio'),
+        content: Text(
+          pinSupported
+              ? 'Elegí el formato que querés agregar a tu pantalla de inicio:'
+              : 'Mantené presionado un espacio libre de tu pantalla de inicio, '
+                    'tocá "Widgets" y elegí LibreMIeL (Resumen 2×2 o Novedades y Materias 4×2).',
+        ),
+        actions: [
+          if (pinSupported) ...[
+            TextButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await widgetService.requestPinWidget(AndroidWidgetKind.compact);
+              },
+              child: const Text('Resumen (2×2)'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await widgetService.requestPinWidget(AndroidWidgetKind.feed);
+              },
+              child: const Text('Novedades (4×2)'),
+            ),
+          ],
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = widget.palette;
@@ -776,6 +819,17 @@ class _AndroidBackgroundHealthSectionState
                   )
                 : const Icon(Icons.chevron_right),
             onTap: _openNotificationSettings,
+          ),
+          Divider(height: 1, color: palette.divider),
+          ListTile(
+            leading: Icon(Icons.widgets_outlined, color: palette.linkAccent),
+            title: const Text('Widgets en pantalla de inicio'),
+            subtitle: Text(
+              'Fijá los widgets de Resumen (2×2) o Novedades y Materias (4×2) en el launcher de Android.',
+              style: TextStyle(color: palette.textMuted),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _openWidgetPickerDialog,
           ),
         ],
       ),
