@@ -12,13 +12,13 @@
       name: "Windows",
       recommendedSuffix: "-windows-x64-setup.exe",
       heroLabel: "Descargar para Windows (.exe)",
-      hint: "Instalador recomendado para Windows 10 / 11 (x86_64)."
+      hint: "Instalador para Windows 10 / 11 (x86_64 y ARM64)."
     },
     linux: {
       name: "Linux",
       recommendedSuffix: "-linux-amd64.deb",
       heroLabel: "Descargar para Linux (.deb)",
-      hint: "Instalador recomendado para Ubuntu, Debian y Mint. También disponible en .rpm, Arch, AppImage y ARM64."
+      hint: "Instalador para Ubuntu, Debian y Mint. También disponible en .rpm, Arch, AppImage y ARM64."
     },
     android: {
       name: "Android",
