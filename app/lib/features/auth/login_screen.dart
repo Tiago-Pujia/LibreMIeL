@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -114,101 +115,114 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final width = MediaQuery.sizeOf(context).width;
     final isWide = width >= 768;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Fondo degradado esmeralda -> verde lima estilo MIeL + hexágonos flotantes animados
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF009674), Color(0xFF63CB5F)],
-                ),
-              ),
-              child: RepaintBoundary(child: _AnimatedHexagonsBackground()),
-            ),
-          ),
+    const overlayStyle = SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+    );
 
-          // Contenido principal con barra superior oscura
-          Column(
-            children: [
-              // Header fijo superior (rgba(0, 22, 6, 0.9))
-              Container(
-                height: isWide ? 68 : 54,
-                width: double.infinity,
-                color: const Color.fromRGBO(0, 22, 6, 0.90),
-                padding: EdgeInsets.symmetric(horizontal: isWide ? 24 : 16),
-                child: SafeArea(
-                  bottom: false,
-                  child: Row(
-                    children: [
-                      LibreMielMark(size: isWide ? 36 : 30, lightText: true),
-                      if (isWide) ...[
-                        const SizedBox(width: 14),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                          child: Text(
-                            'Cliente no oficial · Open Source',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: Scaffold(
+        body: Stack(
+          children: [
+            // Fondo degradado esmeralda -> verde lima estilo MIeL + hexágonos flotantes animados
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF009674), Color(0xFF63CB5F)],
                   ),
                 ),
+                child: RepaintBoundary(child: _AnimatedHexagonsBackground()),
               ),
+            ),
 
-              // Área Hero (2 columnas en desktop, 1 columna centrada en mobile)
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isWide ? 36 : 18,
-                      vertical: 28,
-                    ),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1120),
-                      child: isWide
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Expanded(flex: 6, child: _buildHeroTitles()),
-                                const SizedBox(width: 48),
-                                ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 440,
-                                  ),
-                                  child: _buildLoginCard(),
+            // Contenido principal con barra superior oscura
+            SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  // Header fijo superior (rgba(0, 22, 6, 0.9))
+                  Container(
+                    height: isWide ? 68 : 54,
+                    width: double.infinity,
+                    color: const Color.fromRGBO(0, 22, 6, 0.90),
+                    padding: EdgeInsets.symmetric(horizontal: isWide ? 24 : 16),
+                    child: SafeArea(
+                      bottom: false,
+                      child: Row(
+                        children: [
+                          LibreMielMark(size: isWide ? 36 : 30, lightText: true),
+                          if (isWide) ...[
+                            const SizedBox(width: 14),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                'Cliente no oficial · Open Source',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 12,
                                 ),
-                              ],
-                            )
-                          : Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 440,
-                                ),
-                                child: _buildLoginCard(),
                               ),
                             ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
+
+                  // Área Hero (2 columnas en desktop, 1 columna centrada en mobile)
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isWide ? 36 : 18,
+                          vertical: 28,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1120),
+                          child: isWide
+                              ? Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Expanded(flex: 6, child: _buildHeroTitles()),
+                                    const SizedBox(width: 48),
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 440,
+                                      ),
+                                      child: _buildLoginCard(),
+                                    ),
+                                  ],
+                                )
+                              : Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 440,
+                                    ),
+                                    child: _buildLoginCard(),
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

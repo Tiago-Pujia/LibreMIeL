@@ -324,4 +324,95 @@ void main() {
       await tester.pumpAndSettle();
     },
   );
+
+  testWidgets(
+    'HomeShell renderiza barra de novedades estética en móvil y respeta SafeArea inferior (barra de 3 botones)',
+    (tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      // Simular barra de navegación de 3 botones de 48dp (144px físicos)
+      tester.view.padding = const FakeViewPadding(bottom: 144);
+      addTearDown(tester.view.reset);
+
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      await db.upsertSubjectFromInterno(
+        const MielSubjectBadgeSummary(
+          idComision: '117968',
+          name: 'Análisis Matemático I',
+          subjectCode: '3622',
+          commissionCode: '12-6300',
+          roleLabel: 'Alumno/a',
+          isHidden: false,
+          hasContenidos: true,
+          hasAutoguia: false,
+          hasPortafolio: false,
+          hasMensajeria: false,
+          hasForo: false,
+          hasChat: false,
+          hasEvaluacion: false,
+        ),
+        DateTime(2026, 11, 20),
+      );
+
+      await db.insertNotificationIfNew(
+        DetectedNotification(
+          dedupeKey: 'notif:1',
+          idComision: '117968',
+          subjectName: 'Análisis Matemático I',
+          module: MielModuleType.contenidos,
+          title: 'Nueva actividad',
+          body: 'Se subió la guía 1',
+          targetUrl: 'https://miel.unlam.edu.ar',
+          detectedAt: DateTime(2026, 11, 20),
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            appSessionProvider.overrideWith(
+              () => _TestSessionController(
+                const AppSessionState(
+                  isChecking: false,
+                  isAuthenticated: true,
+                  studentName: 'ESTUDIANTE, DEMO',
+                ),
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            theme: buildMielDarkTheme(),
+            home: const HomeShell(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // 1. Barra de novedades estilizada en móvil (un solo renglón, icono badge, texto, Limpiar y chevron)
+      expect(find.text('Tenés 1 actividad nueva'), findsOneWidget);
+      expect(find.text('Limpiar'), findsOneWidget);
+      expect(find.byIcon(Icons.notifications_active), findsWidgets);
+      expect(find.byIcon(Icons.chevron_right), findsWidgets);
+      expect(find.text('Ver notificaciones'), findsNothing); // En móvil no sobrecarga con texto redundante
+
+      // 2. Encuadre SafeArea inferior:
+      // El contenido scrollable / body de HomeShell no invade los 48dp inferiores (844 - 48 = 796dp)
+      final scrollableFinder = find.byType(SingleChildScrollView);
+      expect(scrollableFinder, findsOneWidget);
+      final scrollableBottom = tester.getBottomLeft(scrollableFinder).dy;
+      expect(scrollableBottom, lessThanOrEqualTo(844 - 48));
+
+      // 3. Tocar "Limpiar" limpia la notificación y el aviso desaparece
+      await tester.tap(find.text('Limpiar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tenés 1 actividad nueva'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
 }

@@ -133,230 +133,111 @@ class _MielHomeViewState extends ConsumerState<MielHomeView> {
                 ],
 
                 // Aviso compacto de novedades sin leer (adaptación LibreMIeL)
-                // Aviso compacto de novedades sin leer (adaptación LibreMIeL)
                 if (unreadCount > 0) ...[
                   const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: palette.unreadBackground,
-                        border: Border(
-                          left: BorderSide(
-                            color: palette.unreadBorder,
-                            width: 4,
+                  Material(
+                    color: palette.unreadBackground,
+                    borderRadius: BorderRadius.circular(6),
+                    child: InkWell(
+                      onTap: widget.onOpenNotifications,
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: palette.unreadBorder.withValues(alpha: 0.35),
+                            width: 1,
                           ),
                         ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      child: isCompact
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: widget.onOpenNotifications,
-                                    borderRadius: BorderRadius.circular(2),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.notifications_active,
-                                          size: 18,
-                                          color: palette.linkAccent,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 9,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: palette.linkAccent.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.notifications_active,
+                                size: 15,
+                                color: palette.linkAccent,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                unreadCount == 1
+                                    ? 'Tenés 1 actividad nueva'
+                                    : 'Tenés $unreadCount actividades nuevas',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: palette.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => ref
+                                    .read(databaseProvider)
+                                    .markAllNotificationsRead(),
+                                borderRadius: BorderRadius.circular(4),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 4,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.done_all,
+                                        size: 15,
+                                        color: palette.textSecondary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Limpiar',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: palette.textSecondary,
                                         ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            unreadCount == 1
-                                                ? 'Tenés 1 actividad nueva'
-                                                : 'Tenés $unreadCount actividades nuevas',
-                                            style: TextStyle(
-                                              fontSize: 13.5,
-                                              fontWeight: FontWeight.w500,
-                                              color: palette.textPrimary,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        onTap: () => ref
-                                            .read(databaseProvider)
-                                            .markAllNotificationsRead(),
-                                        borderRadius: BorderRadius.circular(3),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.done_all,
-                                                size: 16,
-                                                color: palette.textSecondary,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'Limpiar',
-                                                style: TextStyle(
-                                                  fontSize: 12.5,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: palette.textSecondary,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        onTap: widget.onOpenNotifications,
-                                        borderRadius: BorderRadius.circular(3),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 4,
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                'Ver notificaciones',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: palette.linkAccent,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 2),
-                                              Icon(
-                                                Icons.chevron_right,
-                                                size: 18,
-                                                color: palette.linkAccent,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                Icon(
-                                  Icons.notifications_active,
-                                  size: 18,
+                              ),
+                            ),
+                            if (!isCompact) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                'Ver notificaciones',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
                                   color: palette.linkAccent,
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: widget.onOpenNotifications,
-                                      borderRadius: BorderRadius.circular(2),
-                                      child: Text(
-                                        unreadCount == 1
-                                            ? 'Tenés 1 actividad nueva'
-                                            : 'Tenés $unreadCount actividades nuevas',
-                                        style: TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w500,
-                                          color: palette.textPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: () => ref
-                                        .read(databaseProvider)
-                                        .markAllNotificationsRead(),
-                                    borderRadius: BorderRadius.circular(3),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.done_all,
-                                            size: 16,
-                                            color: palette.textSecondary,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Limpiar',
-                                            style: TextStyle(
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w500,
-                                              color: palette.textSecondary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: widget.onOpenNotifications,
-                                    borderRadius: BorderRadius.circular(3),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 4,
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            'Ver notificaciones',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: palette.linkAccent,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 2),
-                                          Icon(
-                                            Icons.chevron_right,
-                                            size: 18,
-                                            color: palette.linkAccent,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
+                            ],
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 18,
+                              color: palette.linkAccent,
                             ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ],
