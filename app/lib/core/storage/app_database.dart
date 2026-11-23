@@ -152,6 +152,8 @@ class SettingKeys {
   static const String offlineCacheMaxMb = 'offline_cache_max_mb';
   static const String notifyOnMielRecovery = 'notify_on_miel_recovery';
   static const String mielOutageDetectedAt = 'miel_outage_detected_at';
+  static const String uiZoomScale = 'ui_zoom_scale';
+  static const String showBrowserNavControls = 'show_browser_nav_controls';
 }
 
 /// Configura SQLite en modo WAL y con `busy_timeout` para permitir acceso
@@ -937,6 +939,16 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> getNotifyOnMielRecovery() async {
     final raw = await getSetting(SettingKeys.notifyOnMielRecovery);
     return raw != 'false';
+  }
+
+  Future<double> getUiZoomScale() async {
+    final raw = await getSetting(SettingKeys.uiZoomScale);
+    final val = double.tryParse(raw ?? '') ?? 1.0;
+    return val.clamp(0.8, 1.5);
+  }
+
+  Future<bool> getShowBrowserNavControls() async {
+    return (await getSetting(SettingKeys.showBrowserNavControls)) == 'true';
   }
 
   /// Borra todos los datos locales al cerrar sesión.

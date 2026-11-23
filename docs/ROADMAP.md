@@ -22,7 +22,7 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 | **Fase 9** | Modo Offline y Contingencia ante Caídas de MIeL | ✅ Completado | Navegación opcional sin conexión (Contenidos, Mensajería, Foros, Portafolio) con sesión activa y aviso de servidor caído |
 | **Fase 10** | App Widget en Pantalla de Inicio (Android) | ✅ Completado | Widgets nativos en pantalla de inicio para resumen de novedades y materias |
 | **Fase 11** | Soporte para iOS e iPadOS | ⏳ Planificado | Target `app/ios/`, adaptación de notificaciones/background, compilación `.ipa` en CI/CD y distribución (AltStore / TestFlight / App Store) |
-| **Fase 12** | Navegación y Experiencia tipo Navegador Web | ⏳ Planificado | Historial Back/Forward (`Mouse 4/5`, `Alt+←/→`, Android `PopScope`), recarga contextual (`F5`/`Ctrl+R`), `Ctrl+F`, zoom, atajos web y *bfcache* sin efectos colaterales |
+| **Fase 12** | Navegación y Experiencia tipo Navegador Web | ✅ Completado | Historial Back/Forward (`Mouse 4/5`, `Alt+←/→`, Android `PopScope`), recarga contextual (`F5`/`Ctrl+R`), `Ctrl+F`, zoom, atajos web y *bfcache* sin efectos colaterales |
 
 ---
 
@@ -233,7 +233,7 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 
 ---
 
-## Fase 12 — Navegación y Experiencia tipo Navegador Web *(Estado: ⏳ Pendiente)*
+## Fase 12 — Navegación y Experiencia tipo Navegador Web *(Estado: ✅ Completado)*
 
 **Objetivo:** Dotar a **LibreMIeL** de la ergonomía, atajos y flujo de navegación propios de un navegador web moderno (ratón con botones laterales `Mouse 4`/`Mouse 5`, recarga con `F5`/`Ctrl+R`, historial Back/Forward, búsqueda en página, zoom, navegación por teclado y retroceso nativo en móvil), manteniendo la arquitectura de **ventana única**, la estética oficial de MIeL y el respeto estricto por sus invariantes de privacidad y efectos colaterales.
 

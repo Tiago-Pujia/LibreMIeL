@@ -9,6 +9,7 @@ import '../../core/parsers/text_normalizer.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/libremiel_brand.dart';
 import '../../core/theme/miel_theme.dart';
+import '../navigation/miel_context_menu.dart';
 import 'module_providers.dart';
 import 'widgets/miel_file_icon.dart';
 import 'widgets/miel_rich_text.dart';
@@ -21,16 +22,33 @@ class ContenidosView extends ConsumerStatefulWidget {
     super.key,
     required this.subject,
     required this.sectionIndex,
+    this.scrollController,
+    this.inPageFindQuery = '',
+    this.searchFocusNode,
+    this.findFocusTick = 0,
   });
 
   final Subject subject;
   final int sectionIndex;
+  final ScrollController? scrollController;
+  final String inPageFindQuery;
+  final FocusNode? searchFocusNode;
+  final int findFocusTick;
 
   @override
   ConsumerState<ContenidosView> createState() => _ContenidosViewState();
 }
 
 class _ContenidosViewState extends ConsumerState<ContenidosView> {
+  ScrollController? _internalScrollController;
+  ScrollController get _effectiveScrollController =>
+      widget.scrollController ??
+      (_internalScrollController ??= ScrollController());
+
+  FocusNode? _internalSearchFocusNode;
+  FocusNode get _effectiveSearchFocusNode =>
+      widget.searchFocusNode ?? (_internalSearchFocusNode ??= FocusNode());
+
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedTypeFilter =
@@ -41,7 +59,31 @@ class _ContenidosViewState extends ConsumerState<ContenidosView> {
   final Set<String> _locallyDownloadedIds = <String>{};
 
   @override
+  void didUpdateWidget(covariant ContenidosView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.inPageFindQuery != oldWidget.inPageFindQuery) {
+      setState(() {
+        _searchQuery = widget.inPageFindQuery.trim();
+        _searchController.text = _searchQuery;
+      });
+    }
+    if (widget.findFocusTick != oldWidget.findFocusTick &&
+        widget.findFocusTick > 0) {
+      if (_effectiveScrollController.hasClients) {
+        _effectiveScrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+      _effectiveSearchFocusNode.requestFocus();
+    }
+  }
+
+  @override
   void dispose() {
+    _internalScrollController?.dispose();
+    _internalSearchFocusNode?.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -54,6 +96,7 @@ class _ContenidosViewState extends ConsumerState<ContenidosView> {
         final hPad = isCompact ? 16.0 : 26.0;
 
         return SingleChildScrollView(
+          controller: _effectiveScrollController,
           padding: EdgeInsets.fromLTRB(hPad, 18, hPad, 32),
           child: _buildArchivosSection(context, isCompact),
         );
@@ -146,6 +189,7 @@ class _ContenidosViewState extends ConsumerState<ContenidosView> {
         const SizedBox(height: 4),
         MielSearchBarField(
           controller: _searchController,
+          focusNode: _effectiveSearchFocusNode,
           query: _searchQuery,
           hintText: 'Filtrar por título, módulo o descripción…',
           onChanged: (v) => setState(() => _searchQuery = v),
@@ -469,7 +513,8 @@ class _ContenidosViewState extends ConsumerState<ContenidosView> {
         ? palette.paleYellowBackground
         : Colors.transparent;
 
-    return MielHoverRow(
+    final fullUrl = resolveMielUrl(item.url);
+    final rowWidget = MielHoverRow(
       backgroundColor: rowBg,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -617,6 +662,13 @@ class _ContenidosViewState extends ConsumerState<ContenidosView> {
           ),
         ],
       ),
+    );
+
+    if (fullUrl.isEmpty) return rowWidget;
+    return MielWebActionTarget(
+      url: fullUrl,
+      title: item.title,
+      child: rowWidget,
     );
   }
 

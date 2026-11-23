@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -10,9 +11,29 @@ import '../../core/models/miel_models.dart';
 import '../../core/network/miel_client.dart';
 import '../../core/network/miel_server_status_classifier.dart';
 import '../../core/parsers/miel_parsers.dart';
+import '../navigation/navigation_history_entry.dart';
 
 /// Tipo de bandeja de Mensajería en MIeL.
 enum MensajeriaBoxKind { entrada, salida, borradores, favoritos }
+
+// --- Bfcache de sesión en memoria (Fase 12) ---
+int _sessionBfCacheGeneration = -1;
+final LinkedHashMap<String, String> _sessionBfHtmlCache =
+    LinkedHashMap<String, String>();
+final Set<String> _forceLiveCacheKeys = <String>{};
+final Set<String> _bfCacheExpectedKeys = <String>{};
+
+/// Marca una o más claves para restauración garantizada desde el bfcache en memoria
+/// al retroceder o avanzar en el historial de navegación (Fase 12).
+void markBfCacheRestoreKeys(Iterable<String> keys) {
+  _bfCacheExpectedKeys.addAll(keys);
+}
+
+/// Marca una o más claves para forzar consulta en vivo en la red ignorando el caché
+/// pasivo (Ctrl + Shift + R / Ctrl + F5).
+void markForceLiveCacheKeys(Iterable<String> keys) {
+  _forceLiveCacheKeys.addAll(keys);
+}
 
 /// Resultado estructurado de una consulta HTML interactiva indicando si provino
 /// de red en vivo o del caché local offline (Fase 9).
@@ -48,6 +69,29 @@ Future<InteractiveHtmlFetchResult> fetchInteractiveHtmlResultWithAuth(
 
   final canUseOfflineCache = offlineEnabled && isAuthenticated;
 
+  int sessionGen = 0;
+  try {
+    sessionGen = ref.watch(sessionGenerationProvider);
+  } catch (_) {}
+  if (_sessionBfCacheGeneration != sessionGen) {
+    _sessionBfHtmlCache.clear();
+    _forceLiveCacheKeys.clear();
+    _bfCacheExpectedKeys.clear();
+    _sessionBfCacheGeneration = sessionGen;
+  }
+
+  final isForceLive = cacheKey != null && _forceLiveCacheKeys.remove(cacheKey);
+
+  if (cacheKey != null && !isForceLive) {
+    final isExpectedBf = _bfCacheExpectedKeys.remove(cacheKey);
+    final inMemoryHtml = _sessionBfHtmlCache[cacheKey];
+    if (inMemoryHtml != null && (isExpectedBf || canUseOfflineCache)) {
+      _sessionBfHtmlCache.remove(cacheKey);
+      _sessionBfHtmlCache[cacheKey] = inMemoryHtml;
+      return InteractiveHtmlFetchResult(html: inMemoryHtml, fromCache: true);
+    }
+  }
+
   void tryReportStatus(MielServerStatus status) {
     try {
       ref.read(appSessionProvider.notifier).reportServerStatus(status);
@@ -59,6 +103,8 @@ Future<InteractiveHtmlFetchResult> fetchInteractiveHtmlResultWithAuth(
     final db = ref.read(databaseProvider);
     final cached = await db.getOfflinePage(cacheKey);
     if (cached != null && cached.htmlContent.isNotEmpty) {
+      _sessionBfHtmlCache.remove(cacheKey);
+      _sessionBfHtmlCache[cacheKey] = cached.htmlContent;
       return InteractiveHtmlFetchResult(
         html: cached.htmlContent,
         fromCache: true,
@@ -88,6 +134,16 @@ Future<InteractiveHtmlFetchResult> fetchInteractiveHtmlResultWithAuth(
     }
 
     tryReportStatus(MielServerStatus.online);
+
+    if (cacheKey != null &&
+        html.isNotEmpty &&
+        !isLikelyLoginRedirectHtml(html)) {
+      _sessionBfHtmlCache.remove(cacheKey);
+      _sessionBfHtmlCache[cacheKey] = html;
+      while (_sessionBfHtmlCache.length > 40) {
+        _sessionBfHtmlCache.remove(_sessionBfHtmlCache.keys.first);
+      }
+    }
 
     // Si el modo offline está activo con sesión autenticada y hay cacheKey, persistir copia local
     if (canUseOfflineCache &&
@@ -656,3 +712,197 @@ final authenticatedImageBytesProvider = FutureProvider.autoDispose
         rethrow;
       }
     });
+
+/// Invalida únicamente los providers correspondientes a la ruta activa ante recargas
+/// de usuario (F5 / Ctrl + R / Ctrl + Shift + R) evitando peticiones redundantes (Fase 12).
+void invalidateRouteProviders(
+  WidgetRef ref,
+  NavigationHistoryEntry entry, {
+  bool forceLive = false,
+}) {
+  if (entry.section == BrowserShellSection.home ||
+      entry.section == BrowserShellSection.novedades) {
+    ref.read(appSessionProvider.notifier).syncNow(includeCycle2: true);
+    return;
+  }
+
+  if (entry.section == BrowserShellSection.ajustes ||
+      entry.subjectId == null ||
+      entry.subjectId!.isEmpty) {
+    return;
+  }
+
+  final sId = entry.subjectId!;
+
+  switch (entry.tool) {
+    case MielToolKind.contenidos:
+      final key = 'contenidos:$sId';
+      if (forceLive) {
+        _sessionBfHtmlCache.remove(key);
+        markForceLiveCacheKeys([key]);
+      }
+      ref.invalidate(contenidosPageProvider(sId));
+      break;
+
+    case MielToolKind.portafolio:
+      if (entry.portafolioPractice != null) {
+        final key =
+            'portafolio:entrega:$sId:${entry.portafolioPractice!.idPractica}';
+        if (forceLive) {
+          _sessionBfHtmlCache.remove(key);
+          markForceLiveCacheKeys([key]);
+        }
+        ref.invalidate(
+          portafolioEntregasDetalleProvider((
+            idComision: sId,
+            idPractica: entry.portafolioPractice!.idPractica,
+          )),
+        );
+      } else {
+        switch (entry.moduleSectionIndex) {
+          case 1:
+            final key = 'portafolio:enviados:$sId';
+            if (forceLive) {
+              _sessionBfHtmlCache.remove(key);
+              markForceLiveCacheKeys([key]);
+            }
+            ref.invalidate(portafolioArchivosEnviadosProvider(sId));
+            break;
+          case 2:
+            final key = 'portafolio:grupos:$sId';
+            if (forceLive) {
+              _sessionBfHtmlCache.remove(key);
+              markForceLiveCacheKeys([key]);
+            }
+            ref.invalidate(portafolioGruposProvider(sId));
+            break;
+          case 3:
+            final keyNotas = 'portafolio:notas:$sId';
+            final keyComp = 'portafolio:competencias:$sId';
+            if (forceLive) {
+              _sessionBfHtmlCache.remove(keyNotas);
+              _sessionBfHtmlCache.remove(keyComp);
+              markForceLiveCacheKeys([keyNotas, keyComp]);
+            }
+            ref.invalidate(portafolioNotasProvider(sId));
+            ref.invalidate(portafolioCompetenciasProvider(sId));
+            break;
+          default:
+            final key = 'portafolio:practicas:$sId';
+            if (forceLive) {
+              _sessionBfHtmlCache.remove(key);
+              markForceLiveCacheKeys([key]);
+            }
+            ref.invalidate(portafolioPracticasProvider(sId));
+            break;
+        }
+      }
+      break;
+
+    case MielToolKind.mensajeria:
+      if (entry.mensajeriaState.selectedMessage != null) {
+        final msg = entry.mensajeriaState.selectedMessage!;
+        final key = 'mensajeria:detalle:${msg.idComision}:${msg.idMensaje}';
+        if (forceLive) {
+          _sessionBfHtmlCache.remove(key);
+          markForceLiveCacheKeys([key]);
+        }
+        ref.invalidate(
+          mensajeriaDetalleProvider((
+            idComision: msg.idComision,
+            idMensaje: msg.idMensaje,
+            detailUrl: msg.detailUrl,
+            wasUnread: false,
+          )),
+        );
+      } else if (entry.mensajeriaState.inlineComposeMode ||
+          entry.moduleSectionIndex == 0) {
+        final key = 'mensajeria:redactar:$sId';
+        if (forceLive) {
+          _sessionBfHtmlCache.remove(key);
+          markForceLiveCacheKeys([key]);
+        }
+        ref.invalidate(mensajeriaRedactarFormProvider(sId));
+      } else if (entry.mensajeriaState.unifiedCrossSubjectMode) {
+        final key = 'mensajeria:unified:${entry.mensajeriaState.page}';
+        if (forceLive) {
+          _sessionBfHtmlCache.remove(key);
+          markForceLiveCacheKeys([key]);
+        }
+        ref.invalidate(mensajeriaUnifiedInboxProvider);
+      } else {
+        final boxKind = switch (entry.moduleSectionIndex) {
+          2 => MensajeriaBoxKind.salida,
+          3 => MensajeriaBoxKind.borradores,
+          4 => MensajeriaBoxKind.favoritos,
+          _ => MensajeriaBoxKind.entrada,
+        };
+        final key =
+            'mensajeria:${boxKind.name}:$sId:${entry.mensajeriaState.page}';
+        if (forceLive) {
+          _sessionBfHtmlCache.remove(key);
+          markForceLiveCacheKeys([key]);
+        }
+        ref.invalidate(
+          mensajeriaBandejaProvider((
+            idComision: sId,
+            box: boxKind,
+            page: entry.mensajeriaState.page,
+          )),
+        );
+      }
+      break;
+
+    case MielToolKind.foro:
+      if (entry.foroTopicId != null) {
+        final key = 'foro:mensajes:$sId:${entry.foroTopicId}';
+        if (forceLive) {
+          _sessionBfHtmlCache.remove(key);
+          markForceLiveCacheKeys([key]);
+        }
+        ref.invalidate(
+          foroMensajesProvider((
+            idComision: sId,
+            idTema: entry.foroTopicId!,
+            unreadBadge: 0,
+          )),
+        );
+      } else {
+        final key = 'foro:temas:$sId';
+        if (forceLive) {
+          _sessionBfHtmlCache.remove(key);
+          markForceLiveCacheKeys([key]);
+        }
+        ref.invalidate(foroTemasProvider(sId));
+      }
+      break;
+
+    case MielToolKind.evaluacion:
+      final key = 'evaluacion:$sId';
+      if (forceLive) {
+        _sessionBfHtmlCache.remove(key);
+        markForceLiveCacheKeys([key]);
+      }
+      ref.invalidate(evaluacionesListProvider(sId));
+      break;
+
+    case MielToolKind.encuestas:
+      final key = 'encuestas:$sId';
+      if (forceLive) {
+        _sessionBfHtmlCache.remove(key);
+        markForceLiveCacheKeys([key]);
+      }
+      ref.invalidate(encuestasListProvider(sId));
+      break;
+
+    case MielToolKind.autoguia:
+    case MielToolKind.chat:
+      final key = 'autoguia:$sId';
+      if (forceLive) {
+        _sessionBfHtmlCache.remove(key);
+        markForceLiveCacheKeys([key]);
+      }
+      ref.invalidate(autoguiaListProvider(sId));
+      break;
+  }
+}

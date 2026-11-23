@@ -2,9 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/models/miel_models.dart';
-import '../../core/network/miel_client.dart';
+import '../../core/parsers/text_normalizer.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/miel_theme.dart';
+import '../navigation/miel_context_menu.dart';
 import 'module_providers.dart';
 import 'widgets/miel_file_icon.dart';
 import 'widgets/module_state_views.dart';
@@ -19,27 +20,60 @@ class PortafolioView extends ConsumerStatefulWidget {
     required this.subject,
     required this.sectionIndex,
     this.sectionResetTick = 0,
+    this.controlledSelectedPractice,
+    this.hasControlledPractice = false,
+    this.onSelectPractice,
+    this.scrollController,
+    this.inPageFindQuery = '',
   });
 
   final Subject subject;
   final int sectionIndex;
   final int sectionResetTick;
+  final PortfolioPractice? controlledSelectedPractice;
+  final bool hasControlledPractice;
+  final ValueChanged<PortfolioPractice?>? onSelectPractice;
+  final ScrollController? scrollController;
+  final String inPageFindQuery;
 
   @override
   ConsumerState<PortafolioView> createState() => _PortafolioViewState();
 }
 
 class _PortafolioViewState extends ConsumerState<PortafolioView> {
-  PortfolioPractice? _selectedPractice;
+  ScrollController? _internalScrollController;
+  ScrollController get _effectiveScrollController =>
+      widget.scrollController ??
+      (_internalScrollController ??= ScrollController());
+
+  PortfolioPractice? _localSelectedPractice;
+  PortfolioPractice? get _selectedPractice => widget.hasControlledPractice
+      ? widget.controlledSelectedPractice
+      : _localSelectedPractice;
+
+  void _setSelectedPractice(PortfolioPractice? practice) {
+    if (widget.onSelectPractice != null) {
+      widget.onSelectPractice!(practice);
+    } else {
+      setState(() => _localSelectedPractice = practice);
+    }
+  }
 
   @override
   void didUpdateWidget(covariant PortafolioView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.sectionIndex != widget.sectionIndex ||
-        oldWidget.sectionResetTick != widget.sectionResetTick ||
-        oldWidget.subject.idComision != widget.subject.idComision) {
-      _selectedPractice = null;
+    if (!widget.hasControlledPractice &&
+        (oldWidget.sectionIndex != widget.sectionIndex ||
+            oldWidget.sectionResetTick != widget.sectionResetTick ||
+            oldWidget.subject.idComision != widget.subject.idComision)) {
+      _localSelectedPractice = null;
     }
+  }
+
+  @override
+  void dispose() {
+    _internalScrollController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -50,6 +84,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
         final hPad = isCompact ? 16.0 : 26.0;
 
         return SingleChildScrollView(
+          controller: _effectiveScrollController,
           padding: EdgeInsets.fromLTRB(hPad, 18, hPad, 32),
           child: switch (widget.sectionIndex) {
             1 => _buildArchivosEnviadosTab(context, isCompact),
@@ -101,16 +136,39 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                 ref.invalidate(portafolioPracticasProvider(idComision)),
           ),
           data: (practices) {
-            if (practices.isEmpty) {
-              return const MielModuleEmptyView(
-                message: 'No hay prácticas publicadas en esta comisión.',
+            var effectivePractices = practices;
+            final q = widget.inPageFindQuery.trim().toLowerCase();
+            if (q.isNotEmpty) {
+              effectivePractices = practices
+                  .where(
+                    (p) =>
+                        p.title.toLowerCase().contains(q) ||
+                        p.moduleName.toLowerCase().contains(q) ||
+                        p.status.toLowerCase().contains(q) ||
+                        p.deliveryType.toLowerCase().contains(q),
+                  )
+                  .toList();
+            }
+            if (effectivePractices.isEmpty) {
+              return MielModuleEmptyView(
+                message: q.isNotEmpty
+                    ? 'No hay prácticas que coincidan con "$q".'
+                    : 'No hay prácticas publicadas en esta comisión.',
                 icon: Icons.assignment_outlined,
               );
             }
             if (isCompact) {
-              return _buildPracticasCompactList(context, palette, practices);
+              return _buildPracticasCompactList(
+                context,
+                palette,
+                effectivePractices,
+              );
             }
-            return _buildPracticasDesktopTable(context, palette, practices);
+            return _buildPracticasDesktopTable(
+              context,
+              palette,
+              effectivePractices,
+            );
           },
         ),
       ],
@@ -198,7 +256,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                               fallbackFileName: p.title,
                             );
                           } else {
-                            setState(() => _selectedPractice = p);
+                            _setSelectedPractice(p);
                           }
                         },
                       ),
@@ -223,10 +281,19 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                   width: 135,
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: MielHoverLink(
-                      text: '[ENTREGAR / VER]',
-                      fontSize: 13,
-                      onTap: () => setState(() => _selectedPractice = p),
+                    child: MielWebActionTarget(
+                      url: resolveMielUrl(
+                        p.detailUrl.isNotEmpty
+                            ? p.detailUrl
+                            : '$kMielBaseUrl/portafolio/practicas/comision/${widget.subject.idComision}',
+                      ),
+                      title: p.title,
+                      onTrigger: () => _setSelectedPractice(p),
+                      child: MielHoverLink(
+                        text: '[ENTREGAR / VER]',
+                        fontSize: 13,
+                        onTap: () => _setSelectedPractice(p),
+                      ),
                     ),
                   ),
                 ),
@@ -319,7 +386,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                         fallbackFileName: p.title,
                       );
                     } else {
-                      setState(() => _selectedPractice = p);
+                      _setSelectedPractice(p);
                     }
                   },
                 ),
@@ -366,10 +433,19 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                   spacing: 10,
                   runSpacing: 8,
                   children: [
-                    MielActionButton(
-                      label: 'ENTREGAR / VER',
-                      primary: true,
-                      onPressed: () => setState(() => _selectedPractice = p),
+                    MielWebActionTarget(
+                      url: resolveMielUrl(
+                        p.detailUrl.isNotEmpty
+                            ? p.detailUrl
+                            : '$kMielBaseUrl/portafolio/practicas/comision/${widget.subject.idComision}',
+                      ),
+                      title: p.title,
+                      onTrigger: () => _setSelectedPractice(p),
+                      child: MielActionButton(
+                        label: 'ENTREGAR / VER',
+                        primary: true,
+                        onPressed: () => _setSelectedPractice(p),
+                      ),
                     ),
                     if (p.promptDownloadUrl.isNotEmpty)
                       MielActionButton(
@@ -417,7 +493,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
           trailing: MielActionButton(
             label: 'Volver',
             primary: true,
-            onPressed: () => setState(() => _selectedPractice = null),
+            onPressed: () => _setSelectedPractice(null),
           ),
         ),
         const SizedBox(height: 10),
@@ -549,7 +625,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                   child: MielActionButton(
                     label: 'Volver',
                     primary: true,
-                    onPressed: () => setState(() => _selectedPractice = null),
+                    onPressed: () => _setSelectedPractice(null),
                   ),
                 ),
               ],

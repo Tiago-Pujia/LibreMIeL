@@ -6,6 +6,7 @@ import '../../../core/network/miel_client.dart';
 import '../../../core/parsers/text_normalizer.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../core/theme/miel_theme.dart';
+import '../../navigation/draft_dirty_registry.dart';
 import '../module_providers.dart';
 import 'module_state_views.dart';
 
@@ -36,10 +37,32 @@ class _MensajeriaComposePanelState
   bool _submitting = false;
   bool _initializedDefaults = false;
 
+  String get _dirtyKey => 'mensajeria_compose_${widget.subject.idComision}';
+
+  @override
+  void initState() {
+    super.initState();
+    _subjectController.addListener(_syncDirtyState);
+    _bodyController.addListener(_syncDirtyState);
+  }
+
+  void _syncDirtyState() {
+    final isDirty =
+        _subjectController.text.trim().isNotEmpty ||
+        _bodyController.text.trim().isNotEmpty ||
+        _attachmentPath != null;
+    ref
+        .read(draftDirtyRegistryProvider)
+        .setDirty(_dirtyKey, isDirty: isDirty, label: 'el nuevo mensaje');
+  }
+
   @override
   void didUpdateWidget(covariant MensajeriaComposePanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.subject.idComision != widget.subject.idComision) {
+      ref
+          .read(draftDirtyRegistryProvider)
+          .clearOwner('mensajeria_compose_${oldWidget.subject.idComision}');
       _selectedRecipients.clear();
       _recipientSearchController.clear();
       _subjectController.clear();
@@ -51,8 +74,19 @@ class _MensajeriaComposePanelState
     }
   }
 
+  DraftDirtyRegistry? _dirtyRegistry;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _dirtyRegistry = ref.read(draftDirtyRegistryProvider);
+  }
+
   @override
   void dispose() {
+    _subjectController.removeListener(_syncDirtyState);
+    _bodyController.removeListener(_syncDirtyState);
+    _dirtyRegistry?.clearOwner(_dirtyKey);
     _recipientSearchController.dispose();
     _subjectController.dispose();
     _bodyController.dispose();
@@ -82,6 +116,7 @@ class _MensajeriaComposePanelState
         _attachmentPath = picked.path;
         _attachmentName = picked.name;
       });
+      _syncDirtyState();
     }
   }
 
@@ -137,6 +172,7 @@ class _MensajeriaComposePanelState
         _attachmentPath = null;
         _attachmentName = null;
       });
+      ref.read(draftDirtyRegistryProvider).clearOwner(_dirtyKey);
 
       final targetBox = saveAsDraft
           ? MensajeriaBoxKind.borradores
@@ -534,6 +570,9 @@ class _MensajeriaReplyPanelState extends ConsumerState<MensajeriaReplyPanel> {
   String? _attachmentName;
   bool _submitting = false;
 
+  String get _dirtyKey =>
+      'mensajeria_reply_${widget.detail.idComision}_${widget.detail.idMensaje}';
+
   @override
   void initState() {
     super.initState();
@@ -541,10 +580,33 @@ class _MensajeriaReplyPanelState extends ConsumerState<MensajeriaReplyPanel> {
     if (def != null) {
       _selectedRecipients.add(def);
     }
+    _bodyController.addListener(_syncDirtyState);
+  }
+
+  void _syncDirtyState() {
+    final isDirty =
+        _bodyController.text.trim().isNotEmpty || _attachmentPath != null;
+    ref
+        .read(draftDirtyRegistryProvider)
+        .setDirty(
+          _dirtyKey,
+          isDirty: isDirty,
+          label: 'la respuesta al mensaje',
+        );
+  }
+
+  DraftDirtyRegistry? _dirtyRegistry;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _dirtyRegistry = ref.read(draftDirtyRegistryProvider);
   }
 
   @override
   void dispose() {
+    _bodyController.removeListener(_syncDirtyState);
+    _dirtyRegistry?.clearOwner(_dirtyKey);
     _bodyController.dispose();
     super.dispose();
   }
@@ -559,6 +621,7 @@ class _MensajeriaReplyPanelState extends ConsumerState<MensajeriaReplyPanel> {
         _attachmentPath = picked.path;
         _attachmentName = picked.name;
       });
+      _syncDirtyState();
     }
   }
 
@@ -594,6 +657,7 @@ class _MensajeriaReplyPanelState extends ConsumerState<MensajeriaReplyPanel> {
         ),
       );
       if (!mounted) return;
+      ref.read(draftDirtyRegistryProvider).clearOwner(_dirtyKey);
       showMielStatusToast(context, message: 'Respuesta enviada correctamente.');
       widget.onReplied();
     } catch (e) {

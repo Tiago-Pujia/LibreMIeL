@@ -7,7 +7,20 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-23
+
 ### Added
+- **Fase 12 — Navegación y Experiencia tipo Navegador Web:**
+  - Historial lineal de navegación en memoria (`NavigationHistoryController`, máx 80 entradas, FIFO) que unifica el estado profundo de todas las vistas (`HomeShell`, `ContenidosView`, `MensajeriaView`, `PortafolioView`, `ForoView`, `SecondaryModulesView`).
+  - Navegación bidireccional mediante botones laterales del ratón (`Mouse 4` / `kBackMouseButton` y `Mouse 5` / `kForwardMouseButton`) con bitmask y debounce que previene dobles saltos en Linux, Windows y macOS.
+  - Atajos de teclado completos (`Alt + ←`, `Alt + →`, `Alt + Home`, `Ctrl + F`, `Esc`, `F5`, `Ctrl + R`, `Ctrl + Shift + R`, `Ctrl + +`, `Ctrl + -`, `Ctrl + 0`).
+  - Protección estricta de foco: cuando un `EditableText` (e.g. `TextField` de búsqueda, redactor de mensajes o respuesta en foro) tiene foco, los atajos de teclado sin modificador (`Home`, `End`, `PageUp`, `PageDown`) no interfieren con la edición de texto.
+  - *bfcache* de sesión en RAM (`_sessionBfHtmlCache`, LRU 40 entradas) con `markBfCacheRestoreKeys`, permitiendo retroceder y avanzar de forma instantánea sin generar peticiones HTTP innecesarias contra los servidores de MIeL ni decrementar involuntariamente contadores de no leídos.
+  - Protección de borradores no guardados (`DraftDirtyRegistry`): intercepta intentos de navegación o recarga cuando hay texto sin enviar en Mensajería, Portafolio o Foros, mostrando un diálogo de confirmación con opciones para seguir editando o descartar.
+  - Zoom de interfaz y lectura (0.8x a 1.5x) mediante `BrowserZoomViewport`, adaptando dinámicamente `MediaQuery` y el árbol visual para mantener hit-testing exacto y breakpoints responsivos sin desbordes.
+  - Prioridad de retroceso con `PopScope`: cierra drawer si está abierto, luego la barra de búsqueda `BrowserFindBar`, verifica borradores sucios, retrocede en el historial lineal y delega al sistema operativo únicamente en la raíz.
+  - Controles visuales opcionales en barra superior (`←`, `→`, `↻`) e indicador lineal de progreso, desactivados por defecto para preservar la fidelidad estética con MIeL pero configurables en Ajustes.
+  - Menús contextuales nativos (`MielContextMenu` / `MielWebActionTarget`) sobre materias, temas de foro, mensajes y notificaciones con opciones para copiar enlace canónico oficial de MIeL y abrir en navegador externo (con soporte para clic central / Shift + clic).
 - Documentación técnica completa de la plataforma MIeL (`2025.2.0`) en `docs/`.
 - Especificación técnica y hoja de ruta de **Fase 12 — Navegación y Experiencia tipo Navegador Web** (historial unificado Back/Forward con `Mouse 4`/`Mouse 5`, `Alt+←/→`, `Cmd+[/]` y Android `PopScope`, recarga contextual con `F5`/`Ctrl+R`, búsqueda en página `Ctrl+F`, zoom, navegación por teclado y preservación de *bfcache*/borradores) en `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/STATUS.md`, `docs/AGENTS.md` y `docs/README.md`.
 - Especificación técnica y hoja de ruta de **Fase 8 — Actualizador Automático Multiplataforma** (alertas de releases vía GitHub API, verificación SHA-256 contra `SHA256SUMS.txt` e instalación in-app en Windows, Android, Linux y macOS) en `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/STATUS.md`, `docs/AGENTS.md` y `docs/GIT_WORKFLOW.md`.

@@ -3,16 +3,25 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../app/app_providers.dart';
 import '../../core/models/miel_models.dart';
+import '../../core/network/miel_client.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/miel_theme.dart';
+import '../navigation/miel_context_menu.dart';
 
 /// Feed unificado de notificaciones de LibreMIeL estilizado con la estética de MIeL
 /// (encabezado h1 Light, botones planos y filas no leídas estilo `.mensaje-no-leido`).
 class FeedScreen extends ConsumerStatefulWidget {
-  const FeedScreen({super.key, this.onOpenSubjectModule});
+  const FeedScreen({
+    super.key,
+    this.onOpenSubjectModule,
+    this.scrollController,
+    this.inPageFindQuery = '',
+  });
 
   final void Function(String idComision, MielToolKind tool)?
   onOpenSubjectModule;
+  final ScrollController? scrollController;
+  final String inPageFindQuery;
 
   @override
   ConsumerState<FeedScreen> createState() => _FeedScreenState();
@@ -132,7 +141,20 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                 error: (err, _) =>
                     Center(child: Text('Error al leer novedades: $err')),
                 data: (items) {
-                  if (items.isEmpty) {
+                  var displayItems = items;
+                  final query = widget.inPageFindQuery.trim().toLowerCase();
+                  if (query.isNotEmpty) {
+                    displayItems = items.where((it) {
+                      final title = it.title.toLowerCase();
+                      final body = it.body.toLowerCase();
+                      final subject = it.subjectName.toLowerCase();
+                      return title.contains(query) ||
+                          body.contains(query) ||
+                          subject.contains(query);
+                    }).toList();
+                  }
+
+                  if (displayItems.isEmpty) {
                     return Center(
                       child: Padding(
                         padding: const EdgeInsets.all(28),
@@ -154,7 +176,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'Todavía no hay novedades registradas',
+                                query.isNotEmpty
+                                    ? 'No se encontraron novedades para "$query"'
+                                    : 'Todavía no hay novedades registradas',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 15.5,
@@ -164,8 +188,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Cuando un docente publique en Contenidos, Portafolio, '
-                                'Mensajería, Foros o Evaluaciones aparecerá acá.',
+                                query.isNotEmpty
+                                    ? 'Probá buscando con otros términos.'
+                                    : 'Cuando un docente publique en Contenidos, Portafolio, '
+                                          'Mensajería, Foros o Evaluaciones aparecerá acá.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 13,
@@ -185,11 +211,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                         .read(appSessionProvider.notifier)
                         .syncNow(includeCycle2: true),
                     child: ListView.separated(
+                      controller: widget.scrollController,
                       padding: EdgeInsets.fromLTRB(hPad, 14, hPad, 24),
-                      itemCount: items.length,
+                      itemCount: displayItems.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, index) => _MielNotificationRow(
-                        item: items[index],
+                        item: displayItems[index],
                         onOpenSubjectModule: widget.onOpenSubjectModule,
                       ),
                     ),
@@ -305,7 +332,7 @@ class _MielNotificationRow extends ConsumerWidget {
         item.idComision != 'global' &&
         item.idComision.isNotEmpty;
 
-    return ClipRRect(
+    final card = ClipRRect(
       borderRadius: BorderRadius.circular(3),
       child: Material(
         color: unread ? palette.unreadBackground : palette.cardBackground,
@@ -414,5 +441,19 @@ class _MielNotificationRow extends ConsumerWidget {
         ),
       ),
     );
+
+    if (canOpenDraft) {
+      return MielWebActionTarget(
+        url: '$kMielBaseUrl${linkedTool.pathForCommission(item.idComision)}',
+        title: item.title,
+        onTrigger: () => _handleOpenNotification(
+          ref,
+          canOpenModule: canOpenDraft,
+          linkedTool: linkedTool,
+        ),
+        child: card,
+      );
+    }
+    return card;
   }
 }

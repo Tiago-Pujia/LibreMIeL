@@ -441,6 +441,110 @@ class SettingsScreen extends ConsumerWidget {
 
                 const SizedBox(height: 20),
 
+                // Navegación y lectura
+                _SectionHeader(title: 'Navegación y lectura', palette: palette),
+                const SizedBox(height: 8),
+                _MielPanel(
+                  palette: palette,
+                  child: Column(
+                    children: [
+                      SwitchListTile(
+                        value: session.showBrowserNavControls,
+                        activeThumbColor: palette.linkAccent,
+                        title: const Text(
+                          'Mostrar botones de navegador en la barra superior',
+                        ),
+                        subtitle: Text(
+                          'Añade controles Atrás (←), Adelante (→) y Recargar (↻) junto al menú principal.',
+                          style: TextStyle(color: palette.textMuted),
+                        ),
+                        onChanged: (val) =>
+                            controller.updateShowBrowserNavControls(val),
+                      ),
+                      Divider(height: 1, color: palette.divider),
+                      ListTile(
+                        leading: Icon(
+                          Icons.zoom_in_outlined,
+                          color: palette.linkAccent,
+                        ),
+                        title: const Text('Zoom de lectura e interfaz'),
+                        subtitle: Text(
+                          'Ajusta la escala entre 80% y 150% (Ctrl + Rueda o Ctrl + +/-/0).',
+                          style: TextStyle(color: palette.textMuted),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove, size: 18),
+                              splashRadius: 18,
+                              tooltip: 'Reducir zoom',
+                              onPressed: session.uiZoomScale > 0.81
+                                  ? () => controller.stepUiZoomScale(-0.1)
+                                  : null,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: palette.buttonSecondaryBackground,
+                                borderRadius: BorderRadius.circular(3),
+                                border: Border.all(color: palette.cardBorder),
+                              ),
+                              child: Text(
+                                '${(session.uiZoomScale * 100).round()}%',
+                                style: TextStyle(
+                                  color: palette.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add, size: 18),
+                              splashRadius: 18,
+                              tooltip: 'Aumentar zoom',
+                              onPressed: session.uiZoomScale < 1.49
+                                  ? () => controller.stepUiZoomScale(0.1)
+                                  : null,
+                            ),
+                            if ((session.uiZoomScale - 1.0).abs() > 0.01)
+                              TextButton(
+                                onPressed: () => controller.resetUiZoomScale(),
+                                child: Text(
+                                  'Restablecer',
+                                  style: TextStyle(
+                                    color: palette.linkAccent,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Divider(height: 1, color: palette.divider),
+                      ListTile(
+                        leading: Icon(
+                          Icons.keyboard_outlined,
+                          color: palette.linkAccent,
+                        ),
+                        title: const Text('Atajos de teclado y ratón'),
+                        subtitle: Text(
+                          'Mouse 4/5 (Atrás/Adelante) • F5 / Ctrl+R (Recargar) • Ctrl+Shift+R (Forzar red) • Ctrl+F (Buscar) • Ctrl+Wheel (Zoom)',
+                          style: TextStyle(
+                            color: palette.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
                 // Cuenta y Datos Locales
                 _SectionHeader(
                   title: 'Cuenta y Datos Locales',

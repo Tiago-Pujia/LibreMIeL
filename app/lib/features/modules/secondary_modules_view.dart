@@ -10,9 +10,16 @@ import 'widgets/module_state_views.dart';
 /// Vista nativa de lectura del módulo **Evaluación** (`05_evaluacion_dark.png`)
 /// fiel a MIeL (`2025.2.0`).
 class EvaluacionView extends ConsumerWidget {
-  const EvaluacionView({super.key, required this.subject});
+  const EvaluacionView({
+    super.key,
+    required this.subject,
+    this.scrollController,
+    this.inPageFindQuery = '',
+  });
 
   final Subject subject;
+  final ScrollController? scrollController;
+  final String inPageFindQuery;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,6 +44,7 @@ class EvaluacionView extends ConsumerWidget {
         );
 
         return SingleChildScrollView(
+          controller: scrollController,
           padding: EdgeInsets.fromLTRB(hPad, 18, hPad, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -363,9 +371,16 @@ class EvaluacionView extends ConsumerWidget {
 
 /// Vista nativa de lectura del módulo **Encuestas**.
 class EncuestasView extends ConsumerWidget {
-  const EncuestasView({super.key, required this.subject});
+  const EncuestasView({
+    super.key,
+    required this.subject,
+    this.scrollController,
+    this.inPageFindQuery = '',
+  });
 
   final Subject subject;
+  final ScrollController? scrollController;
+  final String inPageFindQuery;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -380,6 +395,7 @@ class EncuestasView extends ConsumerWidget {
         final hPad = isCompact ? 16.0 : 26.0;
 
         return SingleChildScrollView(
+          controller: scrollController,
           padding: EdgeInsets.fromLTRB(hPad, 18, hPad, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -478,9 +494,16 @@ class EncuestasView extends ConsumerWidget {
 
 /// Vista nativa de lectura del módulo **Autoguía**.
 class AutoguiaView extends ConsumerWidget {
-  const AutoguiaView({super.key, required this.subject});
+  const AutoguiaView({
+    super.key,
+    required this.subject,
+    this.scrollController,
+    this.inPageFindQuery = '',
+  });
 
   final Subject subject;
+  final ScrollController? scrollController;
+  final String inPageFindQuery;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -495,6 +518,7 @@ class AutoguiaView extends ConsumerWidget {
         final hPad = isCompact ? 16.0 : 26.0;
 
         return SingleChildScrollView(
+          controller: scrollController,
           padding: EdgeInsets.fromLTRB(hPad, 18, hPad, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

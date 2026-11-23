@@ -7,6 +7,8 @@ import '../../core/parsers/mensajeria_parser.dart';
 import '../../core/parsers/text_normalizer.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/theme/miel_theme.dart';
+import '../navigation/miel_context_menu.dart';
+import '../navigation/navigation_history_entry.dart';
 import 'module_providers.dart';
 import 'widgets/mensajeria_composer.dart';
 import 'widgets/miel_file_icon.dart';
@@ -22,24 +24,53 @@ class MensajeriaView extends ConsumerStatefulWidget {
     required this.subject,
     required this.sectionIndex,
     this.sectionResetTick = 0,
+    this.controlledRouteState,
+    this.onRouteStateChanged,
+    this.scrollController,
+    this.inPageFindQuery = '',
+    this.searchFocusNode,
+    this.findFocusTick = 0,
   });
 
   final Subject subject;
   final int sectionIndex;
   final int sectionResetTick;
+  final MensajeriaViewRouteState? controlledRouteState;
+  final ValueChanged<MensajeriaViewRouteState>? onRouteStateChanged;
+  final ScrollController? scrollController;
+  final String inPageFindQuery;
+  final FocusNode? searchFocusNode;
+  final int findFocusTick;
 
   @override
   ConsumerState<MensajeriaView> createState() => _MensajeriaViewState();
 }
 
 class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
-  InboxMessageSummary? _selectedMessage;
-  int _currentPage = 1;
+  ScrollController? _internalScrollController;
+  ScrollController get _effectiveScrollController =>
+      widget.scrollController ??
+      (_internalScrollController ??= ScrollController());
+
+  final FocusNode _subjectFilterFocusNode = FocusNode();
+
+  InboxMessageSummary? _localSelectedMessage;
+  int _localCurrentPage = 1;
   bool _showFilters = false;
-  bool _unifiedCrossSubjectMode = false;
-  bool _inlineComposeMode = false;
+  bool _localUnifiedCrossSubjectMode = false;
+  bool _localInlineComposeMode = false;
   bool _showReplyPanel = false;
   bool _markingAllRead = false;
+
+  int get _currentPage =>
+      widget.controlledRouteState?.page ?? _localCurrentPage;
+  bool get _unifiedCrossSubjectMode =>
+      widget.controlledRouteState?.unifiedCrossSubjectMode ??
+      _localUnifiedCrossSubjectMode;
+  bool get _inlineComposeMode =>
+      widget.controlledRouteState?.inlineComposeMode ?? _localInlineComposeMode;
+  InboxMessageSummary? get _selectedMessage =>
+      widget.controlledRouteState?.selectedMessage ?? _localSelectedMessage;
 
   String _filterSenderQuery = '';
   String _filterSubjectQuery = '';
@@ -50,21 +81,79 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   final Map<String, bool> _localFavoriteOverrides = <String, bool>{};
   final Set<String> _locallyDeletedDraftKeys = <String>{};
 
+  MensajeriaViewRouteState _effectiveRouteState() {
+    return widget.controlledRouteState ??
+        MensajeriaViewRouteState(
+          page: _currentPage,
+          unifiedCrossSubjectMode: _unifiedCrossSubjectMode,
+          inlineComposeMode: _inlineComposeMode,
+          selectedMessage: _selectedMessage,
+        );
+  }
+
+  void _updateRouteState({
+    int? page,
+    bool? unifiedCrossSubjectMode,
+    bool? inlineComposeMode,
+    InboxMessageSummary? selectedMessage,
+    bool clearSelectedMessage = false,
+  }) {
+    final next = _effectiveRouteState().copyWith(
+      page: page,
+      unifiedCrossSubjectMode: unifiedCrossSubjectMode,
+      inlineComposeMode: inlineComposeMode,
+      selectedMessage: selectedMessage,
+      clearSelectedMessage: clearSelectedMessage,
+    );
+    if (widget.onRouteStateChanged != null) {
+      widget.onRouteStateChanged!(next);
+    } else {
+      setState(() {
+        if (page != null) _localCurrentPage = page;
+        if (unifiedCrossSubjectMode != null) {
+          _localUnifiedCrossSubjectMode = unifiedCrossSubjectMode;
+        }
+        if (inlineComposeMode != null) {
+          _localInlineComposeMode = inlineComposeMode;
+        }
+        if (clearSelectedMessage) {
+          _localSelectedMessage = null;
+        } else if (selectedMessage != null) {
+          _localSelectedMessage = selectedMessage;
+        }
+      });
+    }
+  }
+
   @override
   void didUpdateWidget(covariant MensajeriaView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.findFocusTick != oldWidget.findFocusTick &&
+        widget.findFocusTick > 0) {
+      if (_selectedMessage == null) {
+        setState(() => _showFilters = true);
+        _subjectFilterFocusNode.requestFocus();
+      }
+    }
     if (oldWidget.sectionIndex != widget.sectionIndex ||
         oldWidget.sectionResetTick != widget.sectionResetTick ||
         oldWidget.subject.idComision != widget.subject.idComision) {
-      _selectedMessage = null;
-      _currentPage = 1;
+      _localSelectedMessage = null;
+      _localCurrentPage = 1;
       _showFilters = false;
-      _inlineComposeMode = false;
+      _localInlineComposeMode = false;
       _showReplyPanel = false;
       if (widget.sectionIndex != 1) {
-        _unifiedCrossSubjectMode = false;
+        _localUnifiedCrossSubjectMode = false;
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _internalScrollController?.dispose();
+    _subjectFilterFocusNode.dispose();
+    super.dispose();
   }
 
   MensajeriaBoxKind _activeBoxKind() {
@@ -116,6 +205,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
         final hPad = isCompact ? 16.0 : 26.0;
 
         return SingleChildScrollView(
+          controller: _effectiveScrollController,
           padding: EdgeInsets.fromLTRB(hPad, 18, hPad, 32),
           child: widget.sectionIndex == 0 || _inlineComposeMode
               ? _buildNuevoMensajeSection(context)
@@ -146,7 +236,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                 MielActionButton(
                   label: 'Volver a la bandeja',
                   icon: Icons.arrow_back,
-                  onPressed: () => setState(() => _inlineComposeMode = false),
+                  onPressed: () => _updateRouteState(inlineComposeMode: false),
                 ),
               MielActionButton(
                 label: 'Abrir en MIeL',
@@ -161,7 +251,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
           subject: widget.subject,
           onSent: () {
             if (_inlineComposeMode && mounted) {
-              setState(() => _inlineComposeMode = false);
+              _updateRouteState(inlineComposeMode: false);
             }
           },
         ),
@@ -314,14 +404,14 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
               IconButton(
                 tooltip: 'Página anterior',
                 onPressed: currentPage > 1
-                    ? () => setState(() => _currentPage--)
+                    ? () => _updateRouteState(page: currentPage - 1)
                     : null,
                 icon: const Icon(Icons.chevron_left, size: 20),
               ),
               IconButton(
                 tooltip: 'Página siguiente',
                 onPressed: currentPage < totalPages
-                    ? () => setState(() => _currentPage++)
+                    ? () => _updateRouteState(page: currentPage + 1)
                     : null,
                 icon: const Icon(Icons.chevron_right, size: 20),
               ),
@@ -343,8 +433,9 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                   ? 'Solo esta materia'
                   : 'Todas las materias',
               icon: _unifiedCrossSubjectMode ? Icons.filter_1 : Icons.all_inbox,
-              onPressed: () => setState(
-                () => _unifiedCrossSubjectMode = !_unifiedCrossSubjectMode,
+              onPressed: () => _updateRouteState(
+                unifiedCrossSubjectMode: !_unifiedCrossSubjectMode,
+                page: 1,
               ),
             ),
           MielActionButton(
@@ -356,7 +447,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             label: 'Redactar',
             icon: Icons.mode_edit,
             primary: true,
-            onPressed: () => setState(() => _inlineComposeMode = true),
+            onPressed: () => _updateRouteState(inlineComposeMode: true),
           ),
         ],
       ),
@@ -553,6 +644,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                   palette: palette,
                   label: 'Asunto:',
                   hint: 'Palabra clave en el asunto…',
+                  focusNode: _subjectFilterFocusNode,
                   onChanged: (v) => setState(() => _filterSubjectQuery = v),
                 ),
                 const SizedBox(height: 10),
@@ -581,6 +673,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                     palette: palette,
                     label: 'Asunto:',
                     hint: 'Palabra clave en el asunto…',
+                    focusNode: _subjectFilterFocusNode,
                     onChanged: (v) => setState(() => _filterSubjectQuery = v),
                   ),
                 ),
@@ -629,6 +722,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     required String label,
     required String hint,
     required ValueChanged<String> onChanged,
+    FocusNode? focusNode,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -648,6 +742,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             borderRadius: BorderRadius.circular(2),
           ),
           child: TextField(
+            focusNode: focusNode,
             onChanged: onChanged,
             style: TextStyle(fontSize: 13, color: palette.textPrimary),
             decoration: InputDecoration.collapsed(
@@ -875,13 +970,15 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     final weight = isUnread ? FontWeight.w700 : FontWeight.w400;
 
     void openMessage() {
-      setState(() {
-        _localUnreadOverrides[msgKey] = false;
-        _selectedMessage = msg;
-      });
+      _localUnreadOverrides[msgKey] = false;
+      _updateRouteState(selectedMessage: msg);
     }
 
-    return MielHoverRow(
+    final detailUrl = msg.detailUrl.isNotEmpty
+        ? resolveMielUrl(msg.detailUrl)
+        : '$kMielBaseUrl/mensajeria/verEntrada/comision/${msg.idComision}/mensaje/${msg.idMensaje}';
+
+    final rowWidget = MielHoverRow(
       backgroundColor: isUnread ? palette.unreadBackground : Colors.transparent,
       border: Border(
         left: isUnread
@@ -1095,6 +1192,13 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
               ],
             ),
     );
+
+    return MielWebActionTarget(
+      url: detailUrl,
+      title: msg.subject,
+      onTrigger: openMessage,
+      child: rowWidget,
+    );
   }
 
   Widget _buildCompactRowContent({
@@ -1245,7 +1349,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             trailing: MielActionButton(
               label: 'Volver',
               primary: true,
-              onPressed: () => setState(() => _selectedMessage = null),
+              onPressed: () => _updateRouteState(clearSelectedMessage: true),
             ),
           ),
           const MielModuleLoadingView(message: 'Abriendo mensaje…'),
@@ -1259,7 +1363,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             trailing: MielActionButton(
               label: 'Volver',
               primary: true,
-              onPressed: () => setState(() => _selectedMessage = null),
+              onPressed: () => _updateRouteState(clearSelectedMessage: true),
             ),
           ),
           const SizedBox(height: 16),
@@ -1285,7 +1389,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             trailing: MielActionButton(
               label: 'Volver',
               primary: true,
-              onPressed: () => setState(() => _selectedMessage = null),
+              onPressed: () => _updateRouteState(clearSelectedMessage: true),
             ),
           ),
           const SizedBox(height: 18),
@@ -1389,6 +1493,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                     MielRichText(
                       htmlContent: detail.bodyHtml,
                       fallbackPlainText: detail.bodyPlainText,
+                      highlightQuery: widget.inPageFindQuery,
                     ),
 
                     // Archivos adjuntos

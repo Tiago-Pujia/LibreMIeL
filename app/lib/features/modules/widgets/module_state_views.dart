@@ -289,6 +289,7 @@ class MielSearchBarField extends StatefulWidget {
     required this.onSubmitted,
     required this.onCleared,
     this.buttonLabel = 'Buscar',
+    this.focusNode,
   });
 
   final TextEditingController controller;
@@ -298,31 +299,46 @@ class MielSearchBarField extends StatefulWidget {
   final VoidCallback onSubmitted;
   final VoidCallback onCleared;
   final String buttonLabel;
+  final FocusNode? focusNode;
 
   @override
   State<MielSearchBarField> createState() => _MielSearchBarFieldState();
 }
 
 class _MielSearchBarFieldState extends State<MielSearchBarField> {
-  final FocusNode _focusNode = FocusNode();
+  FocusNode? _internalFocusNode;
+  FocusNode get _effectiveFocusNode =>
+      widget.focusNode ?? (_internalFocusNode ??= FocusNode());
   bool _focused = false;
 
   @override
   void initState() {
     super.initState();
-    _focusNode.addListener(_handleFocusChange);
+    _effectiveFocusNode.addListener(_handleFocusChange);
   }
 
   void _handleFocusChange() {
     if (mounted) {
-      setState(() => _focused = _focusNode.hasFocus);
+      setState(() => _focused = _effectiveFocusNode.hasFocus);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MielSearchBarField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      (oldWidget.focusNode ?? _internalFocusNode)?.removeListener(
+        _handleFocusChange,
+      );
+      _effectiveFocusNode.addListener(_handleFocusChange);
+      _focused = _effectiveFocusNode.hasFocus;
     }
   }
 
   @override
   void dispose() {
-    _focusNode.removeListener(_handleFocusChange);
-    _focusNode.dispose();
+    _effectiveFocusNode.removeListener(_handleFocusChange);
+    _internalFocusNode?.dispose();
     super.dispose();
   }
 
@@ -352,7 +368,7 @@ class _MielSearchBarFieldState extends State<MielSearchBarField> {
                   Expanded(
                     child: TextField(
                       controller: widget.controller,
-                      focusNode: _focusNode,
+                      focusNode: _effectiveFocusNode,
                       onChanged: widget.onChanged,
                       onSubmitted: (_) => widget.onSubmitted(),
                       style: TextStyle(
