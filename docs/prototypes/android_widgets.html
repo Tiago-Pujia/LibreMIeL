@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prototipos de Widgets Android — LibreMIeL</title>
+  <style>
+    :root {
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --miel-green: #009674;
+      --miel-green-dark: #128268;
+      --miel-green-light: #e6f6f2;
+      --badge-red: #dc3545;
+      --badge-red-bg: #fee2e2;
+      --status-online: #10b981;
+      --status-down: #f59e0b;
+      --status-offline: #ef4444;
+
+      /* Light Mode */
+      --bg-canvas: #f1f5f9;
+      --text-canvas: #0f172a;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --card-border: rgba(0, 150, 116, 0.2);
+      --card-border-subtle: rgba(226, 232, 240, 0.8);
+      --inner-card: #f8fafc;
+      --inner-card-hover: #f1f5f9;
+      --text-primary: #1e293b;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --shadow-widget: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      --phone-bg: #f8fafc;
+      --phone-border: #cbd5e1;
+    }
+
+    body.dark {
+      --bg-canvas: #0b0f19;
+      --text-canvas: #f8fafc;
+      --card-bg: rgba(26, 38, 35, 0.95);
+      --card-border: rgba(0, 150, 116, 0.35);
+      --card-border-subtle: rgba(51, 65, 85, 0.6);
+      --inner-card: #14201c;
+      --inner-card-hover: #1c2e28;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --shadow-widget: 0 12px 30px -4px rgba(0, 0, 0, 0.45);
+      --phone-bg: #0f172a;
+      --phone-border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-family);
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-canvas);
+      padding: 24px 16px;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 2px solid var(--card-border);
+      padding-bottom: 16px;
+    }
+
+    .title-group h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--miel-green);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title-group p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      background: var(--card-bg);
+      padding: 8px 12px;
+      border-radius: 9999px;
+      border: 1px solid var(--card-border-subtle);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .btn-toggle {
+      border: none;
+      background: none;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+    }
+
+    .btn-toggle.active {
+      background: var(--miel-green);
+      color: white;
+    }
+
+    .grid-widgets {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 28px;
+      margin-top: 24px;
+    }
+
+    .widget-box {
+      background: var(--phone-bg);
+      border: 1px solid var(--phone-border);
+      border-radius: 32px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    }
+
+    .widget-label {
+      width: 100%;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .widget-label h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--miel-green);
+    }
+
+    .widget-spec-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--card-border);
+      color: var(--text-secondary);
+    }
+
+    /* --- WIDGET 1: COMPACTO (2x2) --- */
+    .widget-compact {
+      width: 200px;
+      height: 200px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 26px;
+      padding: 14px;
+      box-shadow: var(--shadow-widget);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .widget-compact:hover {
+      transform: translateY(-2px);
+    }
+
+    .widget-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .app-icon {
+      width: 22px;
+      height: 22px;
+      background: linear-gradient(135deg, #009674, #128268);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 900;
+      font-size: 11px;
+    }
+
+    .app-name {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .refresh-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: none;
+      background: var(--inner-card);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .refresh-btn:hover {
+      color: var(--miel-green);
+      transform: rotate(90deg);
+    }
+
+    .status-bar-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .status-online {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--status-online);
+    }
+
+    .status-down {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--status-down);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .sync-time {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .count-display-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+    }
+
+    .huge-count {
+      font-size: 32px;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--miel-green);
+    }
+
+    .count-labels {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .count-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .count-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .card-notice {
+      background: var(--inner-card);
+      border: 1px solid var(--card-border-subtle);
+      border-radius: 12px;
+      padding: 7px 9px;
+    }
+
+    .card-notice .subject {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--miel-green);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-notice .headline {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* --- WIDGET 2: BARRA HORIZONTAL (4x1) --- */
+    .widget-strip {
+      width: 340px;
+      height: 76px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 22px;
+      padding: 12px 16px;
+      box-shadow: var(--shadow-widget);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease;
+    }
+    .widget-strip:hover {
+      transform: translateY(-2px);
+    }
+
+    .strip-badge-circle {
+      min-width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #009674, #128268);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .strip-badge-num {
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .strip-badge-lbl {
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .strip-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .strip-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .strip-main-text {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .strip-sub-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* --- WIDGET 3: FEED & MATERIAS (4x2 / 4x3) --- */
+    .widget-feed {
+      width: 360px;
+      height: 290px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 28px;
+      padding: 16px;
+      box-shadow: var(--shadow-widget);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease;
+    }
+    .widget-feed:hover {
+      transform: translateY(-2px);
+    }
+
+    .feed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--card-border-subtle);
+    }
+
+    .feed-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feed-header-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .feed-chips-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .feed-chips-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .subject-chip {
+      background: var(--inner-card);
+      border: 1px solid var(--card-border-subtle);
+      border-radius: 9999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .subject-chip:hover {
+      border-color: var(--miel-green);
+      background: var(--inner-card-hover);
+    }
+    .subject-chip.has-badge {
+      border-color: var(--card-border);
+      background: rgba(0, 150, 116, 0.08);
+      color: var(--miel-green);
+    }
+
+    .chip-badge {
+      background: var(--badge-red);
+      color: white;
+      font-size: 10px;
+      font-weight: 800;
+      border-radius: 9999px;
+      padding: 1px 5px;
+      min-width: 16px;
+      text-align: center;
+    }
+
+    .feed-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+
+    .feed-item {
+      background: var(--inner-card);
+      border: 1px solid var(--card-border-subtle);
+      border-radius: 12px;
+      padding: 7px 10px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .feed-item:hover {
+      background: var(--inner-card-hover);
+      border-color: var(--card-border);
+    }
+
+    .feed-item-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .feed-icon-contenidos { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .feed-icon-mensajeria { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .feed-icon-foros      { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .feed-icon-portafolio { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+
+    .feed-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .feed-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .feed-item-subject {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--miel-green);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .feed-item-time {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      margin-left: 6px;
+    }
+
+    .feed-item-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+
+    /* Signed Out State (Overlay) */
+    .signed-out-view {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 16px;
+    }
+    .signed-out-view.active {
+      display: flex;
+    }
+    .auth-view.hidden {
+      display: none !important;
+    }
+
+    .btn-login-widget {
+      background: var(--miel-green);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 11.5px;
+      font-weight: 700;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    .features-list {
+      margin-top: 32px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border-subtle);
+      border-radius: 20px;
+      padding: 20px 24px;
+    }
+
+    .features-list h2 {
+      font-size: 18px;
+      color: var(--miel-green);
+      margin-bottom: 12px;
+      font-weight: 800;
+    }
+
+    .features-list ul {
+      list-style-position: inside;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .features-list li strong {
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>
+          <span>📱</span> Prototipos de Widgets Android — LibreMIeL
+        </h1>
+        <p>Previsualización interactiva de layouts modernos (Material 3 / Android 12–15) en RemoteViews</p>
+      </div>
+      <div class="controls-bar">
+        <button class="btn-toggle active" id="btnThemeLight" onclick="setTheme('light')">☀️ Claro</button>
+        <button class="btn-toggle" id="btnThemeDark" onclick="setTheme('dark')">🌙 Oscuro</button>
+        <span style="color: var(--text-muted); font-size: 12px;">|</span>
+        <button class="btn-toggle active" id="btnStateOnline" onclick="setServerState('online')">🟢 En línea</button>
+        <button class="btn-toggle" id="btnStateDown" onclick="setServerState('down')">🟡 MIeL Caído</button>
+        <button class="btn-toggle" id="btnStateSignedOut" onclick="setServerState('signed_out')">🔒 Sesión Cerrada</button>
+      </div>
+    </header>
+
+    <div class="grid-widgets">
+      <!-- 1. COMPACTO 2x2 -->
+      <div class="widget-box">
+        <div class="widget-label">
+          <h3>Widget Compacto (2×2)</h3>
+          <span class="widget-spec-badge">RemoteViews XML</span>
+        </div>
+        <div class="widget-compact" title="Tocar abre LibreMIeL en Novedades">
+          <!-- Auth View -->
+          <div class="auth-view" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
+            <div class="widget-header-row">
+              <div class="brand-pill">
+                <div class="app-icon">L</div>
+                <span class="app-name">LibreMIeL</span>
+              </div>
+              <button class="refresh-btn" title="Sincronizar ahora" onclick="event.stopPropagation(); triggerSync();">↻</button>
+            </div>
+
+            <div class="status-bar-row">
+              <span class="status-pill status-online" id="compactStatusPill">
+                <span class="status-dot"></span>
+                <span id="compactStatusText">En línea</span>
+              </span>
+              <span class="sync-time">10:35</span>
+            </div>
+
+            <div class="count-display-row">
+              <div class="huge-count" id="compactUnreadCount">4</div>
+              <div class="count-labels">
+                <span class="count-title">sin leer</span>
+                <span class="count-sub">en 3 materias</span>
+              </div>
+            </div>
+
+            <div class="card-notice">
+              <div class="subject">Sistemas Operativos</div>
+              <div class="headline">Nuevo mensaje en foro: "Dudas Entrega TP2"</div>
+            </div>
+          </div>
+
+          <!-- Signed Out View -->
+          <div class="signed-out-view">
+            <div class="app-icon" style="width: 32px; height: 32px; font-size: 15px; margin-bottom: 8px;">L</div>
+            <strong style="font-size: 12px; color: var(--text-primary);">Sesión cerrada</strong>
+            <span style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Iniciá sesión para ver tus materias</span>
+            <button class="btn-login-widget">Ingresar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. BARRA RESUMEN 4x1 -->
+      <div class="widget-box">
+        <div class="widget-label">
+          <h3>Barra Resumen Horizontal (4×1)</h3>
+          <span class="widget-spec-badge">Minimalista</span>
+        </div>
+        <div class="widget-strip" title="Tocar abre LibreMIeL">
+          <!-- Auth View -->
+          <div class="auth-view" style="display: flex; align-items: center; width: 100%; gap: 12px;">
+            <div class="strip-badge-circle">
+              <span class="strip-badge-num" id="stripBadgeCount">4</span>
+              <span class="strip-badge-lbl">AVISOS</span>
+            </div>
+            <div class="strip-info">
+              <div class="strip-title-row">
+                <span class="strip-main-text">4 novedades pendientes</span>
+              </div>
+              <div class="strip-sub-text">
+                <span id="stripStatusText">En línea</span> · Act. hace 5 min
+              </div>
+            </div>
+            <button class="refresh-btn" title="Sincronizar ahora" onclick="event.stopPropagation(); triggerSync();">↻</button>
+          </div>
+
+          <!-- Signed Out View -->
+          <div class="signed-out-view" style="flex-direction: row; gap: 10px;">
+            <div class="app-icon" style="width: 28px; height: 28px;">L</div>
+            <div style="flex: 1; text-align: left;">
+              <strong style="font-size: 12px; color: var(--text-primary); display: block;">Sesión no iniciada</strong>
+              <span style="font-size: 10px; color: var(--text-muted);">Tocá para iniciar sesión</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. FEED Y MATERIAS 4x2 / 4x3 -->
+      <div class="widget-box" style="grid-column: 1 / -1;">
+        <div class="widget-label">
+          <h3>Tablero Feed y Materias (4×2 / 4×3)</h3>
+          <span class="widget-spec-badge">Feed Completo + Filtro de Materias</span>
+        </div>
+        <div class="widget-feed" title="Tocar abre LibreMIeL">
+          <!-- Auth View -->
+          <div class="auth-view" style="display: flex; flex-direction: column; height: 100%; gap: 10px;">
+            <div class="feed-header">
+              <div class="feed-header-left">
+                <div class="app-icon">L</div>
+                <span class="feed-header-title">LibreMIeL</span>
+                <span class="status-pill status-online" id="feedStatusPill">
+                  <span class="status-dot"></span>
+                  <span id="feedStatusText">En línea</span>
+                </span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="sync-time">Última sinc: 10:35</span>
+                <button class="refresh-btn" title="Sincronizar ahora" onclick="event.stopPropagation(); triggerSync();">↻</button>
+              </div>
+            </div>
+
+            <!-- Chips de Materias con badges -->
+            <div class="feed-chips-scroll">
+              <div class="subject-chip has-badge">
+                <span>Algoritmos y Estructuras</span>
+                <span class="chip-badge">2</span>
+              </div>
+              <div class="subject-chip has-badge">
+                <span>Sistemas Operativos</span>
+                <span class="chip-badge">1</span>
+              </div>
+              <div class="subject-chip has-badge">
+                <span>Base de Datos</span>
+                <span class="chip-badge">1</span>
+              </div>
+              <div class="subject-chip">
+                <span>Ingeniería de Software</span>
+              </div>
+              <div class="subject-chip">
+                <span>Redes de Datos</span>
+              </div>
+            </div>
+
+            <!-- Lista de Novedades Recientes -->
+            <div class="feed-items-list">
+              <div class="feed-item">
+                <div class="feed-item-icon feed-icon-foros">💬</div>
+                <div class="feed-item-content">
+                  <div class="feed-item-top">
+                    <span class="feed-item-subject">Sistemas Operativos</span>
+                    <span class="feed-item-time">10:15</span>
+                  </div>
+                  <div class="feed-item-title">Tutor/a respondió: "Aclaraciones sobre hilos y semáforos"</div>
+                </div>
+              </div>
+
+              <div class="feed-item">
+                <div class="feed-item-icon feed-icon-contenidos">📁</div>
+                <div class="feed-item-content">
+                  <div class="feed-item-top">
+                    <span class="feed-item-subject">Algoritmos y Estructuras</span>
+                    <span class="feed-item-time">09:40</span>
+                  </div>
+                  <div class="feed-item-title">Nuevo archivo: "Guía Práctica Grafos y Árboles AVL.pdf"</div>
+                </div>
+              </div>
+
+              <div class="feed-item">
+                <div class="feed-item-icon feed-icon-portafolio">🎒</div>
+                <div class="feed-item-content">
+                  <div class="feed-item-top">
+                    <span class="feed-item-subject">Base de Datos</span>
+                    <span class="feed-item-time">Ayer</span>
+                  </div>
+                  <div class="feed-item-title">Corrección disponible: "TP Normalización Relacional"</div>
+                </div>
+              </div>
+
+              <div class="feed-item">
+                <div class="feed-item-icon feed-icon-mensajeria">✉️</div>
+                <div class="feed-item-content">
+                  <div class="feed-item-top">
+                    <span class="feed-item-subject">Algoritmos y Estructuras</span>
+                    <span class="feed-item-time">Ayer</span>
+                  </div>
+                  <div class="feed-item-title">Prof. Martínez: "Consulta de recuperatorio de parcial"</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Signed Out View -->
+          <div class="signed-out-view">
+            <div class="app-icon" style="width: 40px; height: 40px; font-size: 18px; margin-bottom: 8px;">L</div>
+            <strong style="font-size: 14px; color: var(--text-primary);">Sesión cerrada en LibreMIeL</strong>
+            <span style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Iniciá sesión en la app para consultar materias y novedades en tu pantalla de inicio</span>
+            <button class="btn-login-widget" style="padding: 10px 22px; font-size: 13px;">Iniciar sesión en LibreMIeL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Explicación técnica de la modernización -->
+    <div class="features-list">
+      <h2>🚀 Mejoras de Modernización en Android (RemoteViews)</h2>
+      <ul>
+        <li><strong>Bordes adaptativos y esquinas suaves:</strong> actualización de los drawables XML a esquinas de <code>24dp</code> / <code>28dp</code> con radio dinámico según la versión de Android (Android 12+ <code>@android:dimen/system_app_widget_background_radius</code>).</li>
+        <li><strong>Paleta Material You e Institucional:</strong> acento verde esmeralda UNLaM (<code>#009674</code> / <code>#128268</code>) integrado con superficies contenedoras adaptativas a tema claro y oscuro (<code>values/</code> y <code>values-night/</code>).</li>
+        <li><strong>Chips interactivos con badges:</strong> visualización horizontal de materias con indicadores individuales para saber al instante qué materia tiene mensajes, foros o prácticas pendientes.</li>
+        <li><strong>Íconos semánticos por módulo:</strong> distinción visual clara entre Contenidos (📁 azul), Mensajería (✉️ verde), Foros (💬 ámbar) y Portafolio (🎒 violeta).</li>
+        <li><strong>Refresco atómico en segundo plano:</strong> el snapshot de datos en <code>SharedPreferences</code> se actualiza de forma síncrona al terminar la tarea periódica de <code>WorkManager</code> y tras sincronizaciones en primer plano.</li>
+        <li><strong>Deep-linking exacto:</strong> al tocar un ítem del feed o un chip de materia, se dispara un <code>PendingIntent</code> que abre la app directamente en la comisión y herramienta correspondiente mediante <code>NotificationTapPayload</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function setTheme(mode) {
+      document.body.classList.toggle('dark', mode === 'dark');
+      document.getElementById('btnThemeLight').classList.toggle('active', mode === 'light');
+      document.getElementById('btnThemeDark').classList.toggle('active', mode === 'dark');
+    }
+
+    function setServerState(state) {
+      const isSignedOut = state === 'signed_out';
+      const isDown = state === 'down';
+
+      document.getElementById('btnStateOnline').classList.toggle('active', state === 'online');
+      document.getElementById('btnStateDown').classList.toggle('active', isDown);
+      document.getElementById('btnStateSignedOut').classList.toggle('active', isSignedOut);
+
+      document.querySelectorAll('.auth-view').forEach(el => el.classList.toggle('hidden', isSignedOut));
+      document.querySelectorAll('.signed-out-view').forEach(el => el.classList.toggle('active', isSignedOut));
+
+      const pills = [
+        document.getElementById('compactStatusPill'),
+        document.getElementById('feedStatusPill')
+      ];
+
+      pills.forEach(pill => {
+        if (!pill) return;
+        pill.className = 'status-pill ' + (isDown ? 'status-down' : 'status-online');
+      });
+
+      const statusTexts = [
+        document.getElementById('compactStatusText'),
+        document.getElementById('stripStatusText'),
+        document.getElementById('feedStatusText')
+      ];
+
+      statusTexts.forEach(txt => {
+        if (!txt) return;
+        txt.textContent = isDown ? 'MIeL Caído' : 'En línea';
+      });
+    }
+
+    function triggerSync() {
+      const refreshBtns = document.querySelectorAll('.refresh-btn');
+      refreshBtns.forEach(btn => {
+        btn.style.transform = 'rotate(360deg)';
+        btn.style.transition = 'transform 0.6s ease';
+      });
+      setTimeout(() => {
+        refreshBtns.forEach(btn => {
+          btn.style.transform = '';
+          btn.style.transition = 'none';
+        });
+      }, 600);
+    }
+  </script>
+</body>
+</html>
