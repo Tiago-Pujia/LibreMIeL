@@ -70,10 +70,23 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_show(GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 
-  // Show the window when Flutter renders.
+  gboolean start_minimized = FALSE;
+  if (self->dart_entrypoint_arguments != nullptr) {
+    for (char** arg = self->dart_entrypoint_arguments; *arg != nullptr; ++arg) {
+      if (g_strcmp0(*arg, "--minimized") == 0 ||
+          g_strcmp0(*arg, "--hidden") == 0) {
+        start_minimized = TRUE;
+        break;
+      }
+    }
+  }
+
+  // Show the window when Flutter renders, unless starting minimized in system tray.
   // Requires the view to be realized so we can start rendering.
-  g_signal_connect_swapped(view, "first-frame", G_CALLBACK(first_frame_cb),
-                           self);
+  if (!start_minimized) {
+    g_signal_connect_swapped(view, "first-frame", G_CALLBACK(first_frame_cb),
+                             self);
+  }
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));

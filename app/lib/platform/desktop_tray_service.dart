@@ -18,6 +18,9 @@ class DesktopTrayService with TrayListener, WindowListener {
   static bool get isDesktop =>
       !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
 
+  /// Bandera global que indica si la aplicación fue invocada con `--minimized` o `--hidden`.
+  static bool startMinimizedRequested = false;
+
   String _resolveIconPath(int unreadCount) {
     final hasUnread = unreadCount > 0;
     if (Platform.isWindows) {
@@ -69,8 +72,9 @@ class DesktopTrayService with TrayListener, WindowListener {
     }
   }
 
-  Future<void> initialize() async {
+  Future<void> initialize({bool? startMinimized}) async {
     if (!isDesktop || _initialized) return;
+    final minimized = startMinimized ?? startMinimizedRequested;
 
     // 1. Inicializar bandeja del sistema primero.
     // IMPORTANTE: en Linux `tray_manager` (libayatana-appindicator3) NO implementa
@@ -94,6 +98,9 @@ class DesktopTrayService with TrayListener, WindowListener {
       await windowManager.setMinimumSize(const Size(720, 520));
       await windowManager.setPreventClose(_trayReady);
       windowManager.addListener(this);
+      if (minimized) {
+        await windowManager.hide();
+      }
     } catch (e) {
       debugPrint('DesktopTrayService: error configurando window_manager: $e');
     }
