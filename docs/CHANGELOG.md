@@ -7,6 +7,18 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ## [Unreleased]
 
+### Added
+- **Integración de tareas y mejoras pendientes en la Tabla General de Estado:**
+  - Registro directo en la **Tabla General de Estado** de [`docs/STATUS.md`](STATUS.md) y especificación en [`docs/ROADMAP.md`](ROADMAP.md) e [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md):
+    - **1. Ejecución de fases restantes:** Fase 11 (iOS e iPadOS con plan completo en `PLAN_IMPLEMENTACION_FASE_11.md`), Fase 6 (Buscador Global Offline FTS5) y Fase 7 (Integración con IA / Asistente de estudio local-first y BYOK).
+    - **2. Actualización de widgets Android:** Optimización de layouts `RemoteViews`, refresco confiable tras background sync (`WorkManager`) y deep-linking a materias.
+    - **3. Habilitar modificación de perfil de MIeL:** Extensión de `MielInteractiveReader` y `MielWriter` para consulta y edición de perfil (`/principal/perfil/`), subida de avatar e invalidación reactiva de caché.
+    - **4. Inicio de sistema en segundo plano:** Flag de arranque silencioso (`--minimized` / `--tray-only`) para que LibreMIeL inicie en la bandeja del sistema (System Tray) sin abrir la ventana completa al encender la PC.
+    - **5. Revisión del panel de configuración:** Reorganización modular y verificación de persistencia en SQLite de todas las opciones en `SettingsScreen`.
+    - **6. Corrección de descargas en celulares:** Compatibilidad con Scoped Storage en Android 10–14+, permisos limpios, guardado accesible y apertura con `FileProvider`.
+    - **7. Revisión y comparativa integral de UI contra MIeL:** Auditoría visual módulo por módulo para garantizar máxima fidelidad y paridad con la web oficial de MIeL (`2025.2.0`).
+    - **8. Auditoría integral del proyecto con Gemini (Paso final):** Revisión exhaustiva final de código, arquitectura, invariantes técnicas de `AGENTS.md`, pruebas y seguridad.
+
 ## [0.2.1] - 2026-11-23
 
 ### Added
