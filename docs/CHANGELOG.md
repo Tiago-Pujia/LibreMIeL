@@ -8,6 +8,18 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 ## [Unreleased]
 
 ### Added
+- **Inicio con el sistema en segundo plano:**
+  - Registro de argumento `--minimized` en `AutostartService` para Linux (archivo `.desktop`), Windows (Registro `HKCU Run`) y macOS (`LaunchAgents plist`).
+  - Modificación del runner nativo de Linux (`my_application.cc`) y Windows (`main.cpp` / `flutter_window.cpp`) para evitar la presentación visible de la ventana en el primer fotograma (`first-frame`) cuando se recibe la bandera `--minimized` o `--hidden`.
+  - Propagación de argumentos de entrada en `main(List<String> args)` y supresión de ventana en `DesktopTrayService.initialize(startMinimized: true)` para mantener la aplicación silenciosa en la bandeja del sistema hasta la interacción del usuario.
+- **Perfil de MIeL (Lectura y Modificación de Datos Personales):**
+  - Modelo inmutable `MielUserProfile` con lista de carreras universitarias disponibles (`CareerOption`), datos personales, contacto y detección de avatar personalizado.
+  - Parser puro `parsePerfilHtml` (`miel_perfil_parser.dart`) con extracción de carrera, DNI, género, fecha de nacimiento, emails, teléfono, domicilio y URL de avatar desde `style="background-image:..."`.
+  - Extensión de `MielInteractiveReader` con `fetchPerfilHtml()` y `MielWriter` con mutaciones multipart (`updatePerfil` hacia `/perfil/event/modificarUsuario/`, `deleteAvatar` hacia `/perfil/event/eliminarAvatar/` y `changePassword` hacia `/perfil/event/cambiarClave/`).
+  - Nueva interfaz modal interactiva `MielProfileDialog` accesible desde el diálogo de usuario en `HomeShell`, permitiendo previsualizar y cambiar la foto de perfil (vía `file_selector`), editar campos personales/contacto y cambiar contraseña de forma segura.
+  - Cobertura de pruebas unitarias en `test/parsers/miel_perfil_parser_test.dart` y actualización de `test/platform/autostart_service_test.dart`.
+- **Widgets Android:**
+  - Prototipo web interactivo autocontenido en [`docs/prototypes/android_widgets.html`](prototypes/android_widgets.html) con simulación en tiempo real de los diseños compacto (`2×2`/`3×2`), barra resumen (`4×1`) y tablero feed/materias (`4×2`/`4×3`), selector de modo claro/oscuro y pruebas de conectividad.
 - **Integración de tareas y mejoras pendientes en la Tabla General de Estado:**
   - Registro directo en la **Tabla General de Estado** de [`docs/STATUS.md`](STATUS.md) y especificación en [`docs/ROADMAP.md`](ROADMAP.md) e [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md):
     - **1. Ejecución de fases restantes:** Fase 11 (iOS e iPadOS con plan completo en `PLAN_IMPLEMENTACION_FASE_11.md`), Fase 6 (Buscador Global Offline FTS5) y Fase 7 (Integración con IA / Asistente de estudio local-first y BYOK).

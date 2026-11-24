@@ -154,6 +154,9 @@ class _FakeNavReader implements MielInteractiveReader {
   Future<String> fetchAutoguiaHtml(String idComision) async => '';
 
   @override
+  Future<String> fetchPerfilHtml() async => '<form id="formUsuario"></form>';
+
+  @override
   Future<Uint8List> downloadAuthenticatedBytes(String urlOrPath) async =>
       Uint8List(0);
 

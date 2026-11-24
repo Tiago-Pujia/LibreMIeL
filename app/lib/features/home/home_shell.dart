@@ -32,6 +32,7 @@ import '../navigation/navigation_history_entry.dart';
 import '../settings/settings_screen.dart';
 import '../subjects/miel_home_view.dart';
 import '../downloads/bulk_download_sheet.dart';
+import '../profile/miel_profile_dialog.dart';
 import '../updates/update_dialog.dart';
 import 'widgets/miel_status_banner.dart';
 
@@ -340,6 +341,13 @@ class _HomeShellState extends ConsumerState<HomeShell>
             .where((s) => s.isEffectivelyHidden)
             .length,
         storageLabel: ref.read(credentialsStoreProvider).storageBackendLabel,
+        onEditProfile: () {
+          Navigator.of(context).pop();
+          showDialog<void>(
+            context: context,
+            builder: (_) => const MielProfileDialog(),
+          );
+        },
         onOpenMielProfile: () => _openExternal('$kMielBaseUrl/perfil/datos/'),
         onLogout: () {
           Navigator.of(context).pop();
@@ -1714,6 +1722,7 @@ class _UserProfileDialog extends StatelessWidget {
     required this.activeSubjectsCount,
     required this.hiddenSubjectsCount,
     required this.storageLabel,
+    required this.onEditProfile,
     required this.onOpenMielProfile,
     required this.onLogout,
   });
@@ -1722,6 +1731,7 @@ class _UserProfileDialog extends StatelessWidget {
   final int activeSubjectsCount;
   final int hiddenSubjectsCount;
   final String storageLabel;
+  final VoidCallback onEditProfile;
   final VoidCallback onOpenMielProfile;
   final VoidCallback onLogout;
 
@@ -1852,14 +1862,26 @@ class _UserProfileDialog extends StatelessWidget {
                       style: TextStyle(color: palette.linkAccent),
                     ),
                   ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                  ElevatedButton.icon(
+                    onPressed: onEditProfile,
+                    icon: const Icon(Icons.edit, size: 16),
+                    label: const Text('Modificar perfil'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: palette.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: palette.textPrimary,
+                      side: BorderSide(color: palette.divider),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                     child: const Text('Cerrar'),

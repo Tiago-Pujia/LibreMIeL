@@ -1,6 +1,8 @@
 /// Modelos inmutables del dominio de LibreMIeL.
 library;
 
+export 'miel_perfil_models.dart';
+
 enum MielAuthStatus {
   ok,
   invalidCredentials,
