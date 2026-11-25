@@ -174,7 +174,7 @@ void main() {
       expect(find.text('Mi perfil'), findsOneWidget);
       expect(find.text('Sincronizar'), findsNothing);
 
-      // Barra lateral exacta: Utilidades (Materias Activas), Funcionalidades (Ajustes, Notificaciones), Repositorio GitHub, Abrir MIeL web
+      // Barra lateral exacta: Utilidades (Materias Activas), Funcionalidades (Ajustes, Notificaciones), Repositorio GitHub, Abrir MIeL web, Reportar errores, Sitio web
       expect(find.text('Utilidades'), findsOneWidget);
       expect(find.text('Materias Activas'), findsOneWidget);
       expect(find.text('Funcionalidades'), findsOneWidget);
@@ -182,9 +182,19 @@ void main() {
       expect(find.text('Notificaciones'), findsOneWidget);
       expect(find.text('Repositorio GitHub'), findsOneWidget);
       expect(find.text('Abrir MIeL web'), findsOneWidget);
+      expect(find.text('Reportar errores'), findsOneWidget);
+      expect(find.text('Sitio web'), findsOneWidget);
       expect(
         tester.getTopLeft(find.text('Repositorio GitHub')).dy,
         lessThan(tester.getTopLeft(find.text('Abrir MIeL web')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('Abrir MIeL web')).dy,
+        lessThan(tester.getTopLeft(find.text('Reportar errores')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('Reportar errores')).dy,
+        lessThan(tester.getTopLeft(find.text('Sitio web')).dy),
       );
       expect(find.text('Calendario'), findsNothing);
       expect(find.text('Biblioteca BiDi'), findsNothing);

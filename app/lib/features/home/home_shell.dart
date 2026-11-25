@@ -431,6 +431,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
             moduleSectionIndex: idx,
             clearForoTopicId: true,
             clearPortafolioPractice: true,
+            mensajeriaState: const MensajeriaViewRouteState(),
           ),
         );
       },
@@ -472,6 +473,17 @@ class _HomeShellState extends ConsumerState<HomeShell>
         tool: activeTool,
         sectionIndex: activeModuleSectionIndex,
         sectionResetTick: _moduleSectionNavTick,
+        onSelectSection: (idx) {
+          _moduleSectionNavTick++;
+          _navigateTo(
+            currentEntry.copyWith(
+              moduleSectionIndex: idx,
+              clearForoTopicId: true,
+              clearPortafolioPractice: true,
+              mensajeriaState: const MensajeriaViewRouteState(),
+            ),
+          );
+        },
         selectedForoTopicId: activeForoTopicId,
         onSelectForoTopic: (topicId) {
           _navigateTo(
@@ -1568,6 +1580,8 @@ class _MielSidebar extends ConsumerWidget {
 }
 
 const String _kLibreMielRepoUrl = 'https://github.com/Tiago-Pujia/LibreMIeL';
+const String _kLibreMielWebsiteUrl = 'https://tiago-pujia.github.io/LibreMIeL/';
+const String _kLibreMielReportIssuesUrl = 'https://wa.me/+5491135201875';
 
 class _SidebarFooterLinks extends StatelessWidget {
   const _SidebarFooterLinks({required this.onOpenExternal});
@@ -1592,6 +1606,18 @@ class _SidebarFooterLinks extends StatelessWidget {
             label: 'Abrir MIeL web',
             selected: false,
             onTap: () => onOpenExternal('$kMielBaseUrl/principal/interno/'),
+          ),
+          _SidebarItem(
+            icon: Icons.bug_report_outlined,
+            label: 'Reportar errores',
+            selected: false,
+            onTap: () => onOpenExternal(_kLibreMielReportIssuesUrl),
+          ),
+          _SidebarItem(
+            icon: Icons.language,
+            label: 'Sitio web',
+            selected: false,
+            onTap: () => onOpenExternal(_kLibreMielWebsiteUrl),
           ),
         ],
       ),
