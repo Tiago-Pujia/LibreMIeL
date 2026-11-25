@@ -332,6 +332,27 @@ jobs:
     needs: [prepare, build-android, build-linux, build-windows, build-macos]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout del tag para notas de versión
+        uses: actions/checkout@v7
+
+      - name: Extraer notas de versión desde CHANGELOG.md
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          python3 - "$VERSION" <<'EOF'
+          import re
+          import sys
+
+          ver = sys.argv[1]
+          with open("docs/CHANGELOG.md", encoding="utf-8") as f:
+              text = f.read()
+
+          pattern = rf"(?ms)^## \[{re.escape(ver)}\][^\n]*\n(.*?)(?=^## \[|\Z)"
+          m = re.search(pattern, text)
+          body = m.group(1).strip() if m else ""
+          with open("release-notes.md", "w", encoding="utf-8") as out:
+              out.write(body + ("\n" if body else ""))
+          EOF
+
       - name: Descargar todos los artefactos
         uses: actions/download-artifact@v4
         with:
@@ -347,6 +368,7 @@ jobs:
       - name: Crear GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: release-notes.md
           generate_release_notes: true
           files: release-assets/*
         env:
