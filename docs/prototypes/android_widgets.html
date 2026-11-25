@@ -200,14 +200,10 @@
     .app-icon {
       width: 22px;
       height: 22px;
-      background: linear-gradient(135deg, #009674, #128268);
-      border-radius: 7px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 900;
-      font-size: 11px;
+      background: url('../../branding/icons/png/64x64/libremiel-icon-circle.png') center / contain no-repeat;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
     }
 
     .app-name {
@@ -648,7 +644,7 @@
           <div class="auth-view" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
             <div class="widget-header-row">
               <div class="brand-pill">
-                <div class="app-icon">L</div>
+                <div class="app-icon"></div>
                 <span class="app-name">LibreMIeL</span>
               </div>
               <button class="refresh-btn" title="Sincronizar ahora" onclick="event.stopPropagation(); triggerSync();">↻</button>
@@ -678,7 +674,7 @@
 
           <!-- Signed Out View -->
           <div class="signed-out-view">
-            <div class="app-icon" style="width: 32px; height: 32px; font-size: 15px; margin-bottom: 8px;">L</div>
+            <div class="app-icon" style="width: 32px; height: 32px; margin-bottom: 8px;"></div>
             <strong style="font-size: 12px; color: var(--text-primary);">Sesión cerrada</strong>
             <span style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Iniciá sesión para ver tus materias</span>
             <button class="btn-login-widget">Ingresar</button>
@@ -712,7 +708,7 @@
 
           <!-- Signed Out View -->
           <div class="signed-out-view" style="flex-direction: row; gap: 10px;">
-            <div class="app-icon" style="width: 28px; height: 28px;">L</div>
+            <div class="app-icon" style="width: 28px; height: 28px;"></div>
             <div style="flex: 1; text-align: left;">
               <strong style="font-size: 12px; color: var(--text-primary); display: block;">Sesión no iniciada</strong>
               <span style="font-size: 10px; color: var(--text-muted);">Tocá para iniciar sesión</span>
@@ -732,7 +728,7 @@
           <div class="auth-view" style="display: flex; flex-direction: column; height: 100%; gap: 10px;">
             <div class="feed-header">
               <div class="feed-header-left">
-                <div class="app-icon">L</div>
+                <div class="app-icon"></div>
                 <span class="feed-header-title">LibreMIeL</span>
                 <span class="status-pill status-online" id="feedStatusPill">
                   <span class="status-dot"></span>
@@ -817,7 +813,7 @@
 
           <!-- Signed Out View -->
           <div class="signed-out-view">
-            <div class="app-icon" style="width: 40px; height: 40px; font-size: 18px; margin-bottom: 8px;">L</div>
+            <div class="app-icon" style="width: 40px; height: 40px; margin-bottom: 8px;"></div>
             <strong style="font-size: 14px; color: var(--text-primary);">Sesión cerrada en LibreMIeL</strong>
             <span style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Iniciá sesión en la app para consultar materias y novedades en tu pantalla de inicio</span>
             <button class="btn-login-widget" style="padding: 10px 22px; font-size: 13px;">Iniciar sesión en LibreMIeL</button>
