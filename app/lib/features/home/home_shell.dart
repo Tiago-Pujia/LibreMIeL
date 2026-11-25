@@ -378,7 +378,19 @@ class _HomeShellState extends ConsumerState<HomeShell>
     _closeDrawerIfOpen();
     final uri = Uri.tryParse(url);
     if (uri != null) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      try {
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          await launchUrl(uri);
+        }
+      } catch (_) {
+        try {
+          await launchUrl(uri);
+        } catch (_) {}
+      }
     }
   }
 
@@ -1581,7 +1593,7 @@ class _MielSidebar extends ConsumerWidget {
 
 const String _kLibreMielRepoUrl = 'https://github.com/Tiago-Pujia/LibreMIeL';
 const String _kLibreMielWebsiteUrl = 'https://tiago-pujia.github.io/LibreMIeL/';
-const String _kLibreMielReportIssuesUrl = 'https://wa.me/+5491135201875';
+const String _kLibreMielReportIssuesUrl = 'https://wa.me/5491135201875';
 
 class _SidebarFooterLinks extends StatelessWidget {
   const _SidebarFooterLinks({required this.onOpenExternal});
@@ -1596,28 +1608,28 @@ class _SidebarFooterLinks extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _SidebarItem(
-            icon: Icons.code,
-            label: 'Repositorio GitHub',
-            selected: false,
-            onTap: () => onOpenExternal(_kLibreMielRepoUrl),
-          ),
-          _SidebarItem(
             icon: Icons.open_in_new,
             label: 'Abrir MIeL web',
             selected: false,
             onTap: () => onOpenExternal('$kMielBaseUrl/principal/interno/'),
           ),
           _SidebarItem(
-            icon: Icons.bug_report_outlined,
-            label: 'Reportar errores',
-            selected: false,
-            onTap: () => onOpenExternal(_kLibreMielReportIssuesUrl),
-          ),
-          _SidebarItem(
             icon: Icons.language,
             label: 'Sitio web',
             selected: false,
             onTap: () => onOpenExternal(_kLibreMielWebsiteUrl),
+          ),
+          _SidebarItem(
+            icon: Icons.code,
+            label: 'Repositorio GitHub',
+            selected: false,
+            onTap: () => onOpenExternal(_kLibreMielRepoUrl),
+          ),
+          _SidebarItem(
+            icon: Icons.bug_report_outlined,
+            label: 'Reportar Bug',
+            selected: false,
+            onTap: () => onOpenExternal(_kLibreMielReportIssuesUrl),
           ),
         ],
       ),
@@ -1650,6 +1662,7 @@ class _SidebarHeading extends StatelessWidget {
 
 class _SidebarItem extends StatefulWidget {
   const _SidebarItem({
+    super.key,
     required this.icon,
     required this.label,
     required this.selected,
@@ -1686,6 +1699,7 @@ class _SidebarItemState extends State<_SidebarItem> {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
+        opaque: true,
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: Material(
@@ -1693,8 +1707,15 @@ class _SidebarItemState extends State<_SidebarItem> {
           borderRadius: BorderRadius.circular(4),
           child: InkWell(
             onTap: widget.onTap,
+            onHover: (hovered) {
+              if (_hovered != hovered) {
+                setState(() => _hovered = hovered);
+              }
+            },
+            mouseCursor: SystemMouseCursors.click,
             borderRadius: BorderRadius.circular(4),
             hoverColor: palette.sidebarHover,
+            splashColor: palette.sidebarSelected.withValues(alpha: 0.35),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               child: Row(
