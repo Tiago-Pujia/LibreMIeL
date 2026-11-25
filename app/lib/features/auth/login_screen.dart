@@ -146,41 +146,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               top: false,
               child: Column(
                 children: [
-                  // Header fijo superior (rgba(0, 22, 6, 0.9))
-                  Container(
-                    height: isWide ? 68 : 54,
-                    width: double.infinity,
-                    color: const Color.fromRGBO(0, 22, 6, 0.90),
-                    padding: EdgeInsets.symmetric(horizontal: isWide ? 24 : 16),
+                  // Header fijo superior (rgba(0, 22, 6, 0.9)) con espacio generoso
+                  DecoratedBox(
+                    decoration: const BoxDecoration(
+                      color: Color.fromRGBO(0, 22, 6, 0.90),
+                    ),
                     child: SafeArea(
                       bottom: false,
-                      child: Row(
-                        children: [
-                          LibreMielMark(
-                            size: isWide ? 36 : 30,
-                            lightText: true,
+                      child: SizedBox(
+                        height: isWide ? 68 : 62,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isWide ? 24 : 16,
                           ),
-                          if (isWide) ...[
-                            const SizedBox(width: 14),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
+                          child: Row(
+                            children: [
+                              LibreMielMark(
+                                size: isWide ? 38 : 34,
+                                lightText: true,
                               ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                              child: Text(
-                                'Cliente no oficial · Open Source',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                  fontSize: 12,
+                              if (isWide) ...[
+                                const SizedBox(width: 14),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                  child: Text(
+                                    'Cliente no oficial · Open Source',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.85,
+                                      ),
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ],
-                        ],
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),

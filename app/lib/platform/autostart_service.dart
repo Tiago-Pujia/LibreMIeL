@@ -103,7 +103,7 @@ class AutostartService {
           'Version=1.0\n'
           'Name=LibreMIeL\n'
           'Comment=Cliente libre para MIeL (UNLaM)\n'
-          'Exec=$quotedExec\n'
+          'Exec=$quotedExec --minimized\n'
           'Icon=$_desktopEntryId\n'
           'Terminal=false\n'
           'StartupNotify=false\n'
@@ -131,6 +131,7 @@ class AutostartService {
           '  <key>ProgramArguments</key>\n'
           '  <array>\n'
           '    <string>$execPath</string>\n'
+          '    <string>--minimized</string>\n'
           '  </array>\n'
           '  <key>RunAtLoad</key>\n'
           '  <true/>\n'
@@ -160,7 +161,7 @@ class AutostartService {
           '/t',
           'REG_SZ',
           '/d',
-          '"$execPath"',
+          '"$execPath" --minimized',
           '/f',
         ]);
         return res.exitCode == 0;

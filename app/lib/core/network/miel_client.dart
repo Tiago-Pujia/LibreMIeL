@@ -116,6 +116,7 @@ abstract class MielInteractiveReader implements MielApiClient {
 
   Future<String> fetchEncuestasHtml(String idComision);
   Future<String> fetchAutoguiaHtml(String idComision);
+  Future<String> fetchPerfilHtml();
 
   Future<Uint8List> downloadAuthenticatedBytes(String urlOrPath);
   Future<DownloadedFileResult> downloadAuthenticatedFile(
@@ -178,6 +179,11 @@ abstract class MielWriter {
     String observations = '',
     String? externalLink,
     String? attachmentPath,
+    bool isGroupDelivery = false,
+    String? groupId,
+    String groupCheckboxName = 'entregaGrupal',
+    String groupCheckboxValue = '1',
+    String groupSelectName = 'idGrupo',
   });
 
   // --- Foros (forov2) ---
@@ -213,6 +219,21 @@ abstract class MielWriter {
     required String idComision,
     required String idEvaluacion,
     String clave = '',
+  });
+
+  // --- Perfil de Usuario y Seguridad ---
+  Future<void> updatePerfil({
+    required MielUserProfile profile,
+    String? newAvatarPath,
+    Uint8List? newAvatarBytes,
+    String? newAvatarFileName,
+  });
+
+  Future<void> deleteAvatar();
+
+  Future<void> changePassword({
+    required String claveAnterior,
+    required String claveNueva,
   });
 }
 
@@ -655,6 +676,9 @@ class DioMielClient implements MielInteractiveReader, MielWriter {
       _getHtml('/autoguia/modulos/comision/$idComision');
 
   @override
+  Future<String> fetchPerfilHtml() => _getHtml('/perfil/datos/');
+
+  @override
   Future<Uint8List> downloadAuthenticatedBytes(String urlOrPath) {
     return _enqueue(() async {
       final normalized = _normalizeMielPath(urlOrPath);
@@ -983,6 +1007,11 @@ class DioMielClient implements MielInteractiveReader, MielWriter {
     String observations = '',
     String? externalLink,
     String? attachmentPath,
+    bool isGroupDelivery = false,
+    String? groupId,
+    String groupCheckboxName = 'entregaGrupal',
+    String groupCheckboxValue = '1',
+    String groupSelectName = 'idGrupo',
   }) {
     return _enqueue(() async {
       final hasLink = externalLink != null && externalLink.trim().isNotEmpty;
@@ -1008,6 +1037,22 @@ class DioMielClient implements MielInteractiveReader, MielWriter {
         ),
       );
       formData.fields.add(MapEntry('observaciones', observations.trim()));
+      if (isGroupDelivery) {
+        final chkName = groupCheckboxName.isNotEmpty
+            ? groupCheckboxName
+            : 'entregaGrupal';
+        final chkVal = groupCheckboxValue.isNotEmpty ? groupCheckboxValue : '1';
+        formData.fields.add(MapEntry(chkName, chkVal));
+        if (groupId != null && groupId.isNotEmpty && groupId != '0') {
+          final selName = groupSelectName.isNotEmpty
+              ? groupSelectName
+              : 'idGrupo';
+          formData.fields.add(MapEntry(selName, groupId));
+          if (selName != 'idGrupo') {
+            formData.fields.add(MapEntry('idGrupo', groupId));
+          }
+        }
+      }
       if (hasLink) {
         formData.fields.add(MapEntry('enlace', externalLink.trim()));
       }
@@ -1230,6 +1275,102 @@ class DioMielClient implements MielInteractiveReader, MielWriter {
         ),
       );
       return _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<void> updatePerfil({
+    required MielUserProfile profile,
+    String? newAvatarPath,
+    Uint8List? newAvatarBytes,
+    String? newAvatarFileName,
+  }) {
+    return _enqueue(() async {
+      final map = <String, dynamic>{
+        'carrera': profile.carreraId,
+        'dni': profile.dni,
+        'sexo': profile.sexo,
+        'fechaNacimiento': profile.fechaNacimiento,
+        'email': profile.email.trim(),
+        'correoInstitucional': profile.correoInstitucional.trim(),
+        'telefono': profile.telefono.trim(),
+        'direccion': profile.direccion.trim(),
+        'localidad': profile.localidad.trim(),
+        'provincia': profile.provincia.trim(),
+        'codigoPostal': profile.codigoPostal.trim(),
+        'pais': profile.pais.trim(),
+      };
+
+      if (newAvatarPath != null && newAvatarPath.isNotEmpty) {
+        map['avatar'] = await MultipartFile.fromFile(
+          newAvatarPath,
+          filename: newAvatarFileName ?? p.basename(newAvatarPath),
+        );
+      } else if (newAvatarBytes != null && newAvatarBytes.isNotEmpty) {
+        map['avatar'] = MultipartFile.fromBytes(
+          newAvatarBytes,
+          filename: newAvatarFileName ?? 'avatar.jpg',
+        );
+      }
+
+      final formData = FormData.fromMap(map);
+      const path = '/perfil/event/modificarUsuario/';
+      final response = await _dio.post<String>(
+        path,
+        data: formData,
+        options: Options(headers: {'Referer': '$kMielBaseUrl/perfil/datos/'}),
+      );
+
+      final body = _assertWriteResponse(response, path);
+      // MIeL redirige a /errores/input/ si algún dato no es válido
+      if (body.contains('/errores/input') ||
+          body.contains('Datos incorrectos') ||
+          body.contains('formato no válido')) {
+        throw const FormatException(
+          'MIeL rechazó los datos del formulario. Verificá que el email sea válido y la fecha tenga formato DD/MM/YYYY.',
+        );
+      }
+    });
+  }
+
+  @override
+  Future<void> deleteAvatar() {
+    return _enqueue(() async {
+      const path = '/perfil/event/eliminarAvatar/';
+      final response = await _dio.get<String>(
+        path,
+        options: Options(headers: {'Referer': '$kMielBaseUrl/perfil/datos/'}),
+      );
+      _assertWriteResponse(response, path);
+    });
+  }
+
+  @override
+  Future<void> changePassword({
+    required String claveAnterior,
+    required String claveNueva,
+  }) {
+    return _enqueue(() async {
+      const path = '/perfil/event/cambiarClave/';
+      final response = await _dio.post<String>(
+        path,
+        data: {
+          'claveAnterior': claveAnterior,
+          'claveNueva': claveNueva,
+          'claveNueva2': claveNueva,
+        },
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+          headers: {'Referer': '$kMielBaseUrl/perfil/seguridad/'},
+        ),
+      );
+      final body = _assertWriteResponse(response, path);
+      if (body.contains('/errores/input') ||
+          body.contains('formato no válido')) {
+        throw const FormatException(
+          'MIeL rechazó la nueva contraseña. Verificá que la contraseña actual sea correcta y que la nueva cumpla los requisitos (mínimo 8 caracteres).',
+        );
+      }
     });
   }
 }

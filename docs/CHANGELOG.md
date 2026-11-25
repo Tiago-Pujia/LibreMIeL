@@ -7,6 +7,33 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-25
+
+### Added
+- **Perfil de MIeL (lectura y modificación fiel a MIeL):**
+  - Pantalla de perfil replicando el diseño oficial de MIeL y parsing de datos personales inyectados vía jQuery inline (`miel_perfil_parser.dart`).
+  - Edición de datos personales/contacto, cambio de contraseña, previsualización y actualización/eliminación de foto de avatar (`MielWriter` hacia `/perfil/event/*`).
+- **Portafolio — Entregas grupales:**
+  - Soporte de entrega grupal y selección de grupo en entregas de práctica (`portafolio_submission_card.dart`, `portafolio_parser.dart`).
+- **Inicio con el sistema en segundo plano:**
+  - Registro de argumento `--minimized` en `AutostartService` para Linux, Windows y macOS, supresión de `first-frame` en runners nativos y arranque silencioso en bandeja del sistema (`DesktopTrayService`).
+- **Widgets Android e identidad visual oficial:**
+  - Modernización de widgets Android (`2×2`/`3×2`, `4×1`, `4×2`/`4×3`) integrando el isotipo oficial de LibreMIeL (`ic_widget_logo.png`) y prototipo interactivo en [`docs/prototypes/android_widgets.html`](prototypes/android_widgets.html).
+  - Incorporación de identidad visual oficial, paleta cromática y generador de íconos normalizados en `branding/`.
+- **Barra lateral:**
+  - Enlaces inferiores de **Sitio web** y **Reportar Bug** (WhatsApp) junto a **Abrir MIeL web** y **Repositorio GitHub**.
+- **Documentación:**
+  - Registro de tareas pendientes y seguimiento en [`docs/STATUS.md`](STATUS.md), [`docs/ROADMAP.md`](ROADMAP.md) y [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
+
+### Changed
+- Mayor altura y espaciado en la barra superior de marca con el logotipo institucional.
+- En **Mi perfil**, se quitó el acceso redundante a Ajustes de LibreMIeL para mantener fidelidad con el menú de MIeL.
+- En **Mensajería > Nuevo mensaje**, se quitó el botón `Abrir en MIeL`, se conservó el retorno directo a la bandeja de origen (**Volver a la bandeja**) y se incorporó filtrado tokenizado en tiempo real con etiqueta `Destinatario:` en **Salida** y **Borradores**.
+
+### Fixed
+- **Zoom de interfaz y hit-testing (`BrowserZoomViewport`):** reemplazo de `Transform.scale` + `OverflowBox` por `FittedBox` para corregir clics, zona interactiva y hover del puntero con zoom menor al `100%` en la parte inferior de la barra lateral izquierda y en **Mensajería > Redactar / Filtrar**, además de limpiar entradas duplicadas en el historial de navegación.
+- **Despliegue de GitHub Pages (`pages.yml`):** separación en jobs `build` y `deploy` con acciones actualizadas a Node 24 para evitar errores al consultar metadatos del artefacto.
+
 ## [0.2.1] - 2026-11-23
 
 ### Added

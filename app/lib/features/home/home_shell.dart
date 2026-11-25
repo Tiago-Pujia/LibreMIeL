@@ -56,6 +56,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
   );
   int _moduleSectionNavTick = 0;
   int _findFocusTick = 0;
+  MielProfileTab _settingsInitialTab = MielProfileTab.datosPersonales;
 
   StreamSubscription<NotificationTapPayload>? _notifTapSub;
   StreamSubscription<NotificationTapPayload>? _widgetTapSub;
@@ -324,29 +325,17 @@ class _HomeShellState extends ConsumerState<HomeShell>
     _navigateTo(const NavigationHistoryEntry.novedades());
   }
 
-  void _goAjustes() {
+  void _goAjustes({
+    MielProfileTab initialTab = MielProfileTab.ajustesLibreMiel,
+  }) {
+    setState(() {
+      _settingsInitialTab = initialTab;
+    });
     _navigateTo(const NavigationHistoryEntry.ajustes());
   }
 
   void _openUserProfile(AppSessionState session, List<Subject> subjects) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => _UserProfileDialog(
-        session: session,
-        activeSubjectsCount: subjects
-            .where((s) => !s.isEffectivelyHidden)
-            .length,
-        hiddenSubjectsCount: subjects
-            .where((s) => s.isEffectivelyHidden)
-            .length,
-        storageLabel: ref.read(credentialsStoreProvider).storageBackendLabel,
-        onOpenMielProfile: () => _openExternal('$kMielBaseUrl/perfil/datos/'),
-        onLogout: () {
-          Navigator.of(context).pop();
-          ref.read(appSessionProvider.notifier).logout();
-        },
-      ),
-    );
+    _goAjustes(initialTab: MielProfileTab.datosPersonales);
   }
 
   void _openModule(
@@ -381,6 +370,19 @@ class _HomeShellState extends ConsumerState<HomeShell>
     return true;
   }
 
+  void _selectModuleSection(int idx) {
+    final current = ref.read(navigationHistoryProvider).current;
+    _moduleSectionNavTick++;
+    _navigateTo(
+      current.copyWith(
+        moduleSectionIndex: idx,
+        clearForoTopicId: true,
+        clearPortafolioPractice: true,
+        mensajeriaState: const MensajeriaViewRouteState(),
+      ),
+    );
+  }
+
   void _closeDrawerIfOpen() {
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.of(context).pop();
@@ -391,7 +393,19 @@ class _HomeShellState extends ConsumerState<HomeShell>
     _closeDrawerIfOpen();
     final uri = Uri.tryParse(url);
     if (uri != null) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      try {
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          await launchUrl(uri);
+        }
+      } catch (_) {
+        try {
+          await launchUrl(uri);
+        } catch (_) {}
+      }
     }
   }
 
@@ -437,16 +451,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
       onSelectHome: _goHome,
       onSelectNovedades: _goNovedades,
       onSelectAjustes: _goAjustes,
-      onSelectModuleSection: (idx) {
-        _moduleSectionNavTick++;
-        _navigateTo(
-          currentEntry.copyWith(
-            moduleSectionIndex: idx,
-            clearForoTopicId: true,
-            clearPortafolioPractice: true,
-          ),
-        );
-      },
+      onSelectModuleSection: _selectModuleSection,
       onSelectForoTopic: (topicId) {
         _navigateTo(
           currentEntry.copyWith(
@@ -476,12 +481,16 @@ class _HomeShellState extends ConsumerState<HomeShell>
         scrollController: _contentScrollController,
         inPageFindQuery: findState.query,
       ),
-      BrowserShellSection.ajustes => const SettingsScreen(),
+      BrowserShellSection.ajustes => SettingsScreen(
+        initialTab: _settingsInitialTab,
+        onGoHome: _goHome,
+      ),
       BrowserShellSection.module => ModuleReaderHost(
         subject: activeSubject!,
         tool: activeTool,
         sectionIndex: activeModuleSectionIndex,
         sectionResetTick: _moduleSectionNavTick,
+        onSelectSection: _selectModuleSection,
         selectedForoTopicId: activeForoTopicId,
         onSelectForoTopic: (topicId) {
           _navigateTo(
@@ -596,6 +605,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
               onToggleTheme: () => ref
                   .read(appSessionProvider.notifier)
                   .toggleThemeMode(Theme.of(context).brightness),
+              onGoAjustes: () =>
+                  _goAjustes(initialTab: MielProfileTab.ajustesLibreMiel),
               onLogout: () => ref.read(appSessionProvider.notifier).logout(),
             ),
 
@@ -760,6 +771,7 @@ class _MielDoubleHeader extends StatelessWidget {
     required this.onSelectTool,
     required this.onSyncNow,
     required this.onToggleTheme,
+    required this.onGoAjustes,
     required this.onLogout,
   });
 
@@ -784,6 +796,7 @@ class _MielDoubleHeader extends StatelessWidget {
   final ValueChanged<MielToolKind> onSelectTool;
   final VoidCallback onSyncNow;
   final VoidCallback onToggleTheme;
+  final VoidCallback onGoAjustes;
   final VoidCallback onLogout;
 
   @override
@@ -802,7 +815,7 @@ class _MielDoubleHeader extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: SizedBox(
-              height: 54,
+              height: isMobileHeader ? 62 : 58,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: isMobileHeader
@@ -925,7 +938,7 @@ class _MielDoubleHeader extends StatelessWidget {
                   label: switch (section) {
                     BrowserShellSection.home => 'Menú principal',
                     BrowserShellSection.novedades => 'Notificaciones',
-                    BrowserShellSection.ajustes => 'Ajustes',
+                    BrowserShellSection.ajustes => 'Menú principal',
                     BrowserShellSection.module => 'Menú principal',
                   },
                   onTap: onGoHome,
@@ -934,7 +947,7 @@ class _MielDoubleHeader extends StatelessWidget {
 
               const Spacer(),
 
-              // Derecha: Sincronizar + Campana de notificaciones + Contraste claro/oscuro (+ Usuario/Salir en móvil)
+              // Derecha: Sincronizar + Campana de notificaciones + Contraste claro/oscuro + Ajustes (+ Usuario/Salir en móvil)
               if (session.isSyncing)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 10),
@@ -958,6 +971,12 @@ class _MielDoubleHeader extends StatelessWidget {
                 tooltip: 'Cambiar modo claro / oscuro',
                 icon: Icons.brightness_4,
                 onTap: onToggleTheme,
+              ),
+
+              _NavIconAction(
+                tooltip: 'Ajustes y perfil',
+                icon: Icons.settings,
+                onTap: onGoAjustes,
               ),
 
               if (isMobileHeader) ...[
@@ -1568,6 +1587,8 @@ class _MielSidebar extends ConsumerWidget {
 }
 
 const String _kLibreMielRepoUrl = 'https://github.com/Tiago-Pujia/LibreMIeL';
+const String _kLibreMielWebsiteUrl = 'https://tiago-pujia.github.io/LibreMIeL/';
+const String _kLibreMielReportIssuesUrl = 'https://wa.me/5491135201875';
 
 class _SidebarFooterLinks extends StatelessWidget {
   const _SidebarFooterLinks({required this.onOpenExternal});
@@ -1582,16 +1603,28 @@ class _SidebarFooterLinks extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _SidebarItem(
+            icon: Icons.open_in_new,
+            label: 'Abrir MIeL web',
+            selected: false,
+            onTap: () => onOpenExternal('$kMielBaseUrl/principal/interno/'),
+          ),
+          _SidebarItem(
+            icon: Icons.language,
+            label: 'Sitio web',
+            selected: false,
+            onTap: () => onOpenExternal(_kLibreMielWebsiteUrl),
+          ),
+          _SidebarItem(
             icon: Icons.code,
             label: 'Repositorio GitHub',
             selected: false,
             onTap: () => onOpenExternal(_kLibreMielRepoUrl),
           ),
           _SidebarItem(
-            icon: Icons.open_in_new,
-            label: 'Abrir MIeL web',
+            icon: Icons.bug_report_outlined,
+            label: 'Reportar Bug',
             selected: false,
-            onTap: () => onOpenExternal('$kMielBaseUrl/principal/interno/'),
+            onTap: () => onOpenExternal(_kLibreMielReportIssuesUrl),
           ),
         ],
       ),
@@ -1658,262 +1691,53 @@ class _SidebarItemState extends State<_SidebarItem> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: Material(
-          color: bg,
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+        child: InkWell(
+          onTap: widget.onTap,
+          onHover: (hovered) {
+            if (_hovered != hovered) {
+              setState(() => _hovered = hovered);
+            }
+          },
+          mouseCursor: SystemMouseCursors.click,
           borderRadius: BorderRadius.circular(4),
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(4),
-            hoverColor: palette.sidebarHover,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              child: Row(
-                children: [
-                  Icon(widget.icon, size: 19, color: iconColor),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Text(
-                      widget.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: widget.selected
-                            ? FontWeight.w500
-                            : FontWeight.w400,
-                        color: palette.textPrimary,
-                      ),
+          hoverColor: palette.sidebarHover,
+          splashColor: palette.sidebarSelected.withValues(alpha: 0.35),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            child: Row(
+              children: [
+                Icon(widget.icon, size: 19, color: iconColor),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: widget.selected
+                          ? FontWeight.w500
+                          : FontWeight.w400,
+                      color: palette.textPrimary,
                     ),
                   ),
-                  if (widget.badgeCount > 0) ...[
-                    const SizedBox(width: 6),
-                    MielRedBadge(
-                      count: widget.badgeCount,
-                      backgroundColor: palette.badgeRed,
-                      compact: true,
-                    ),
-                  ],
+                ),
+                if (widget.badgeCount > 0) ...[
+                  const SizedBox(width: 6),
+                  MielRedBadge(
+                    count: widget.badgeCount,
+                    backgroundColor: palette.badgeRed,
+                    compact: true,
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Modal "Mi perfil" accesible desde el enlace de usuario o avatar en la barra superior.
-class _UserProfileDialog extends StatelessWidget {
-  const _UserProfileDialog({
-    required this.session,
-    required this.activeSubjectsCount,
-    required this.hiddenSubjectsCount,
-    required this.storageLabel,
-    required this.onOpenMielProfile,
-    required this.onLogout,
-  });
-
-  final AppSessionState session;
-  final int activeSubjectsCount;
-  final int hiddenSubjectsCount;
-  final String storageLabel;
-  final VoidCallback onOpenMielProfile;
-  final VoidCallback onLogout;
-
-  String _formatLastSync(DateTime? dt) {
-    if (dt == null) return 'Aún no sincronizado';
-    final l = dt.toLocal();
-    final d = l.day.toString().padLeft(2, '0');
-    final m = l.month.toString().padLeft(2, '0');
-    final hh = l.hour.toString().padLeft(2, '0');
-    final mm = l.minute.toString().padLeft(2, '0');
-    return '$d/$m ${l.year} $hh:$mm';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MielPalette.of(context);
-    final name = session.studentName.isNotEmpty
-        ? session.studentName
-        : 'Estudiante MIeL';
-
-    return Dialog(
-      insetPadding: const EdgeInsets.all(20),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(18, 14, 10, 14),
-              decoration: BoxDecoration(
-                color: palette.primary,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(4),
-                ),
-              ),
-              child: Row(
-                children: [
-                  MielAvatar(
-                    avatarUrl: session.studentAvatarUrl,
-                    radius: 20,
-                    fallbackBackgroundColor: Colors.white24,
-                    fallbackIconColor: Colors.white,
-                    fallbackIconSize: 26,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Mi perfil',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ProfileInfoRow(
-                    icon: Icons.school_outlined,
-                    label: 'Materias',
-                    value: hiddenSubjectsCount > 0
-                        ? '$activeSubjectsCount activas · $hiddenSubjectsCount ocultas'
-                        : '$activeSubjectsCount activas',
-                    palette: palette,
-                  ),
-                  const SizedBox(height: 10),
-                  _ProfileInfoRow(
-                    icon: Icons.sync,
-                    label: 'Última sincronización',
-                    value: _formatLastSync(session.lastSyncAt),
-                    palette: palette,
-                  ),
-                  const SizedBox(height: 10),
-                  _ProfileInfoRow(
-                    icon: Icons.key_outlined,
-                    label: 'Credenciales',
-                    value: storageLabel,
-                    palette: palette,
-                  ),
-                ],
-              ),
-            ),
-            Divider(color: palette.divider, height: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  TextButton.icon(
-                    onPressed: onLogout,
-                    icon: Icon(Icons.logout, size: 17, color: palette.badgeRed),
-                    label: Text(
-                      'Cerrar sesión',
-                      style: TextStyle(color: palette.badgeRed),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: onOpenMielProfile,
-                    icon: Icon(
-                      Icons.open_in_new,
-                      size: 17,
-                      color: palette.linkAccent,
-                    ),
-                    label: Text(
-                      'Perfil en MIeL',
-                      style: TextStyle(color: palette.linkAccent),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: palette.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                    child: const Text('Cerrar'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileInfoRow extends StatelessWidget {
-  const _ProfileInfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.palette,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final MielPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: palette.linkAccent),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 12, color: palette.textMuted),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w500,
-                  color: palette.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

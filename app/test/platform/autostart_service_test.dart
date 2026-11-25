@@ -36,7 +36,7 @@ void main() {
         );
         expect(desktopFile.existsSync(), isTrue);
         final contents = await desktopFile.readAsString();
-        expect(contents, contains('Exec=/opt/libremiel/libremiel'));
+        expect(contents, contains('Exec=/opt/libremiel/libremiel --minimized'));
         expect(contents, contains('X-GNOME-Autostart-enabled=true'));
 
         final disabled = await service.setEnabled(false);

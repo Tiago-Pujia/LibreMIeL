@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -174,18 +176,44 @@ void main() {
       expect(find.text('Mi perfil'), findsOneWidget);
       expect(find.text('Sincronizar'), findsNothing);
 
-      // Barra lateral exacta: Utilidades (Materias Activas), Funcionalidades (Ajustes, Notificaciones), Repositorio GitHub, Abrir MIeL web
+      // Barra lateral exacta: Utilidades (Materias Activas), Funcionalidades (Ajustes, Notificaciones), Abrir MIeL web, Sitio web, Repositorio GitHub, Reportar Bug
       expect(find.text('Utilidades'), findsOneWidget);
       expect(find.text('Materias Activas'), findsOneWidget);
       expect(find.text('Funcionalidades'), findsOneWidget);
       expect(find.text('Ajustes'), findsOneWidget);
       expect(find.text('Notificaciones'), findsOneWidget);
-      expect(find.text('Repositorio GitHub'), findsOneWidget);
       expect(find.text('Abrir MIeL web'), findsOneWidget);
+      expect(find.text('Sitio web'), findsOneWidget);
+      expect(find.text('Repositorio GitHub'), findsOneWidget);
+      expect(find.text('Reportar Bug'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Abrir MIeL web')).dy,
+        lessThan(tester.getTopLeft(find.text('Sitio web')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('Sitio web')).dy,
+        lessThan(tester.getTopLeft(find.text('Repositorio GitHub')).dy),
+      );
       expect(
         tester.getTopLeft(find.text('Repositorio GitHub')).dy,
-        lessThan(tester.getTopLeft(find.text('Abrir MIeL web')).dy),
+        lessThan(tester.getTopLeft(find.text('Reportar Bug')).dy),
       );
+
+      // Verificar que los 4 enlaces de la barra lateral reciben hover de puntero mouse
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+
+      for (final label in [
+        'Abrir MIeL web',
+        'Sitio web',
+        'Repositorio GitHub',
+        'Reportar Bug',
+      ]) {
+        await gesture.moveTo(tester.getCenter(find.text(label)));
+        await tester.pumpAndSettle();
+      }
+
       expect(find.text('Calendario'), findsNothing);
       expect(find.text('Biblioteca BiDi'), findsNothing);
 

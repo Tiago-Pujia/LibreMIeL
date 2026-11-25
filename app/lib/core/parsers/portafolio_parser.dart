@@ -56,13 +56,35 @@ List<PortfolioPractice> parsePortafolioPracticasHtml(
 
     String cellText(int index) {
       if (index >= cells.length) return '';
-      final txt = cleanWhitespace(cells[index].text);
+      final raw = cells[index].children.isNotEmpty
+          ? cells[index].children
+                .map((c) => c.text.trim())
+                .where((t) => t.isNotEmpty)
+                .join(' ')
+          : cells[index].text;
+      final txt = cleanWhitespace(raw);
       return txt == '---' ? '' : txt;
     }
 
     // Orden estándar de columnas:
     // 0: Práctica | 1: Entrega | 2: F. vencim. | 3: Detalle entregas | 4: F. entrega | 5: F. correc. | 6: Estado | 7: Nota
-    final deliveryType = cellText(1);
+    final deliveryType = cellText(1)
+        .replaceAll(
+          RegExp(r'obligatoria\s*grupal', caseSensitive: false),
+          'obligatoria grupal',
+        )
+        .replaceAll(
+          RegExp(r'opcional\s*grupal', caseSensitive: false),
+          'opcional grupal',
+        )
+        .replaceAll(
+          RegExp(r'obligatoria\s*individual', caseSensitive: false),
+          'obligatoria individual',
+        )
+        .replaceAll(
+          RegExp(r'opcional\s*individual', caseSensitive: false),
+          'opcional individual',
+        );
     final dueDate = cellText(2);
     final deliveryDate = cellText(4);
     final correctionDate = cellText(5);
@@ -287,6 +309,52 @@ PortfolioPracticeDetail parsePortafolioEntregasDetalleHtml(
         ),
       );
     }
+    final groupCheckboxes = formEl.querySelectorAll('input[type="checkbox"]');
+    Element? groupCheckbox;
+    for (final cb in groupCheckboxes) {
+      final name = cb.attributes['name']?.toLowerCase() ?? '';
+      if (name.contains('grupal') || name.contains('grupo')) {
+        groupCheckbox = cb;
+        break;
+      }
+    }
+    groupCheckbox ??= groupCheckboxes.isNotEmpty ? groupCheckboxes.first : null;
+    final groupSelect = formEl.querySelector(
+      'select[name="idGrupo"], select[name="grupo"], select[name="codGrupo"], select:not([name="tutorDestinatario"])',
+    );
+
+    final formGroups = <PortfolioGroupOption>[];
+    final seenGroupIds = <String>{};
+    if (groupSelect != null) {
+      for (final opt in groupSelect.querySelectorAll('option')) {
+        final rawId = (opt.attributes['value'] ?? '').trim();
+        final name = cleanWhitespace(opt.text);
+        if (name.isEmpty) continue;
+        final id = rawId.isEmpty ? name : rawId;
+        if (seenGroupIds.add(id)) {
+          formGroups.add(PortfolioGroupOption(id: id, name: name));
+        }
+      }
+    }
+
+    final isGrupalMode = deliveryModeLabel.toLowerCase().contains('grupal');
+    final allowsGroup =
+        groupCheckbox != null || groupSelect != null || isGrupalMode;
+    final isGroupDefault =
+        groupCheckbox?.attributes.containsKey('checked') ?? isGrupalMode;
+    final groupCheckboxName =
+        (groupCheckbox?.attributes['name'] ?? '').trim().isNotEmpty
+        ? groupCheckbox!.attributes['name']!.trim()
+        : 'entregaGrupal';
+    final groupCheckboxValue =
+        (groupCheckbox?.attributes['value'] ?? '').trim().isNotEmpty
+        ? groupCheckbox!.attributes['value']!.trim()
+        : '1';
+    final groupSelectName =
+        (groupSelect?.attributes['name'] ?? '').trim().isNotEmpty
+        ? groupSelect!.attributes['name']!.trim()
+        : 'idGrupo';
+
     final allowsLink = formEl.querySelector('input[name="enlace"]') != null;
     submissionForm = PortfolioSubmissionFormMeta(
       canSubmit: true,
@@ -294,6 +362,12 @@ PortfolioPracticeDetail parsePortafolioEntregasDetalleHtml(
       allowsLink: allowsLink,
       requiresFile: !allowsLink,
       maxSizeMb: 40,
+      allowsGroup: allowsGroup,
+      isGroupDefault: isGroupDefault,
+      groupCheckboxName: groupCheckboxName,
+      groupCheckboxValue: groupCheckboxValue,
+      groupSelectName: groupSelectName,
+      groups: formGroups,
     );
   }
 

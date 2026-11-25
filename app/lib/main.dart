@@ -4,14 +4,28 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:window_manager/window_manager.dart';
+
 import 'app/app_providers.dart';
 import 'core/theme/miel_theme.dart';
 import 'features/auth/login_screen.dart';
 import 'features/home/home_shell.dart';
 import 'platform/android_background_worker.dart';
+import 'platform/desktop_tray_service.dart';
 
-void main() async {
+void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (DesktopTrayService.isDesktop) {
+    final startMinimized =
+        args.contains('--minimized') || args.contains('--hidden');
+    DesktopTrayService.startMinimizedRequested = startMinimized;
+    if (startMinimized) {
+      try {
+        await windowManager.ensureInitialized();
+        await windowManager.hide();
+      } catch (_) {}
+    }
+  }
   if (!kIsWeb && Platform.isAndroid) {
     try {
       await AndroidBackgroundWorker.ensureInitialized();

@@ -18,6 +18,7 @@ class PortafolioSubmissionCard extends ConsumerStatefulWidget {
     required this.formMeta,
     required this.webUrl,
     required this.onSubmitted,
+    this.deliveryType = '',
   });
 
   final String idComision;
@@ -26,6 +27,7 @@ class PortafolioSubmissionCard extends ConsumerStatefulWidget {
   final PortfolioSubmissionFormMeta formMeta;
   final String webUrl;
   final VoidCallback onSubmitted;
+  final String deliveryType;
 
   @override
   ConsumerState<PortafolioSubmissionCard> createState() =>
@@ -37,6 +39,8 @@ class _PortafolioSubmissionCardState
   final TextEditingController _observationsController = TextEditingController();
   final TextEditingController _linkController = TextEditingController();
   late String _selectedTutorId;
+  late bool _isGroupDelivery;
+  String? _selectedGroupId;
   String? _attachmentPath;
   String? _attachmentName;
   bool _submitting = false;
@@ -50,6 +54,11 @@ class _PortafolioSubmissionCardState
     _selectedTutorId = widget.formMeta.tutors.isNotEmpty
         ? widget.formMeta.tutors.first.id
         : '0';
+    final isGrupal =
+        widget.formMeta.isGroupDefault ||
+        widget.formMeta.allowsGroup ||
+        widget.deliveryType.toLowerCase().contains('grupal');
+    _isGroupDelivery = isGrupal;
     _observationsController.addListener(_syncDirtyState);
     _linkController.addListener(_syncDirtyState);
   }
@@ -85,6 +94,12 @@ class _PortafolioSubmissionCardState
       _selectedTutorId = widget.formMeta.tutors.isNotEmpty
           ? widget.formMeta.tutors.first.id
           : '0';
+      final isGrupal =
+          widget.formMeta.isGroupDefault ||
+          widget.formMeta.allowsGroup ||
+          widget.deliveryType.toLowerCase().contains('grupal');
+      _isGroupDelivery = isGrupal;
+      _selectedGroupId = null;
     }
   }
 
@@ -120,7 +135,11 @@ class _PortafolioSubmissionCardState
     }
   }
 
-  Future<void> _confirmAndSubmit() async {
+  Future<void> _confirmAndSubmit({
+    required String validTutorId,
+    required List<PortfolioGroupOption> availableGroups,
+    required String validGroupId,
+  }) async {
     final hasFile = _attachmentPath != null && _attachmentPath!.isNotEmpty;
     final link = _linkController.text.trim();
     final hasLink = widget.formMeta.allowsLink && link.isNotEmpty;
@@ -149,9 +168,17 @@ class _PortafolioSubmissionCardState
     }
 
     final tutorLabel = widget.formMeta.tutors
-        .where((t) => t.id == _selectedTutorId)
+        .where((t) => t.id == validTutorId)
         .map((t) => t.name)
         .firstOrNull;
+
+    final groupLabel = _isGroupDelivery
+        ? (availableGroups
+                  .where((g) => g.id == validGroupId)
+                  .map((g) => g.name)
+                  .firstOrNull ??
+              'Grupo seleccionado')
+        : null;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -166,6 +193,8 @@ class _PortafolioSubmissionCardState
             if (tutorLabel != null) Text('Docente destinatario: $tutorLabel'),
             if (hasFile) Text('Archivo: $_attachmentName'),
             if (hasLink) Text('Enlace: $link'),
+            if (_isGroupDelivery && groupLabel != null)
+              Text('Entrega grupal: $groupLabel'),
             const SizedBox(height: 10),
             const Text(
               'Esta acción registrará la entrega directamente en MIeL UNLaM.',
@@ -196,10 +225,15 @@ class _PortafolioSubmissionCardState
         (writer) => writer.submitPortafolioEntrega(
           idComision: widget.idComision,
           idPractica: widget.idPractica,
-          tutorDestinatarioId: _selectedTutorId,
+          tutorDestinatarioId: validTutorId,
           observations: _observationsController.text.trim(),
           externalLink: hasLink ? link : null,
           attachmentPath: hasFile ? _attachmentPath : null,
+          isGroupDelivery: _isGroupDelivery,
+          groupId: _isGroupDelivery ? validGroupId : null,
+          groupCheckboxName: widget.formMeta.groupCheckboxName,
+          groupCheckboxValue: widget.formMeta.groupCheckboxValue,
+          groupSelectName: widget.formMeta.groupSelectName,
         ),
       );
       if (!mounted) return;
@@ -259,6 +293,23 @@ class _PortafolioSubmissionCardState
         ? _selectedTutorId
         : tutors.first.id;
 
+    final groupsAsync = ref.watch(portafolioGruposProvider(widget.idComision));
+    final registeredGroups = groupsAsync.asData?.value ?? const [];
+
+    final availableGroups = <PortfolioGroupOption>[
+      if (widget.formMeta.groups.isNotEmpty)
+        ...widget.formMeta.groups
+      else if (registeredGroups.isNotEmpty)
+        for (final g in registeredGroups)
+          PortfolioGroupOption(id: g.idGrupo, name: g.name)
+      else
+        const PortfolioGroupOption(id: '0', name: 'Mi grupo'),
+    ];
+
+    final validGroupId = availableGroups.any((g) => g.id == _selectedGroupId)
+        ? _selectedGroupId!
+        : availableGroups.first.id;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -266,72 +317,75 @@ class _PortafolioSubmissionCardState
         borderRadius: BorderRadius.circular(3),
         border: Border.all(color: palette.cardBorder),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Nueva entrega',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w400,
-                    color: palette.textPrimary,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Nueva entrega',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w400,
+                      color: palette.textPrimary,
+                    ),
                   ),
                 ),
-              ),
-              MielHoverLink(
-                text: 'Abrir en MIeL',
+                MielHoverLink(
+                  text: 'Abrir en MIeL',
+                  fontSize: 12.5,
+                  leadingIcon: Icons.open_in_new,
+                  leadingIconSize: 14,
+                  onTap: () => openMielExternalUrl(widget.webUrl),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // 1. Docente destinatario
+            Text(
+              'Docente destinatario:',
+              style: TextStyle(
                 fontSize: 12.5,
-                leadingIcon: Icons.open_in_new,
-                leadingIconSize: 14,
-                onTap: () => openMielExternalUrl(widget.webUrl),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          Text(
-            'Docente destinatario:',
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: palette.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            height: 38,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: palette.inputBackground,
-              border: Border.all(color: palette.inputBorder),
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: validTutorId,
-                isExpanded: true,
-                dropdownColor: palette.dropdownBackground,
-                style: TextStyle(fontSize: 13, color: palette.textPrimary),
-                items: [
-                  for (final t in tutors)
-                    DropdownMenuItem(value: t.id, child: Text(t.name)),
-                ],
-                onChanged: _submitting
-                    ? null
-                    : (v) {
-                        if (v != null) setState(() => _selectedTutorId = v);
-                      },
+                fontWeight: FontWeight.w600,
+                color: palette.textSecondary,
               ),
             ),
-          ),
+            const SizedBox(height: 4),
+            Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: palette.inputBackground,
+                border: Border.all(color: palette.inputBorder),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: validTutorId,
+                  isExpanded: true,
+                  dropdownColor: palette.dropdownBackground,
+                  style: TextStyle(fontSize: 13, color: palette.textPrimary),
+                  items: [
+                    for (final t in tutors)
+                      DropdownMenuItem(value: t.id, child: Text(t.name)),
+                  ],
+                  onChanged: _submitting
+                      ? null
+                      : (v) {
+                          if (v != null) setState(() => _selectedTutorId = v);
+                        },
+                ),
+              ),
+            ),
 
-          if (widget.formMeta.allowsLink) ...[
+            // 2. Mensaje
             const SizedBox(height: 12),
             Text(
-              'Enlace externo (opcional si subís archivo):',
+              'Mensaje / observaciones (opcional):',
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
@@ -340,19 +394,17 @@ class _PortafolioSubmissionCardState
             ),
             const SizedBox(height: 4),
             TextField(
-              controller: _linkController,
+              controller: _observationsController,
               enabled: !_submitting,
+              minLines: 3,
+              maxLines: 6,
               style: TextStyle(fontSize: 13, color: palette.textPrimary),
               decoration: InputDecoration(
-                hintText: 'https://…',
+                hintText: 'Comentarios para el docente…',
                 hintStyle: TextStyle(color: palette.textMuted, fontSize: 13),
                 filled: true,
                 fillColor: palette.inputBackground,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 9,
-                ),
+                contentPadding: const EdgeInsets.all(10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(2),
                   borderSide: BorderSide(color: palette.inputBorder),
@@ -363,92 +415,184 @@ class _PortafolioSubmissionCardState
                 ),
               ),
             ),
-          ],
 
-          const SizedBox(height: 12),
-          Text(
-            'Archivo de entrega (máx. ${widget.formMeta.maxSizeMb} MB):',
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: palette.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 10,
-            runSpacing: 8,
-            children: [
-              MielActionButton(
-                label: _attachmentName == null
-                    ? 'Seleccionar archivo'
-                    : 'Cambiar archivo',
-                icon: Icons.upload_file,
-                onPressed: _submitting ? null : _pickFile,
+            // 3. Cargar archivo
+            const SizedBox(height: 12),
+            Text(
+              'Archivo de entrega (máx. ${widget.formMeta.maxSizeMb} MB):',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: palette.textSecondary,
               ),
-              if (_attachmentName != null)
-                InputChip(
-                  avatar: const Icon(Icons.insert_drive_file, size: 16),
-                  label: Text(
-                    _attachmentName!,
-                    style: const TextStyle(fontSize: 12.5),
-                  ),
-                  deleteIcon: const Icon(Icons.close, size: 15),
-                  onDeleted: _submitting
-                      ? null
-                      : () => setState(() {
-                          _attachmentPath = null;
-                          _attachmentName = null;
-                        }),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 10,
+              runSpacing: 8,
+              children: [
+                MielActionButton(
+                  label: _attachmentName == null
+                      ? 'Cargar archivo (hasta ${widget.formMeta.maxSizeMb} MB)'
+                      : 'Cambiar archivo',
+                  icon: Icons.attach_file,
+                  onPressed: _submitting ? null : _pickFile,
                 ),
+                if (_attachmentName != null)
+                  InputChip(
+                    avatar: const Icon(Icons.insert_drive_file, size: 16),
+                    label: Text(
+                      _attachmentName!,
+                      style: const TextStyle(fontSize: 12.5),
+                    ),
+                    deleteIcon: const Icon(Icons.close, size: 15),
+                    onDeleted: _submitting
+                        ? null
+                        : () => setState(() {
+                            _attachmentPath = null;
+                            _attachmentName = null;
+                          }),
+                  ),
+              ],
+            ),
+
+            if (widget.formMeta.allowsLink) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Enlace externo (opcional si subís archivo):',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: palette.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextField(
+                controller: _linkController,
+                enabled: !_submitting,
+                style: TextStyle(fontSize: 13, color: palette.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'https://…',
+                  hintStyle: TextStyle(color: palette.textMuted, fontSize: 13),
+                  filled: true,
+                  fillColor: palette.inputBackground,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 9,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(2),
+                    borderSide: BorderSide(color: palette.inputBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(2),
+                    borderSide: BorderSide(color: palette.inputBorder),
+                  ),
+                ),
+              ),
             ],
-          ),
 
-          const SizedBox(height: 12),
-          Text(
-            'Mensaje / observaciones (opcional):',
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: palette.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          TextField(
-            controller: _observationsController,
-            enabled: !_submitting,
-            minLines: 3,
-            maxLines: 6,
-            style: TextStyle(fontSize: 13, color: palette.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Comentarios para el docente…',
-              hintStyle: TextStyle(color: palette.textMuted, fontSize: 13),
-              filled: true,
-              fillColor: palette.inputBackground,
-              contentPadding: const EdgeInsets.all(10),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(2),
-                borderSide: BorderSide(color: palette.inputBorder),
+            // 4. Entrega grupal
+            const SizedBox(height: 14),
+            InkWell(
+              onTap: _submitting
+                  ? null
+                  : () => setState(() => _isGroupDelivery = !_isGroupDelivery),
+              borderRadius: BorderRadius.circular(3),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: _isGroupDelivery,
+                      onChanged: _submitting
+                          ? null
+                          : (val) =>
+                                setState(() => _isGroupDelivery = val ?? false),
+                      activeColor: palette.primary,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Entrega grupal (práctica realizada por varios alumnos).',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: palette.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(2),
-                borderSide: BorderSide(color: palette.inputBorder),
-              ),
             ),
-          ),
 
-          const SizedBox(height: 14),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: MielActionButton(
-              label: _submitting ? 'Enviando entrega…' : 'Enviar entrega',
-              icon: Icons.send,
-              primary: true,
-              onPressed: _submitting ? null : _confirmAndSubmit,
+            // 5. Grupo
+            if (_isGroupDelivery) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Grupo:',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: palette.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: palette.inputBackground,
+                  border: Border.all(color: palette.inputBorder),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: validGroupId,
+                    isExpanded: true,
+                    dropdownColor: palette.dropdownBackground,
+                    style: TextStyle(fontSize: 13, color: palette.textPrimary),
+                    items: [
+                      for (final g in availableGroups)
+                        DropdownMenuItem(value: g.id, child: Text(g.name)),
+                    ],
+                    onChanged: _submitting
+                        ? null
+                        : (v) {
+                            if (v != null) {
+                              setState(() => _selectedGroupId = v);
+                            }
+                          },
+                  ),
+                ),
+              ),
+            ],
+
+            // 6. Enviar entrega
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: MielActionButton(
+                label: _submitting ? 'Enviando entrega…' : 'Enviar entrega',
+                icon: Icons.send,
+                primary: true,
+                onPressed: _submitting
+                    ? null
+                    : () => _confirmAndSubmit(
+                        validTutorId: validTutorId,
+                        availableGroups: availableGroups,
+                        validGroupId: validGroupId,
+                      ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

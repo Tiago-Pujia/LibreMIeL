@@ -21,8 +21,10 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
 | **Fase 8** | Actualizador Automático en la App | ✅ Completado | Alertas de nuevos releases en GitHub y actualización automática/asistida por SO sin salir al navegador |
 | **Fase 9** | Modo Offline y Contingencia ante Caídas de MIeL | ✅ Completado | Navegación opcional sin conexión (Contenidos, Mensajería, Foros, Portafolio) con sesión activa y aviso de servidor caído |
 | **Fase 10** | App Widget en Pantalla de Inicio (Android) | ✅ Completado | Widgets nativos en pantalla de inicio para resumen de novedades y materias |
-| **Fase 11** | Soporte para iOS e iPadOS | ⏳ Planificado | Target `app/ios/`, adaptación de notificaciones/background, compilación `.ipa` en CI/CD y distribución (AltStore / TestFlight / App Store) |
+| **Fase 11** | Soporte para iOS e iPadOS | ⏳ Planificado | Target `app/ios/`, adaptación de notificaciones/background, compilación `.ipa` en CI/CD y distribución (ver [`PLAN_IMPLEMENTACION_FASE_11.md`](PLAN_IMPLEMENTACION_FASE_11.md)) |
 | **Fase 12** | Navegación y Experiencia tipo Navegador Web | ✅ Completado | Historial Back/Forward (`Mouse 4/5`, `Alt+←/→`, Android `PopScope`), recarga contextual (`F5`/`Ctrl+R`), `Ctrl+F`, zoom, atajos web y *bfcache* sin efectos colaterales |
+
+> Ver el estado completo en [**STATUS.md**](STATUS.md#tabla-general-de-estado) y el detalle de cada tarea técnica a continuación.
 
 ---
 
@@ -275,3 +277,91 @@ Este documento describe en detalle las próximas fases planificadas para **Libre
   - Si existe texto, destinatarios o adjuntos sin guardar en [`MensajeriaComposePanel`](../app/lib/features/modules/widgets/mensajeria_composer.dart), [`PortafolioSubmissionCard`](../app/lib/features/modules/widgets/portafolio_submission_card.dart) o el redactor/respuesta de [`ForoView`](../app/lib/features/modules/foro_view.dart), interceptar la navegación atrás/adelante o `F5` con una confirmación explícita (*"Tenés cambios sin enviar, ¿querés descartarlos?"*).
 - **Alcance de ventana única:**
   - Se adopta explícitamente navegación en **ventana única con historial** en lugar de múltiples pestañas concurrentes para preservar el diseño original de MIeL y evitar duplicación de estado de `SyncEngine` o carreras sobre cookies/lecturas.
+
+---
+
+## Tareas y Mejoras Pendientes
+
+A continuación se detallan las tareas y mejoras técnicas planificadas para las próximas iteraciones de desarrollo, consolidando las fases restantes del proyecto, mejoras de plataforma y auditorías de calidad:
+
+### 1. Ejecutar Fases Restantes del Roadmap
+- **Fase 11 — Soporte para iOS e iPadOS (iPhone / iPad):**
+  - Ejecutar el plan técnico exhaustivo documentado en [`docs/PLAN_IMPLEMENTACION_FASE_11.md`](PLAN_IMPLEMENTACION_FASE_11.md).
+  - Generar el target nativo `app/ios/` con bundle ID canónico `io.github.tiagopujia.libremiel` y versión mínima iOS `15.0`.
+  - Configurar permisos en `Info.plist` para compatibilidad con la app nativa **Archivos** (`UIFileSharingEnabled`, `LSSupportsOpeningDocumentsInPlace`) y notificaciones locales.
+  - Almacenar la base SQLite en `ApplicationSupport` para protegerla de borrado accidental en la app Archivos.
+  - Registrar handlers de segundo plano con `BGTaskScheduler` (`workmanager_apple`) y canal nativo `ios_system` para compartir descargas.
+  - Implementar job de compilación automatizada `build-ios` en GitHub Actions (`macos-latest`) para generar paquetes `.ipa` sin requerir una Mac local.
+- **Fase 6 — Buscador Global Offline:**
+  - Implementar tablas virtuales FTS5 en SQLite (`Drift`) indexando Contenidos, Mensajería, Foros y Portafolio.
+  - Exponer interfaz de búsqueda global (`Ctrl + K` en escritorio / botón de lupa en móvil) con filtros por materia, módulo, docente y fecha.
+- **Fase 7 — Integración con IA (Asistente de Estudio):**
+  - Módulo opcional *local-first* y BYOK (Ollama, LM Studio o API keys de usuario) para resúmenes de apuntes y consultas RAG con citas directas a los archivos de la cátedra, garantizando total privacidad y anonimización de datos.
+
+### 2. Actualizar y Modernizar Widgets de Android e Identidad Visual *(Estado: ✅ Completado)*
+- **Componentes involucrados:** `app/android/app/src/main/kotlin/io/github/tiago_pujia/libremiel/`, `app/android/app/src/main/res/layout/`, `app/android/app/src/main/res/drawable-*/`, `branding/` y `docs/prototypes/android_widgets.html`.
+- **Implementación y entrega:**
+  - Modernización completa de layouts `RemoteViews` según prototipo aprobado (`docs/prototypes/android_widgets.html`): contador destacado (32sp), bordes del sistema en Android 12+ (`drawable-v31`) para tarjetas de contenido, y formatos 2×2, 4×1 y 4×2.
+  - Integración del isotipo circular oficial del pato y el gato (`foto ds.png`) en todas las densidades nativas de Android (`ic_widget_logo.png` en `mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`).
+  - Creación del repositorio central de branding en `branding/` con foto maestra, paleta cromática (`COLOR-PALETTE.md`), escalas 50-950, iconos normalizados PNG (`512` a `32`) y script generador reproducible.
+  - Compilación y entrega del APK release en `~/Descargas/LibreMIeL-0.2.1-release.apk`.
+
+### 3. Habilitar Modificación de Perfil de MIeL *(Estado: ✅ Completado)*
+- **Componentes involucrados:** `MielInteractiveReader`, `MielWriter`, `MielAvatar`, `AppSessionState`, `HomeShell` y `MielProfileDialog`.
+- **Implementación y entrega:**
+  - Modelos de datos (`MielUserProfile`), parser puro de `/perfil/datos/`, mutación multipart (`/perfil/event/modificarUsuario/`), cambio y eliminación de foto de avatar (`/perfil/event/eliminarAvatar/`) y cambio de contraseña (`/perfil/event/cambiarClave/`).
+  - Modal nativo completo `MielProfileDialog` accesible desde el menú de usuario en `HomeShell`.
+  - Invalidación reactiva de `sessionGenerationProvider` y tests unitarios en `miel_perfil_parser_test.dart`.
+
+### 4. Ejecutar LibreMIeL al Iniciar el Sistema en Segundo Plano (Silent Autostart) *(Estado: ✅ Completado)*
+- **Componentes involucrados:** `app/lib/platform/autostart/`, `main.dart`, `app_bootstrap.dart`, `my_application.cc` (Linux GTK), `flutter_window.cpp` (Win32), `window_manager` y `tray_manager`.
+- **Implementación y entrega:**
+  - Registro de autostart con argumento `--minimized` en Linux XDG `.desktop`, Windows Registry y macOS LaunchAgents.
+  - Supresión nativa de `first-frame` en el runner C++ de Linux y Windows para evitar parpadeos visuales al iniciar con el sistema.
+  - Servicio `DesktopTrayService` que inicializa el tray y mantiene LibreMIeL en segundo plano sin mostrar la ventana principal hasta que el usuario lo solicite.
+
+### 5. Revisar y Reorganizar el Panel de Configuración (Ajustes)
+- **Componentes involucrados:** `app/lib/features/settings/settings_screen.dart`, `AppDatabase` (`SettingKeys`) y providers de Riverpod.
+- **Alcance:**
+  - Auditar integralmente la pantalla de Ajustes para verificar consistencia visual, orden y usabilidad.
+  - Estructurar las configuraciones en secciones claras:
+    - **Cuenta y Sesión:** usuario actual, estado de autenticación y botón de cerrar sesión.
+    - **Sincronización:** intervalo de verificación, arranque con el sistema en segundo plano e historial de alertas.
+    - **Modo Offline y Almacenamiento:** switch de contingencia ante caídas de MIeL, cuota máxima en MB, precarga segura y botón para limpiar caché.
+    - **Navegación y Lectura:** control de zoom de interfaz, controles visibles opcionales en barra superior y atajos.
+    - **Notificaciones:** filtros por rol docente y menciones en foros.
+    - **Acerca de y Actualizaciones:** versión instalada, comprobación manual de updates y enlaces a documentación/repositorio.
+  - Verificar que cada cambio de preferencia se guarde correctamente en SQLite y surta efecto de inmediato sin requerir reinicio.
+
+### 6. Resolver Problemas de Descarga de Archivos en Celulares (Android)
+- **Componentes involucrados:** `app/lib/platform/file_download_service.dart`, `AndroidManifest.xml`, `FileProvider` y librerías de apertura de archivos.
+- **Alcance:**
+  - Identificar la causa raíz de los errores de descarga en Android (fallos de permisos, rutas inaccesibles o excepciones al intentar abrir el archivo).
+  - Adaptar la gestión de rutas a las políticas de Scoped Storage (Android 10+) utilizando el directorio estándar público de descargas (`Environment.DIRECTORY_DOWNLOADS`) o el directorio de almacenamiento externo de la app con acceso visible.
+  - Manejar adecuadamente los permisos en Android 11, 12, 13 y 14 (evitando solicitar permisos deprecados como `WRITE_EXTERNAL_STORAGE` en APIs modernas).
+  - Configurar correctamente `FileProvider` en `AndroidManifest.xml` con `FLAG_GRANT_READ_URI_PERMISSION` para que las aplicaciones externas (visores de PDF, procesadores de texto, editores de código) puedan abrir los archivos descargados sin crasheos.
+  - Emitir una notificación nativa interactiva que permita abrir el archivo directamente al completarse la descarga.
+
+### 7. Revisar todo el UI y Compararlo con MIeL
+- **Componentes involucrados:** Toda la capa visual en `app/lib/features/` (Login, HomeShell, Contenidos, Portafolio, Mensajería, Foros, Evaluación, Encuestas, Autoguía).
+- **Alcance:**
+  - Realizar una auditoría visual sistemática comparando cada pantalla y módulo contra la plataforma oficial de MIeL UNLaM (`https://miel.unlam.edu.ar/`, versión `2025.2.0`).
+  - Puntos de control:
+    - **Estilo y paleta institucional:** verificar el verde UNLaM `#009674` / `#128268`, contrastes accesibles y coherencia entre modo claro y modo oscuro.
+    - **Fidelidad W3.CSS:** tarjetas, bordes, sombras, badges `.w3-badge` rojos y tipografías.
+    - **Contenidos:** alineación de carpetas `.desplegarModulo`, íconos semánticos y visualización de enlaces externos.
+    - **Portafolio:** formato de tablas, estados de entrega, devolución docente y tarjetas de asistencia (`Presente`, `Ausente`, `Justificado`).
+    - **Mensajería:** fidelidad en bandejas, lectura de mensajes (`verEntrada`) y panel de redacción.
+    - **Foros:** jerarquía de hilos, sangrías, menciones interactivas y etiquetas docentes `Tutor/a`.
+    - **Responsividad:** comportamiento idéntico en escritorio (sidebar lateral) y móvil (drawer y navegación fluida).
+
+### 8. Poner a Gemini 4 a Revisar todo el Proyecto (Paso Final)
+- **Alcance y propósito:**
+  - Constituye la auditoría final exhaustiva de cierre de ciclo una vez implementadas las tareas y fases anteriores.
+  - Ejecutar una revisión profunda del repositorio completo utilizando Gemini para auditar:
+    - **Cumplimiento estricto de invariantes técnicas:** respeto a las 12 reglas obligatorias de [`AGENTS.md`](AGENTS.md) (sin efectos colaterales en polling, aislamiento multi-cuenta, manejo seguro de sesiones).
+    - **Calidad y robustez del código:** detección de posibles memory leaks, optimización de árboles de widgets y suscripciones Riverpod, control de excepciones y sanitización de inputs.
+    - **Cobertura de pruebas:** validación de suites de tests unitarios, de parsers y de widgets en `app/test/`.
+    - **Seguridad:** auditoría de almacenamiento seguro de credenciales, protección contra inyección y aislamiento del actualizador automático.
+    - **Consistencia documental:** verificación de paridad absoluta entre la arquitectura documentada en `/docs` y el código fuente en `/app`.
+

@@ -5,5 +5,6 @@ export 'forov2_parser.dart';
 export 'interno_parser.dart';
 export 'mensajeria_parser.dart';
 export 'portafolio_parser.dart';
+export 'miel_perfil_parser.dart';
 export 'secondary_modules_parser.dart';
 export 'text_normalizer.dart';

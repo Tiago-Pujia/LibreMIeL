@@ -20,6 +20,7 @@ class ModuleReaderHost extends StatelessWidget {
     required this.selectedForoTopicId,
     required this.onSelectForoTopic,
     this.sectionResetTick = 0,
+    this.onSelectSection,
     this.mensajeriaState,
     this.onMensajeriaStateChanged,
     this.selectedPortafolioPractice,
@@ -35,6 +36,7 @@ class ModuleReaderHost extends StatelessWidget {
   final MielToolKind tool;
   final int sectionIndex;
   final int sectionResetTick;
+  final ValueChanged<int>? onSelectSection;
   final String? selectedForoTopicId;
   final ValueChanged<String?> onSelectForoTopic;
 
@@ -78,6 +80,7 @@ class ModuleReaderHost extends StatelessWidget {
           subject: subject,
           sectionIndex: sectionIndex,
           sectionResetTick: sectionResetTick,
+          onSelectSection: onSelectSection,
           controlledRouteState: mensajeriaState,
           onRouteStateChanged: onMensajeriaStateChanged,
           scrollController: scrollController,
