@@ -1662,7 +1662,6 @@ class _SidebarHeading extends StatelessWidget {
 
 class _SidebarItem extends StatefulWidget {
   const _SidebarItem({
-    super.key,
     required this.icon,
     required this.label,
     required this.selected,

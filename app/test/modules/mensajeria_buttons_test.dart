@@ -241,18 +241,27 @@ void main() {
       expect(find.text('DOCENTE, UNO'), findsOneWidget);
       expect(find.text('ALUMNO, DOS'), findsOneWidget);
 
-      // 1. Probar botón Filtrar
+      // 1. Probar botón Filtrar y cambio a 'Ocultar filtros'
+      expect(find.widgetWithText(MielActionButton, 'Filtrar'), findsOneWidget);
       await tester.tap(find.widgetWithText(MielActionButton, 'Filtrar'));
       await tester.pumpAndSettle();
 
       expect(find.text('Filtrar mensajes'), findsOneWidget);
       expect(find.text('Usuario / Remitente:'), findsOneWidget);
+      expect(find.widgetWithText(MielActionButton, 'Ocultar filtros'), findsOneWidget);
 
-      // Filtrar por texto 'DOCENTE'
+      // Búsqueda tokenizada en orden inverso: 'uno docente' debe encontrar 'DOCENTE, UNO'
       await tester.enterText(
         find.widgetWithText(TextField, '').first,
-        'DOCENTE',
+        'uno docente',
       );
+      await tester.pumpAndSettle();
+
+      // Probar botón 'Filtrar' dentro del panel
+      await tester.tap(find.descendant(
+        of: find.byType(Container),
+        matching: find.widgetWithText(MielActionButton, 'Filtrar'),
+      ));
       await tester.pumpAndSettle();
 
       expect(find.text('DOCENTE, UNO'), findsOneWidget);
@@ -265,7 +274,12 @@ void main() {
       expect(find.text('DOCENTE, UNO'), findsOneWidget);
       expect(find.text('ALUMNO, DOS'), findsOneWidget);
 
-      // 2. Probar botón Redactar
+      // Ocultar panel de filtros
+      await tester.tap(find.widgetWithText(MielActionButton, 'Ocultar filtros'));
+      await tester.pumpAndSettle();
+      expect(find.text('Filtrar mensajes'), findsNothing);
+
+      // 2. Probar botón Redactar y regreso con 'Volver a la bandeja'
       await tester.tap(find.widgetWithText(MielActionButton, 'Redactar'));
       await tester.pumpAndSettle();
 
@@ -275,13 +289,24 @@ void main() {
         0,
       );
       expect(find.text('Abrir en MIeL'), findsNothing);
+      expect(find.widgetWithText(MielActionButton, 'Volver a la bandeja'), findsOneWidget);
+
+      // Pulsar 'Volver a la bandeja' debe retornar a Bandeja de Entrada (sección 1)
+      await tester.tap(find.widgetWithText(MielActionButton, 'Volver a la bandeja'));
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(navigationHistoryProvider).current.moduleSectionIndex,
+        1,
+      );
+      expect(find.text('Bandeja de Entrada'), findsOneWidget);
 
       await cleanUp(tester, db);
     },
   );
 
   testWidgets(
-    'Bandeja de Salida: Redactar navega a Nuevo Mensaje y Filtrar muestra Destinatario',
+    'Bandeja de Salida: Redactar navega a Nuevo Mensaje, Filtrar muestra Destinatario y Volver regresa a Salida',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 840);
       tester.view.devicePixelRatio = 1.0;
@@ -317,17 +342,17 @@ void main() {
       expect(find.text('Filtrar mensajes'), findsOneWidget);
       expect(find.text('Destinatario:'), findsOneWidget);
 
-      // Filtrar por destinatario 'JUAN'
+      // Filtrar por destinatario tokenizado 'juan profesor'
       await tester.enterText(
         find.widgetWithText(TextField, '').first,
-        'JUAN',
+        'juan profesor',
       );
       await tester.pumpAndSettle();
 
       expect(find.text('PROFESOR, JUAN'), findsOneWidget);
       expect(find.text('DOCENTE, PEDRO'), findsNothing);
 
-      // 2. Probar botón Redactar
+      // 2. Probar botón Redactar y retorno a Bandeja de Salida
       await tester.tap(find.widgetWithText(MielActionButton, 'Redactar'));
       await tester.pumpAndSettle();
 
@@ -335,13 +360,23 @@ void main() {
         container.read(navigationHistoryProvider).current.moduleSectionIndex,
         0,
       );
+      expect(find.widgetWithText(MielActionButton, 'Volver a la bandeja'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(MielActionButton, 'Volver a la bandeja'));
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(navigationHistoryProvider).current.moduleSectionIndex,
+        2,
+      );
+      expect(find.text('Bandeja de Salida'), findsOneWidget);
 
       await cleanUp(tester, db);
     },
   );
 
   testWidgets(
-    'Borradores: Redactar navega a Nuevo Mensaje y Filtrar funciona con Destinatario',
+    'Borradores: Redactar navega a Nuevo Mensaje, Filtrar funciona con Destinatario y Volver regresa a Borradores',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 840);
       tester.view.devicePixelRatio = 1.0;
@@ -394,13 +429,26 @@ void main() {
         findsOneWidget,
       );
 
-      // 2. Probar botón Redactar
+      // 2. Probar botón Redactar y retorno a Borradores
       await tester.tap(find.widgetWithText(MielActionButton, 'Redactar'));
       await tester.pumpAndSettle();
 
       expect(
         container.read(navigationHistoryProvider).current.moduleSectionIndex,
         0,
+      );
+      expect(find.widgetWithText(MielActionButton, 'Volver a la bandeja'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(MielActionButton, 'Volver a la bandeja'));
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(navigationHistoryProvider).current.moduleSectionIndex,
+        3,
+      );
+      expect(
+        find.widgetWithText(MielModuleHeader, 'Borradores'),
+        findsOneWidget,
       );
 
       await cleanUp(tester, db);

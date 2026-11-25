@@ -65,6 +65,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   bool _localInlineComposeMode = false;
   bool _showReplyPanel = false;
   bool _markingAllRead = false;
+  int _lastBoxSectionIndex = 1;
 
   int get _currentPage =>
       widget.controlledRouteState?.page ?? _localCurrentPage;
@@ -94,6 +95,9 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   @override
   void initState() {
     super.initState();
+    if (widget.sectionIndex >= 1 && widget.sectionIndex <= 4) {
+      _lastBoxSectionIndex = widget.sectionIndex;
+    }
     _filterSenderController = TextEditingController(text: _filterSenderQuery);
     _filterSubjectController = TextEditingController(text: _filterSubjectQuery);
   }
@@ -145,6 +149,9 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   @override
   void didUpdateWidget(covariant MensajeriaView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.sectionIndex >= 1 && widget.sectionIndex <= 4) {
+      _lastBoxSectionIndex = widget.sectionIndex;
+    }
     if (widget.findFocusTick != oldWidget.findFocusTick &&
         widget.findFocusTick > 0) {
       if (_selectedMessage == null) {
@@ -252,28 +259,39 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
       children: [
         MielModuleHeader(
           title: 'Nuevo mensaje',
-          trailing: _inlineComposeMode
-              ? Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    MielActionButton(
-                      label: 'Volver a la bandeja',
-                      icon: Icons.arrow_back,
-                      onPressed: () =>
-                          _updateRouteState(inlineComposeMode: false),
-                    ),
-                  ],
-                )
-              : null,
+          trailing: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              MielActionButton(
+                label: 'Volver a la bandeja',
+                icon: Icons.arrow_back,
+                onPressed: () {
+                  setState(() {
+                    _localInlineComposeMode = false;
+                    _localSelectedMessage = null;
+                  });
+                  _updateRouteState(
+                    inlineComposeMode: false,
+                    clearSelectedMessage: true,
+                  );
+                  if (widget.onSelectSection != null) {
+                    widget.onSelectSection!(_lastBoxSectionIndex);
+                  }
+                },
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         MensajeriaComposePanel(
           subject: widget.subject,
           onSent: () {
-            if (_inlineComposeMode && mounted) {
+            if (mounted) {
+              setState(() => _localInlineComposeMode = false);
               _updateRouteState(inlineComposeMode: false);
-            } else if (widget.onSelectSection != null) {
+            }
+            if (widget.onSelectSection != null) {
               widget.onSelectSection!(2);
             }
           },
@@ -466,8 +484,12 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
               ),
             ),
           MielActionButton(
-            label: 'Filtrar',
-            icon: Icons.search,
+            label: _showFilters
+                ? 'Ocultar filtros'
+                : (_hasActiveFilters ? 'Filtros (activos)' : 'Filtrar'),
+            icon: _showFilters
+                ? Icons.filter_alt_off
+                : (_hasActiveFilters ? Icons.filter_alt : Icons.search),
             primary: _showFilters || _hasActiveFilters,
             onPressed: () {
               setState(() => _showFilters = !_showFilters);
@@ -483,10 +505,17 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             icon: Icons.mode_edit,
             primary: true,
             onPressed: () {
+              setState(() {
+                _localInlineComposeMode = true;
+                _showFilters = false;
+                _localSelectedMessage = null;
+              });
+              _updateRouteState(
+                inlineComposeMode: true,
+                clearSelectedMessage: true,
+              );
               if (widget.onSelectSection != null) {
                 widget.onSelectSection!(0);
-              } else {
-                _updateRouteState(inlineComposeMode: true);
               }
             },
           ),
@@ -769,8 +798,8 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                     },
                   ),
                 MielActionButton(
-                  label: 'Aplicar',
-                  icon: Icons.filter_list,
+                  label: 'Filtrar',
+                  icon: Icons.search,
                   primary: true,
                   onPressed: () {
                     setState(() {
@@ -926,17 +955,33 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
       if (!effectiveFav) return false;
     }
 
-    final senderQ = normalizeText(_filterSenderQuery);
-    if (senderQ.isNotEmpty &&
-        !normalizeText(msg.senderName).contains(senderQ)) {
-      return false;
+    final rawSenderQ = _filterSenderQuery.trim();
+    if (rawSenderQ.isNotEmpty) {
+      final cleanMsgSender =
+          normalizeText(msg.senderName).replaceAll(RegExp(r'[^\w\s]'), ' ');
+      final senderTokens = normalizeText(rawSenderQ)
+          .replaceAll(RegExp(r'[^\w\s]'), ' ')
+          .split(RegExp(r'\s+'))
+          .where((t) => t.isNotEmpty);
+      if (senderTokens.isNotEmpty &&
+          !senderTokens.every((t) => cleanMsgSender.contains(t))) {
+        return false;
+      }
     }
 
-    final subjQ = normalizeText(_filterSubjectQuery);
-    if (subjQ.isNotEmpty &&
-        !normalizeText('${msg.subject} ${msg.subjectNameLabel}')
-            .contains(subjQ)) {
-      return false;
+    final rawSubjQ = _filterSubjectQuery.trim();
+    if (rawSubjQ.isNotEmpty) {
+      final cleanMsgSubj = normalizeText(
+        '${msg.subject} ${msg.subjectNameLabel}',
+      ).replaceAll(RegExp(r'[^\w\s]'), ' ');
+      final subjTokens = normalizeText(rawSubjQ)
+          .replaceAll(RegExp(r'[^\w\s]'), ' ')
+          .split(RegExp(r'\s+'))
+          .where((t) => t.isNotEmpty);
+      if (subjTokens.isNotEmpty &&
+          !subjTokens.every((t) => cleanMsgSubj.contains(t))) {
+        return false;
+      }
     }
 
     return true;
