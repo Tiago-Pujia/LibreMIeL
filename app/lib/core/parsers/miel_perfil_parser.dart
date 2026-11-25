@@ -44,6 +44,9 @@ MielUserProfile parsePerfilHtml(String rawHtml) {
     }
   }
 
+  // Extraer valores asignados por script inline de jQuery (usado por el backend de MIeL)
+  final jsVals = _extractJQueryValAssignments(rawHtml);
+
   // 4. Carrera seleccionada y lista de carreras disponibles
   var carreraId = '0';
   final carreras = <CareerOption>[];
@@ -62,6 +65,9 @@ MielUserProfile parsePerfilHtml(String rawHtml) {
       }
     }
   }
+  if (jsVals.containsKey('carrera') && jsVals['carrera']!.isNotEmpty) {
+    carreraId = jsVals['carrera']!;
+  }
 
   // 5. Sexo
   var sexo = '';
@@ -74,32 +80,54 @@ MielUserProfile parsePerfilHtml(String rawHtml) {
       }
     }
   }
-
-  // 6. Campos de texto
-  String getInputValue(String selector) {
-    final el = form?.querySelector(selector);
-    return el?.attributes['value']?.trim() ?? '';
+  if (jsVals.containsKey('sexo')) {
+    sexo = jsVals['sexo']!;
   }
 
-  final dni = getInputValue('input#dni, input[name="dni"]');
+  // 6. Campos de texto (prioridad: script inline de jQuery -> atributo HTML value)
+  String getInputValue(String id, String selector) {
+    final fromJs = jsVals[id];
+    if (fromJs != null && fromJs.isNotEmpty) {
+      return fromJs;
+    }
+    final el = form?.querySelector(selector);
+    return el?.attributes['value']?.trim() ?? fromJs ?? '';
+  }
+
+  final dni = getInputValue('dni', 'input#dni, input[name="dni"]');
   if (usuario.isEmpty && dni.isNotEmpty) {
     usuario = dni;
   }
   final fechaNacimiento = getInputValue(
+    'fechaNacimiento',
     'input#fechaNacimiento, input[name="fechaNacimiento"]',
   );
-  final email = getInputValue('input#email, input[name="email"]');
+  final email = getInputValue('email', 'input#email, input[name="email"]');
   final correoInstitucional = getInputValue(
+    'correoInstitucional',
     'input#correoInstitucional, input[name="correoInstitucional"]',
   );
-  final telefono = getInputValue('input#telefono, input[name="telefono"]');
-  final direccion = getInputValue('input#direccion, input[name="direccion"]');
-  final localidad = getInputValue('input#localidad, input[name="localidad"]');
-  final provincia = getInputValue('input#provincia, input[name="provincia"]');
+  final telefono = getInputValue(
+    'telefono',
+    'input#telefono, input[name="telefono"]',
+  );
+  final direccion = getInputValue(
+    'direccion',
+    'input#direccion, input[name="direccion"]',
+  );
+  final localidad = getInputValue(
+    'localidad',
+    'input#localidad, input[name="localidad"]',
+  );
+  final provincia = getInputValue(
+    'provincia',
+    'input#provincia, input[name="provincia"]',
+  );
   final codigoPostal = getInputValue(
+    'codigoPostal',
     'input#codigoPostal, input[name="codigoPostal"]',
   );
-  final pais = getInputValue('input#pais, input[name="pais"]');
+  final pais = getInputValue('pais', 'input#pais, input[name="pais"]');
 
   return MielUserProfile(
     nombreCompleto: nombreCompleto,
@@ -119,4 +147,26 @@ MielUserProfile parsePerfilHtml(String rawHtml) {
     codigoPostal: codigoPostal,
     pais: pais,
   );
+}
+
+/// Extrae asignaciones de valores realizadas dinámicamente con jQuery en la página
+/// (ej: `$("#email").val("alumno@unlam.edu.ar")`, `$('#carrera').val(0)`).
+Map<String, String> _extractJQueryValAssignments(String html) {
+  final result = <String, String>{};
+  // Coincide con $(["']#fieldId["']).val("value" o 'value' o número o vacío)
+  final regExp = RegExp(
+    r'''\$\s*\(\s*["']#([a-zA-Z0-9_\-]+)["']\s*\)\s*\.val\s*\(\s*(?:"([^"]*)"|'([^']*)'|([0-9]+)|([^)]*))\s*\)''',
+  );
+  for (final match in regExp.allMatches(html)) {
+    final fieldId = match.group(1);
+    if (fieldId == null) continue;
+    final val =
+        match.group(2) ??
+        match.group(3) ??
+        match.group(4) ??
+        match.group(5)?.trim() ??
+        '';
+    result[fieldId] = val.trim();
+  }
+  return result;
 }

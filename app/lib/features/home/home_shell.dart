@@ -32,7 +32,6 @@ import '../navigation/navigation_history_entry.dart';
 import '../settings/settings_screen.dart';
 import '../subjects/miel_home_view.dart';
 import '../downloads/bulk_download_sheet.dart';
-import '../profile/miel_profile_dialog.dart';
 import '../updates/update_dialog.dart';
 import 'widgets/miel_status_banner.dart';
 
@@ -57,6 +56,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
   );
   int _moduleSectionNavTick = 0;
   int _findFocusTick = 0;
+  MielProfileTab _settingsInitialTab = MielProfileTab.datosPersonales;
 
   StreamSubscription<NotificationTapPayload>? _notifTapSub;
   StreamSubscription<NotificationTapPayload>? _widgetTapSub;
@@ -325,36 +325,15 @@ class _HomeShellState extends ConsumerState<HomeShell>
     _navigateTo(const NavigationHistoryEntry.novedades());
   }
 
-  void _goAjustes() {
+  void _goAjustes({MielProfileTab initialTab = MielProfileTab.ajustesLibreMiel}) {
+    setState(() {
+      _settingsInitialTab = initialTab;
+    });
     _navigateTo(const NavigationHistoryEntry.ajustes());
   }
 
   void _openUserProfile(AppSessionState session, List<Subject> subjects) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => _UserProfileDialog(
-        session: session,
-        activeSubjectsCount: subjects
-            .where((s) => !s.isEffectivelyHidden)
-            .length,
-        hiddenSubjectsCount: subjects
-            .where((s) => s.isEffectivelyHidden)
-            .length,
-        storageLabel: ref.read(credentialsStoreProvider).storageBackendLabel,
-        onEditProfile: () {
-          Navigator.of(context).pop();
-          showDialog<void>(
-            context: context,
-            builder: (_) => const MielProfileDialog(),
-          );
-        },
-        onOpenMielProfile: () => _openExternal('$kMielBaseUrl/perfil/datos/'),
-        onLogout: () {
-          Navigator.of(context).pop();
-          ref.read(appSessionProvider.notifier).logout();
-        },
-      ),
-    );
+    _goAjustes(initialTab: MielProfileTab.datosPersonales);
   }
 
   void _openModule(
@@ -484,7 +463,10 @@ class _HomeShellState extends ConsumerState<HomeShell>
         scrollController: _contentScrollController,
         inPageFindQuery: findState.query,
       ),
-      BrowserShellSection.ajustes => const SettingsScreen(),
+      BrowserShellSection.ajustes => SettingsScreen(
+        initialTab: _settingsInitialTab,
+        onGoHome: _goHome,
+      ),
       BrowserShellSection.module => ModuleReaderHost(
         subject: activeSubject!,
         tool: activeTool,
@@ -604,6 +586,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
               onToggleTheme: () => ref
                   .read(appSessionProvider.notifier)
                   .toggleThemeMode(Theme.of(context).brightness),
+              onGoAjustes: () =>
+                  _goAjustes(initialTab: MielProfileTab.datosPersonales),
               onLogout: () => ref.read(appSessionProvider.notifier).logout(),
             ),
 
@@ -768,6 +752,7 @@ class _MielDoubleHeader extends StatelessWidget {
     required this.onSelectTool,
     required this.onSyncNow,
     required this.onToggleTheme,
+    required this.onGoAjustes,
     required this.onLogout,
   });
 
@@ -792,6 +777,7 @@ class _MielDoubleHeader extends StatelessWidget {
   final ValueChanged<MielToolKind> onSelectTool;
   final VoidCallback onSyncNow;
   final VoidCallback onToggleTheme;
+  final VoidCallback onGoAjustes;
   final VoidCallback onLogout;
 
   @override
@@ -933,7 +919,7 @@ class _MielDoubleHeader extends StatelessWidget {
                   label: switch (section) {
                     BrowserShellSection.home => 'Menú principal',
                     BrowserShellSection.novedades => 'Notificaciones',
-                    BrowserShellSection.ajustes => 'Ajustes',
+                    BrowserShellSection.ajustes => 'Menú principal',
                     BrowserShellSection.module => 'Menú principal',
                   },
                   onTap: onGoHome,
@@ -942,7 +928,7 @@ class _MielDoubleHeader extends StatelessWidget {
 
               const Spacer(),
 
-              // Derecha: Sincronizar + Campana de notificaciones + Contraste claro/oscuro (+ Usuario/Salir en móvil)
+              // Derecha: Sincronizar + Campana de notificaciones + Contraste claro/oscuro + Ajustes (+ Usuario/Salir en móvil)
               if (session.isSyncing)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 10),
@@ -966,6 +952,12 @@ class _MielDoubleHeader extends StatelessWidget {
                 tooltip: 'Cambiar modo claro / oscuro',
                 icon: Icons.brightness_4,
                 onTap: onToggleTheme,
+              ),
+
+              _NavIconAction(
+                tooltip: 'Ajustes y perfil',
+                icon: Icons.settings,
+                onTap: onGoAjustes,
               ),
 
               if (isMobileHeader) ...[
@@ -1711,231 +1703,6 @@ class _SidebarItemState extends State<_SidebarItem> {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Modal "Mi perfil" accesible desde el enlace de usuario o avatar en la barra superior.
-class _UserProfileDialog extends StatelessWidget {
-  const _UserProfileDialog({
-    required this.session,
-    required this.activeSubjectsCount,
-    required this.hiddenSubjectsCount,
-    required this.storageLabel,
-    required this.onEditProfile,
-    required this.onOpenMielProfile,
-    required this.onLogout,
-  });
-
-  final AppSessionState session;
-  final int activeSubjectsCount;
-  final int hiddenSubjectsCount;
-  final String storageLabel;
-  final VoidCallback onEditProfile;
-  final VoidCallback onOpenMielProfile;
-  final VoidCallback onLogout;
-
-  String _formatLastSync(DateTime? dt) {
-    if (dt == null) return 'Aún no sincronizado';
-    final l = dt.toLocal();
-    final d = l.day.toString().padLeft(2, '0');
-    final m = l.month.toString().padLeft(2, '0');
-    final hh = l.hour.toString().padLeft(2, '0');
-    final mm = l.minute.toString().padLeft(2, '0');
-    return '$d/$m ${l.year} $hh:$mm';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MielPalette.of(context);
-    final name = session.studentName.isNotEmpty
-        ? session.studentName
-        : 'Estudiante MIeL';
-
-    return Dialog(
-      insetPadding: const EdgeInsets.all(20),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(18, 14, 10, 14),
-              decoration: BoxDecoration(
-                color: palette.primary,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(4),
-                ),
-              ),
-              child: Row(
-                children: [
-                  MielAvatar(
-                    avatarUrl: session.studentAvatarUrl,
-                    radius: 20,
-                    fallbackBackgroundColor: Colors.white24,
-                    fallbackIconColor: Colors.white,
-                    fallbackIconSize: 26,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Mi perfil',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ProfileInfoRow(
-                    icon: Icons.school_outlined,
-                    label: 'Materias',
-                    value: hiddenSubjectsCount > 0
-                        ? '$activeSubjectsCount activas · $hiddenSubjectsCount ocultas'
-                        : '$activeSubjectsCount activas',
-                    palette: palette,
-                  ),
-                  const SizedBox(height: 10),
-                  _ProfileInfoRow(
-                    icon: Icons.sync,
-                    label: 'Última sincronización',
-                    value: _formatLastSync(session.lastSyncAt),
-                    palette: palette,
-                  ),
-                  const SizedBox(height: 10),
-                  _ProfileInfoRow(
-                    icon: Icons.key_outlined,
-                    label: 'Credenciales',
-                    value: storageLabel,
-                    palette: palette,
-                  ),
-                ],
-              ),
-            ),
-            Divider(color: palette.divider, height: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  TextButton.icon(
-                    onPressed: onLogout,
-                    icon: Icon(Icons.logout, size: 17, color: palette.badgeRed),
-                    label: Text(
-                      'Cerrar sesión',
-                      style: TextStyle(color: palette.badgeRed),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: onOpenMielProfile,
-                    icon: Icon(
-                      Icons.open_in_new,
-                      size: 17,
-                      color: palette.linkAccent,
-                    ),
-                    label: Text(
-                      'Perfil en MIeL',
-                      style: TextStyle(color: palette.linkAccent),
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: onEditProfile,
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Modificar perfil'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: palette.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: palette.textPrimary,
-                      side: BorderSide(color: palette.divider),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    child: const Text('Cerrar'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileInfoRow extends StatelessWidget {
-  const _ProfileInfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.palette,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final MielPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: palette.linkAccent),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 12, color: palette.textMuted),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w500,
-                  color: palette.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

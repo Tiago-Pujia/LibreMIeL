@@ -101,5 +101,68 @@ void main() {
       expect(perfil.email, equals('minimo@ejemplo.com'));
       expect(perfil.telefono, equals(''));
     });
+
+    test('extrae datos correctamente cuando MIeL puebla los inputs via script jQuery inline', () {
+      const html = '''
+<div id="perfil-fotoAvatar" style="background-image:url('https://miel.unlam.edu.ar/data2/avatares/cat_avatar.jpg?1722994157');"></div>
+<form id="formUsuario" action="https://miel.unlam.edu.ar/perfil/event/modificarUsuario/" method="post">
+  <h5>PUJIA, TIAGO NAHUEL</h5>
+  <div class="w3-text-dark-grey">Usuario: 45614262</div>
+  <select id="carrera" name="carrera">
+    <option value="" disabled>-- Seleccione una carrera --</option>
+    <option value="0">(000) OTROS</option>
+    <option value="201">(201) ING. EN INFORMÁTICA</option>
+  </select>
+  <input type="text" id="dni" name="dni">
+  <select id="sexo" name="sexo">
+    <option value="">-- Seleccionar --</option>
+    <option value="M">Masculino</option>
+    <option value="F">Femenino</option>
+  </select>
+  <input type="text" id="fechaNacimiento" name="fechaNacimiento">
+  <input type="text" id="email" name="email">
+  <input type="text" id="correoInstitucional" name="correoInstitucional">
+  <input type="text" id="telefono" name="telefono">
+  <input type="text" id="direccion" name="direccion">
+  <input type="text" id="localidad" name="localidad">
+  <input type="text" id="provincia" name="provincia">
+  <input type="text" id="codigoPostal" name="codigoPostal">
+  <input type="text" id="pais" name="pais">
+</form>
+<script type="text/javascript">
+  \$(function() {
+    \$("#carrera").val(201);
+    \$("#dni").val("45614262");
+    \$("#sexo").val("M");
+    \$("#fechaNacimiento").val("10/08/2001").datepicker("update");
+    \$("#direccion").val("Calle Falsa 123");
+    \$("#localidad").val("San Justo");
+    \$("#provincia").val("Buenos Aires");
+    \$("#codigoPostal").val("1754");
+    \$("#pais").val("Argentina");
+    \$("#email").val("tiagonahuelpujia@gmail.com");
+    \$("#correoInstitucional").val("tpujia@alumno.unlam.edu.ar");
+    \$("#telefono").val("1122334455");
+  });
+</script>
+''';
+
+      final perfil = parsePerfilHtml(html);
+
+      expect(perfil.nombreCompleto, equals('PUJIA, TIAGO NAHUEL'));
+      expect(perfil.usuario, equals('45614262'));
+      expect(perfil.carreraId, equals('201'));
+      expect(perfil.dni, equals('45614262'));
+      expect(perfil.sexo, equals('M'));
+      expect(perfil.fechaNacimiento, equals('10/08/2001'));
+      expect(perfil.email, equals('tiagonahuelpujia@gmail.com'));
+      expect(perfil.correoInstitucional, equals('tpujia@alumno.unlam.edu.ar'));
+      expect(perfil.telefono, equals('1122334455'));
+      expect(perfil.direccion, equals('Calle Falsa 123'));
+      expect(perfil.localidad, equals('San Justo'));
+      expect(perfil.provincia, equals('Buenos Aires'));
+      expect(perfil.codigoPostal, equals('1754'));
+      expect(perfil.pais, equals('Argentina'));
+    });
   });
 }
