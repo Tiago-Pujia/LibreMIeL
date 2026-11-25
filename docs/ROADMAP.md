@@ -298,30 +298,27 @@ A continuación se detallan las tareas y mejoras técnicas planificadas para las
 - **Fase 7 — Integración con IA (Asistente de Estudio):**
   - Módulo opcional *local-first* y BYOK (Ollama, LM Studio o API keys de usuario) para resúmenes de apuntes y consultas RAG con citas directas a los archivos de la cátedra, garantizando total privacidad y anonimización de datos.
 
-### 2. Actualizar y Modernizar Widgets de Android
-- **Componentes involucrados:** `app/android/app/src/main/kotlin/io/github/tiago_pujia/libremiel/`, `app/android/app/src/main/res/layout/` y `libremiel_android_widget`.
-- **Alcance:**
-  - Auditar el diseño y comportamiento de los layouts `RemoteViews` (`2×2` compacto y `4×2` feed/materias) para adaptarse a estilos visuales modernos de Android 12 a 15 (Dynamic Colors / Material You).
-  - Garantizar actualización atómica del snapshot compartido (`SharedPreferences`) tras cada ciclo de sincronización en segundo plano de `WorkManager` y tras sincronizaciones manuales.
-  - Asegurar que el botón de refresco rápido incorporado en el widget responda de forma inmediata.
-  - Reforzar el deep-linking (`PendingIntent` con `NotificationTapPayload`) para que tocar un elemento del widget abra la app directamente en la comisión y herramienta exacta.
+### 2. Actualizar y Modernizar Widgets de Android e Identidad Visual *(Estado: ✅ Completado)*
+- **Componentes involucrados:** `app/android/app/src/main/kotlin/io/github/tiago_pujia/libremiel/`, `app/android/app/src/main/res/layout/`, `app/android/app/src/main/res/drawable-*/`, `branding/` y `docs/prototypes/android_widgets.html`.
+- **Implementación y entrega:**
+  - Modernización completa de layouts `RemoteViews` según prototipo aprobado (`docs/prototypes/android_widgets.html`): contador destacado (32sp), bordes del sistema en Android 12+ (`drawable-v31`) para tarjetas de contenido, y formatos 2×2, 4×1 y 4×2.
+  - Integración del isotipo circular oficial del pato y el gato (`foto ds.png`) en todas las densidades nativas de Android (`ic_widget_logo.png` en `mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`).
+  - Creación del repositorio central de branding en `branding/` con foto maestra, paleta cromática (`COLOR-PALETTE.md`), escalas 50-950, iconos normalizados PNG (`512` a `32`) y script generador reproducible.
+  - Compilación y entrega del APK release en `~/Descargas/LibreMIeL-0.2.1-release.apk`.
 
-### 3. Habilitar Modificación de Perfil de MIeL
-- **Componentes involucrados:** `MielInteractiveReader`, `MielWriter`, `MielAvatar`, `AppSessionState` y `HomeShell`.
-- **Alcance:**
-  - Relevar la estructura HTML y formularios de `/principal/perfil/` en MIeL oficial.
-  - Incorporar en `MielInteractiveReader` la consulta de los datos de perfil actuales del estudiante.
-  - Implementar en `MielWriter` el soporte para envío de formularios (`multipart/form-data`) para actualizar datos personales, información de contacto y subir una nueva foto de perfil (avatar).
-  - Diseñar la interfaz de usuario nativa: vista/modal "Mi perfil" accesible desde la barra superior de `HomeShell`.
-  - Asegurar la invalidación inmediata de `sessionGenerationProvider` y del caché de imágenes de `MielAvatar` tras una actualización exitosa para reflejar el cambio al instante en toda la app.
+### 3. Habilitar Modificación de Perfil de MIeL *(Estado: ✅ Completado)*
+- **Componentes involucrados:** `MielInteractiveReader`, `MielWriter`, `MielAvatar`, `AppSessionState`, `HomeShell` y `MielProfileDialog`.
+- **Implementación y entrega:**
+  - Modelos de datos (`MielUserProfile`), parser puro de `/perfil/datos/`, mutación multipart (`/perfil/event/modificarUsuario/`), cambio y eliminación de foto de avatar (`/perfil/event/eliminarAvatar/`) y cambio de contraseña (`/perfil/event/cambiarClave/`).
+  - Modal nativo completo `MielProfileDialog` accesible desde el menú de usuario en `HomeShell`.
+  - Invalidación reactiva de `sessionGenerationProvider` y tests unitarios en `miel_perfil_parser_test.dart`.
 
-### 4. Ejecutar LibreMIeL al Iniciar el Sistema en Segundo Plano (Silent Autostart)
-- **Componentes involucrados:** `app/lib/platform/autostart/`, `main.dart`, `app_bootstrap.dart`, `window_manager` y `tray_manager`.
-- **Alcance:**
-  - Corregir el comportamiento actual de inicio automático en escritorio (Linux XDG `.desktop`, Windows Registry Run, macOS LaunchAgents).
-  - Agregar un flag de línea de comandos (ej. `--minimized` o `--silent`) en la orden de inicio registrada en el sistema operativo.
-  - En el arranque de la app, detectar si el flag está presente: en caso afirmativo, inicializar el motor, la sesión y el icono de la bandeja del sistema (`tray_manager`) sin mostrar la ventana principal (`windowManager.hide()`) ni robar el foco de la pantalla.
-  - Mantener la app activa en segundo plano en el tray, permitiendo al usuario abrir la ventana completa con un clic en el icono.
+### 4. Ejecutar LibreMIeL al Iniciar el Sistema en Segundo Plano (Silent Autostart) *(Estado: ✅ Completado)*
+- **Componentes involucrados:** `app/lib/platform/autostart/`, `main.dart`, `app_bootstrap.dart`, `my_application.cc` (Linux GTK), `flutter_window.cpp` (Win32), `window_manager` y `tray_manager`.
+- **Implementación y entrega:**
+  - Registro de autostart con argumento `--minimized` en Linux XDG `.desktop`, Windows Registry y macOS LaunchAgents.
+  - Supresión nativa de `first-frame` en el runner C++ de Linux y Windows para evitar parpadeos visuales al iniciar con el sistema.
+  - Servicio `DesktopTrayService` que inicializa el tray y mantiene LibreMIeL en segundo plano sin mostrar la ventana principal hasta que el usuario lo solicite.
 
 ### 5. Revisar y Reorganizar el Panel de Configuración (Ajustes)
 - **Componentes involucrados:** `app/lib/features/settings/settings_screen.dart`, `AppDatabase` (`SettingKeys`) y providers de Riverpod.
