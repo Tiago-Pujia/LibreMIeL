@@ -599,7 +599,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
                   .read(appSessionProvider.notifier)
                   .toggleThemeMode(Theme.of(context).brightness),
               onGoAjustes: () =>
-                  _goAjustes(initialTab: MielProfileTab.datosPersonales),
+                  _goAjustes(initialTab: MielProfileTab.ajustesLibreMiel),
               onLogout: () => ref.read(appSessionProvider.notifier).logout(),
             ),
 

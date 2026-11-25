@@ -310,6 +310,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 780;
 
+        if (_selectedTab == MielProfileTab.ajustesLibreMiel) {
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              isCompact ? 16 : 28,
+              20,
+              isCompact ? 16 : 28,
+              32,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 960),
+              child: _buildAjustesLibreMielTab(palette, isCompact),
+            ),
+          );
+        }
+
         if (isCompact) {
           return Column(
             children: [
@@ -387,18 +402,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             tab: MielProfileTab.firmas,
             icon: Icons.border_color,
             label: 'Firmas personalizadas',
-            palette: palette,
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Divider(color: palette.divider, height: 1),
-          ),
-          const SizedBox(height: 8),
-          _buildSidebarItem(
-            tab: MielProfileTab.ajustesLibreMiel,
-            icon: Icons.tune,
-            label: 'Ajustes de LibreMIeL',
             palette: palette,
           ),
         ],
@@ -483,13 +486,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               tab: MielProfileTab.firmas,
               label: 'Firmas',
               icon: Icons.border_color,
-              palette: palette,
-            ),
-            const SizedBox(width: 8),
-            _buildMobileTabChip(
-              tab: MielProfileTab.ajustesLibreMiel,
-              label: 'Ajustes LibreMIeL',
-              icon: Icons.tune,
               palette: palette,
             ),
           ],
