@@ -160,7 +160,9 @@ void main() {
     return ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(db),
-        mielInteractiveReaderProvider.overrideWith((_) async => _FakeInteractiveReader()),
+        mielInteractiveReaderProvider.overrideWith(
+          (_) async => _FakeInteractiveReader(),
+        ),
         mielWriterProvider.overrideWith((_) async => _FakeWriter()),
         appSessionProvider.overrideWith(
           () => _TestSessionController(
@@ -173,46 +175,44 @@ void main() {
           ),
         ),
       ],
-      child: MaterialApp(
-        theme: buildMielLightTheme(),
-        home: const HomeShell(),
-      ),
+      child: MaterialApp(theme: buildMielLightTheme(), home: const HomeShell()),
     );
   }
 
-  testWidgets(
-    'Nuevo mensaje NO contiene el botón Abrir en MIeL',
-    (tester) async {
-      tester.view.physicalSize = const Size(1280, 840);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+  testWidgets('Nuevo mensaje NO contiene el botón Abrir en MIeL', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 840);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
 
-      final db = await createTestDb();
+    final db = await createTestDb();
 
-      await tester.pumpWidget(buildTestApp(db));
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(buildTestApp(db));
+    await tester.pumpAndSettle();
 
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(HomeShell)),
-      );
-      // Navega a sección 0: Nuevo mensaje
-      container.read(navigationHistoryProvider.notifier).navigateTo(
-        const NavigationHistoryEntry(
-          section: BrowserShellSection.module,
-          subjectId: '117967',
-          tool: MielToolKind.mensajeria,
-          moduleSectionIndex: 0,
-        ),
-      );
-      await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(HomeShell)),
+    );
+    // Navega a sección 0: Nuevo mensaje
+    container
+        .read(navigationHistoryProvider.notifier)
+        .navigateTo(
+          const NavigationHistoryEntry(
+            section: BrowserShellSection.module,
+            subjectId: '117967',
+            tool: MielToolKind.mensajeria,
+            moduleSectionIndex: 0,
+          ),
+        );
+    await tester.pumpAndSettle();
 
-      // Verifica que no exista botón 'Abrir en MIeL' en la vista
-      expect(find.text('Abrir en MIeL'), findsNothing);
-      expect(find.text('Nuevo mensaje'), findsWidgets);
+    // Verifica que no exista botón 'Abrir en MIeL' en la vista
+    expect(find.text('Abrir en MIeL'), findsNothing);
+    expect(find.text('Nuevo mensaje'), findsWidgets);
 
-      await cleanUp(tester, db);
-    },
-  );
+    await cleanUp(tester, db);
+  });
 
   testWidgets(
     'Bandeja de Entrada: Redactar navega a Nuevo Mensaje y Filtrar filtra en tiempo real',
@@ -230,14 +230,16 @@ void main() {
         tester.element(find.byType(HomeShell)),
       );
       // Navega a Bandeja de Entrada (sección 1)
-      container.read(navigationHistoryProvider.notifier).navigateTo(
-        const NavigationHistoryEntry(
-          section: BrowserShellSection.module,
-          subjectId: '117967',
-          tool: MielToolKind.mensajeria,
-          moduleSectionIndex: 1,
-        ),
-      );
+      container
+          .read(navigationHistoryProvider.notifier)
+          .navigateTo(
+            const NavigationHistoryEntry(
+              section: BrowserShellSection.module,
+              subjectId: '117967',
+              tool: MielToolKind.mensajeria,
+              moduleSectionIndex: 1,
+            ),
+          );
       await tester.pumpAndSettle();
 
       expect(find.text('Bandeja de Entrada'), findsOneWidget);
@@ -251,7 +253,10 @@ void main() {
 
       expect(find.text('Filtrar mensajes'), findsOneWidget);
       expect(find.text('Usuario / Remitente:'), findsOneWidget);
-      expect(find.widgetWithText(MielActionButton, 'Ocultar filtros'), findsOneWidget);
+      expect(
+        find.widgetWithText(MielActionButton, 'Ocultar filtros'),
+        findsOneWidget,
+      );
 
       // Búsqueda tokenizada en orden inverso: 'uno docente' debe encontrar 'DOCENTE, UNO'
       await tester.enterText(
@@ -261,24 +266,30 @@ void main() {
       await tester.pumpAndSettle();
 
       // Probar botón 'Filtrar' dentro del panel
-      await tester.tap(find.descendant(
-        of: find.byType(Container),
-        matching: find.widgetWithText(MielActionButton, 'Filtrar'),
-      ));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(Container),
+          matching: find.widgetWithText(MielActionButton, 'Filtrar'),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('DOCENTE, UNO'), findsOneWidget);
       expect(find.text('ALUMNO, DOS'), findsNothing);
 
       // Limpiar filtros
-      await tester.tap(find.widgetWithText(MielActionButton, 'Limpiar filtros'));
+      await tester.tap(
+        find.widgetWithText(MielActionButton, 'Limpiar filtros'),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('DOCENTE, UNO'), findsOneWidget);
       expect(find.text('ALUMNO, DOS'), findsOneWidget);
 
       // Ocultar panel de filtros
-      await tester.tap(find.widgetWithText(MielActionButton, 'Ocultar filtros'));
+      await tester.tap(
+        find.widgetWithText(MielActionButton, 'Ocultar filtros'),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Filtrar mensajes'), findsNothing);
 
@@ -292,10 +303,15 @@ void main() {
         0,
       );
       expect(find.text('Abrir en MIeL'), findsNothing);
-      expect(find.widgetWithText(MielActionButton, 'Volver a la bandeja'), findsOneWidget);
+      expect(
+        find.widgetWithText(MielActionButton, 'Volver a la bandeja'),
+        findsOneWidget,
+      );
 
       // Pulsar 'Volver a la bandeja' debe retornar a Bandeja de Entrada (sección 1)
-      await tester.tap(find.widgetWithText(MielActionButton, 'Volver a la bandeja'));
+      await tester.tap(
+        find.widgetWithText(MielActionButton, 'Volver a la bandeja'),
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -324,14 +340,16 @@ void main() {
         tester.element(find.byType(HomeShell)),
       );
       // Navega a Bandeja de Salida (sección 2)
-      container.read(navigationHistoryProvider.notifier).navigateTo(
-        const NavigationHistoryEntry(
-          section: BrowserShellSection.module,
-          subjectId: '117967',
-          tool: MielToolKind.mensajeria,
-          moduleSectionIndex: 2,
-        ),
-      );
+      container
+          .read(navigationHistoryProvider.notifier)
+          .navigateTo(
+            const NavigationHistoryEntry(
+              section: BrowserShellSection.module,
+              subjectId: '117967',
+              tool: MielToolKind.mensajeria,
+              moduleSectionIndex: 2,
+            ),
+          );
       await tester.pumpAndSettle();
 
       expect(find.text('Bandeja de Salida'), findsOneWidget);
@@ -363,9 +381,14 @@ void main() {
         container.read(navigationHistoryProvider).current.moduleSectionIndex,
         0,
       );
-      expect(find.widgetWithText(MielActionButton, 'Volver a la bandeja'), findsOneWidget);
+      expect(
+        find.widgetWithText(MielActionButton, 'Volver a la bandeja'),
+        findsOneWidget,
+      );
 
-      await tester.tap(find.widgetWithText(MielActionButton, 'Volver a la bandeja'));
+      await tester.tap(
+        find.widgetWithText(MielActionButton, 'Volver a la bandeja'),
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -394,14 +417,16 @@ void main() {
         tester.element(find.byType(HomeShell)),
       );
       // Navega a Borradores (sección 3)
-      container.read(navigationHistoryProvider.notifier).navigateTo(
-        const NavigationHistoryEntry(
-          section: BrowserShellSection.module,
-          subjectId: '117967',
-          tool: MielToolKind.mensajeria,
-          moduleSectionIndex: 3,
-        ),
-      );
+      container
+          .read(navigationHistoryProvider.notifier)
+          .navigateTo(
+            const NavigationHistoryEntry(
+              section: BrowserShellSection.module,
+              subjectId: '117967',
+              tool: MielToolKind.mensajeria,
+              moduleSectionIndex: 3,
+            ),
+          );
       await tester.pumpAndSettle();
 
       expect(
@@ -440,9 +465,14 @@ void main() {
         container.read(navigationHistoryProvider).current.moduleSectionIndex,
         0,
       );
-      expect(find.widgetWithText(MielActionButton, 'Volver a la bandeja'), findsOneWidget);
+      expect(
+        find.widgetWithText(MielActionButton, 'Volver a la bandeja'),
+        findsOneWidget,
+      );
 
-      await tester.tap(find.widgetWithText(MielActionButton, 'Volver a la bandeja'));
+      await tester.tap(
+        find.widgetWithText(MielActionButton, 'Volver a la bandeja'),
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -473,14 +503,16 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(HomeShell)),
       );
-      container.read(navigationHistoryProvider.notifier).navigateTo(
-        const NavigationHistoryEntry(
-          section: BrowserShellSection.module,
-          subjectId: '117967',
-          tool: MielToolKind.mensajeria,
-          moduleSectionIndex: 1,
-        ),
-      );
+      container
+          .read(navigationHistoryProvider.notifier)
+          .navigateTo(
+            const NavigationHistoryEntry(
+              section: BrowserShellSection.module,
+              subjectId: '117967',
+              tool: MielToolKind.mensajeria,
+              moduleSectionIndex: 1,
+            ),
+          );
       await tester.pumpAndSettle();
 
       final mouse = await tester.createGesture(
@@ -520,8 +552,10 @@ void main() {
       expect(find.text('Filtrar mensajes'), findsOneWidget);
 
       // 3. Verificar hover, cursor click, tap y entrada única en historial para Redactar
-      final historyCountBefore =
-          container.read(navigationHistoryProvider).entries.length;
+      final historyCountBefore = container
+          .read(navigationHistoryProvider)
+          .entries
+          .length;
       final redactarBtn = find.widgetWithText(MielActionButton, 'Redactar');
       await mouse.moveTo(tester.getCenter(redactarBtn));
       await tester.pumpAndSettle();

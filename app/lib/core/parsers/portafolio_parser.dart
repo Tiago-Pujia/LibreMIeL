@@ -57,11 +57,10 @@ List<PortfolioPractice> parsePortafolioPracticasHtml(
     String cellText(int index) {
       if (index >= cells.length) return '';
       final raw = cells[index].children.isNotEmpty
-          ? cells[index]
-              .children
-              .map((c) => c.text.trim())
-              .where((t) => t.isNotEmpty)
-              .join(' ')
+          ? cells[index].children
+                .map((c) => c.text.trim())
+                .where((t) => t.isNotEmpty)
+                .join(' ')
           : cells[index].text;
       final txt = cleanWhitespace(raw);
       return txt == '---' ? '' : txt;
@@ -70,10 +69,22 @@ List<PortfolioPractice> parsePortafolioPracticasHtml(
     // Orden estándar de columnas:
     // 0: Práctica | 1: Entrega | 2: F. vencim. | 3: Detalle entregas | 4: F. entrega | 5: F. correc. | 6: Estado | 7: Nota
     final deliveryType = cellText(1)
-        .replaceAll(RegExp(r'obligatoria\s*grupal', caseSensitive: false), 'obligatoria grupal')
-        .replaceAll(RegExp(r'opcional\s*grupal', caseSensitive: false), 'opcional grupal')
-        .replaceAll(RegExp(r'obligatoria\s*individual', caseSensitive: false), 'obligatoria individual')
-        .replaceAll(RegExp(r'opcional\s*individual', caseSensitive: false), 'opcional individual');
+        .replaceAll(
+          RegExp(r'obligatoria\s*grupal', caseSensitive: false),
+          'obligatoria grupal',
+        )
+        .replaceAll(
+          RegExp(r'opcional\s*grupal', caseSensitive: false),
+          'opcional grupal',
+        )
+        .replaceAll(
+          RegExp(r'obligatoria\s*individual', caseSensitive: false),
+          'obligatoria individual',
+        )
+        .replaceAll(
+          RegExp(r'opcional\s*individual', caseSensitive: false),
+          'opcional individual',
+        );
     final dueDate = cellText(2);
     final deliveryDate = cellText(4);
     final correctionDate = cellText(5);
@@ -333,16 +344,16 @@ PortfolioPracticeDetail parsePortafolioEntregasDetalleHtml(
         groupCheckbox?.attributes.containsKey('checked') ?? isGrupalMode;
     final groupCheckboxName =
         (groupCheckbox?.attributes['name'] ?? '').trim().isNotEmpty
-            ? groupCheckbox!.attributes['name']!.trim()
-            : 'entregaGrupal';
+        ? groupCheckbox!.attributes['name']!.trim()
+        : 'entregaGrupal';
     final groupCheckboxValue =
         (groupCheckbox?.attributes['value'] ?? '').trim().isNotEmpty
-            ? groupCheckbox!.attributes['value']!.trim()
-            : '1';
+        ? groupCheckbox!.attributes['value']!.trim()
+        : '1';
     final groupSelectName =
         (groupSelect?.attributes['name'] ?? '').trim().isNotEmpty
-            ? groupSelect!.attributes['name']!.trim()
-            : 'idGrupo';
+        ? groupSelect!.attributes['name']!.trim()
+        : 'idGrupo';
 
     final allowsLink = formEl.querySelector('input[name="enlace"]') != null;
     submissionForm = PortfolioSubmissionFormMeta(

@@ -325,7 +325,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
     _navigateTo(const NavigationHistoryEntry.novedades());
   }
 
-  void _goAjustes({MielProfileTab initialTab = MielProfileTab.ajustesLibreMiel}) {
+  void _goAjustes({
+    MielProfileTab initialTab = MielProfileTab.ajustesLibreMiel,
+  }) {
     setState(() {
       _settingsInitialTab = initialTab;
     });

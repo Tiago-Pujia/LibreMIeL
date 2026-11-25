@@ -488,10 +488,22 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
         ? practice.deliveryType
         : (detailAsync.asData?.value.deliveryModeLabel ?? '');
     final deliverySubtitle = rawDeliverySubtitle
-        .replaceAll(RegExp(r'obligatoria\s*grupal', caseSensitive: false), 'obligatoria grupal')
-        .replaceAll(RegExp(r'opcional\s*grupal', caseSensitive: false), 'opcional grupal')
-        .replaceAll(RegExp(r'obligatoria\s*individual', caseSensitive: false), 'obligatoria individual')
-        .replaceAll(RegExp(r'opcional\s*individual', caseSensitive: false), 'opcional individual');
+        .replaceAll(
+          RegExp(r'obligatoria\s*grupal', caseSensitive: false),
+          'obligatoria grupal',
+        )
+        .replaceAll(
+          RegExp(r'opcional\s*grupal', caseSensitive: false),
+          'opcional grupal',
+        )
+        .replaceAll(
+          RegExp(r'obligatoria\s*individual', caseSensitive: false),
+          'obligatoria individual',
+        )
+        .replaceAll(
+          RegExp(r'opcional\s*individual', caseSensitive: false),
+          'opcional individual',
+        );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

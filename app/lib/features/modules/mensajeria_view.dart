@@ -321,8 +321,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
           const SizedBox(height: 16),
           unifiedAsync.when(
             loading: () => const MielModuleLoadingView(
-              message:
-                  'Consultando bandejas de entrada de todas tus materias activas…',
+              message: 'Consultando bandejas de entrada de todas tus materias activas…',
             ),
             error: (err, _) => MielModuleErrorView(
               message: 'No se pudo cargar la bandeja unificada: $err',
@@ -665,8 +664,9 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   ) {
     final isOutboxOrDrafts =
         box == MensajeriaBoxKind.salida || box == MensajeriaBoxKind.borradores;
-    final personLabel =
-        isOutboxOrDrafts ? 'Destinatario:' : 'Usuario / Remitente:';
+    final personLabel = isOutboxOrDrafts
+        ? 'Destinatario:'
+        : 'Usuario / Remitente:';
     final personHint = isOutboxOrDrafts
         ? 'Ej: nombre o apellido del destinatario…'
         : 'Ej: apellido del docente…';
@@ -792,8 +792,8 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                   onPressed: () {
                     setState(() {
                       _filterSenderQuery = _filterSenderController.text.trim();
-                      _filterSubjectQuery =
-                          _filterSubjectController.text.trim();
+                      _filterSubjectQuery = _filterSubjectController.text
+                          .trim();
                     });
                   },
                 ),
@@ -945,8 +945,8 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
 
     final rawSenderQ = _filterSenderQuery.trim();
     if (rawSenderQ.isNotEmpty) {
-      final cleanMsgSender =
-          normalizeText(msg.senderName).replaceAll(RegExp(r'[^\w\s]'), ' ');
+      final cleanMsgSender = normalizeText(msg.senderName)
+          .replaceAll(RegExp(r'[^\w\s]'), ' ');
       final senderTokens = normalizeText(rawSenderQ)
           .replaceAll(RegExp(r'[^\w\s]'), ' ')
           .split(RegExp(r'\s+'))
@@ -988,8 +988,7 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     if (filtered.isEmpty) {
       if (messages.isNotEmpty && _hasActiveFilters) {
         return const MielModuleEmptyView(
-          message:
-              'No se encontraron mensajes que coincidan con los filtros aplicados.',
+          message: 'No se encontraron mensajes que coincidan con los filtros aplicados.',
           icon: Icons.search_off,
         );
       }

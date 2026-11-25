@@ -455,9 +455,7 @@ void main() {
     testWidgets(
       'BrowserZoomViewport mantiene hit-test y hover en bordes inferiores y derechos con zoom 0.8 y 1.2',
       (tester) async {
-        final mouse = await tester.createGesture(
-          kind: PointerDeviceKind.mouse,
-        );
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
         await mouse.addPointer(location: Offset.zero);
         addTearDown(mouse.removePointer);
 

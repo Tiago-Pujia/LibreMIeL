@@ -17,12 +17,7 @@ import '../modules/widgets/module_state_views.dart';
 import '../updates/update_dialog.dart';
 
 /// Pestañas del menú lateral de "Mi perfil" de MIeL.
-enum MielProfileTab {
-  datosPersonales,
-  seguridad,
-  firmas,
-  ajustesLibreMiel,
-}
+enum MielProfileTab { datosPersonales, seguridad, firmas, ajustesLibreMiel }
 
 /// Pantalla completa de Configuración y Perfil de MIeL (`/perfil/datos/`),
 /// replicando con exactitud la estética, barra lateral, campos y footer de MIeL oficial.
@@ -147,9 +142,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final reader = await ref
           .read(mielInteractiveReaderProvider.future)
           .timeout(const Duration(seconds: 4));
-      final rawHtml = await reader
-          .fetchPerfilHtml()
-          .timeout(const Duration(seconds: 6));
+      final rawHtml = await reader.fetchPerfilHtml().timeout(
+        const Duration(seconds: 6),
+      );
       final profile = parsePerfilHtml(rawHtml);
 
       if (!mounted) return;
@@ -176,8 +171,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage =
-            'No se pudo cargar el perfil de MIeL. Verificá tu conexión o estado de sesión.';
+        _errorMessage = 'No se pudo cargar el perfil de MIeL. Verificá tu conexión o estado de sesión.';
       });
     }
   }
@@ -420,7 +414,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return InkWell(
       onTap: () {
         setState(() => _selectedTab = tab);
-        if (tab == MielProfileTab.datosPersonales && _profile == null && !_isLoading) {
+        if (tab == MielProfileTab.datosPersonales &&
+            _profile == null &&
+            !_isLoading) {
           _loadProfile();
         }
       },
@@ -525,7 +521,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       onSelected: (_) {
         setState(() => _selectedTab = tab);
-        if (tab == MielProfileTab.datosPersonales && _profile == null && !_isLoading) {
+        if (tab == MielProfileTab.datosPersonales &&
+            _profile == null &&
+            !_isLoading) {
           _loadProfile();
         }
       },
@@ -669,10 +667,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           onPressed:
               ((_newAvatarBytes != null ||
-                          (_profile?.hasCustomAvatar ?? false)) &&
-                      !_removeAvatarRequested)
-                  ? _removeAvatar
-                  : null,
+                      (_profile?.hasCustomAvatar ?? false)) &&
+                  !_removeAvatarRequested)
+              ? _removeAvatar
+              : null,
           child: const Text('Eliminar foto'),
         ),
       ],
@@ -752,9 +750,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         // Carrera: *
         _FieldLabel(label: 'Carrera', isRequired: true, palette: palette),
         DropdownButtonFormField<String>(
-          initialValue: profile.carrerasDisponibles.any(
-            (c) => c.id == _selectedCarreraId,
-          )
+          initialValue:
+              profile.carrerasDisponibles.any((c) => c.id == _selectedCarreraId)
               ? _selectedCarreraId
               : (profile.carrerasDisponibles.isNotEmpty
                     ? profile.carrerasDisponibles.first.id
@@ -856,7 +853,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SizedBox(height: 12),
 
         // Email personal: *
-        _FieldLabel(label: 'Email personal', isRequired: true, palette: palette),
+        _FieldLabel(
+          label: 'Email personal',
+          isRequired: true,
+          palette: palette,
+        ),
         TextFormField(
           controller: _emailController,
           decoration: _mielInputDecoration(palette),
@@ -1147,8 +1148,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     controller: _claveAnteriorController,
                     obscureText: true,
                     decoration: _mielInputDecoration(palette),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Ingresá tu clave actual' : null,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? 'Ingresá tu clave actual'
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   _FieldLabel(
@@ -1180,10 +1182,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     controller: _claveNueva2Controller,
                     obscureText: true,
                     decoration: _mielInputDecoration(palette),
-                    validator: (v) =>
-                        (v != _claveNuevaController.text)
-                            ? 'Las contraseñas no coinciden'
-                            : null,
+                    validator: (v) => (v != _claveNuevaController.text)
+                        ? 'Las contraseñas no coinciden'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -1248,8 +1249,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onPressed: () {
                     showMielStatusToast(
                       context,
-                      message:
-                          'Se solicitó el cierre de sesiones. Recuerde que esta acción puede tardar hasta 1 hora en efectuarse.',
+                      message: 'Se solicitó el cierre de sesiones. Recuerde que esta acción puede tardar hasta 1 hora en efectuarse.',
                     );
                   },
                 ),
@@ -1448,7 +1448,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   style: TextStyle(color: palette.textMuted),
                 ),
                 trailing: DropdownButton<int>(
-                  value: const [15, 30, 60].contains(session.syncIntervalMinutes)
+                  value:
+                      const [15, 30, 60].contains(session.syncIntervalMinutes)
                       ? session.syncIntervalMinutes
                       : 15,
                   dropdownColor: palette.dropdownBackground,
@@ -1497,7 +1498,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 RadioListTile<ForumSyncMode>(
                   value: ForumSyncMode.mentionsAndReplies,
                   activeColor: palette.primary,
-                  title: const Text('Solo si te etiquetan o responden (por defecto)'),
+                  title: const Text(
+                    'Solo si te etiquetan o responden (por defecto)',
+                  ),
                   subtitle: Text(
                     'Te avisa únicamente cuando te etiquetan (@mención) o responden a tus mensajes o temas. Foro general desactivado.',
                     style: TextStyle(color: palette.textMuted),
@@ -1704,9 +1707,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     style: TextStyle(color: palette.textMuted),
                   ),
                   trailing: DropdownButton<int>(
-                    value: const [50, 100, 250, 500].contains(
-                      session.offlineCacheMaxMb,
-                    )
+                    value:
+                        const [
+                          50,
+                          100,
+                          250,
+                          500,
+                        ].contains(session.offlineCacheMaxMb)
                         ? session.offlineCacheMaxMb
                         : 100,
                     dropdownColor: palette.dropdownBackground,
@@ -1750,7 +1757,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   'Añade controles Atrás (←), Adelante (→) y Recargar (↻) junto al menú principal.',
                   style: TextStyle(color: palette.textMuted),
                 ),
-                onChanged: (val) => controller.updateShowBrowserNavControls(val),
+                onChanged: (val) =>
+                    controller.updateShowBrowserNavControls(val),
               ),
               Divider(height: 1, color: palette.divider),
               ListTile(
@@ -1880,10 +1888,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               Divider(height: 1, color: palette.divider),
               ListTile(
-                leading: Icon(
-                  Icons.delete_forever,
-                  color: palette.badgeRed,
-                ),
+                leading: Icon(Icons.delete_forever, color: palette.badgeRed),
                 title: Text(
                   'Cerrar sesión y borrar historial local',
                   style: TextStyle(color: palette.badgeRed),
@@ -2014,10 +2019,7 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
-InputDecoration _mielInputDecoration(
-  MielPalette palette, {
-  String? hintText,
-}) {
+InputDecoration _mielInputDecoration(MielPalette palette, {String? hintText}) {
   return InputDecoration(
     hintText: hintText,
     hintStyle: TextStyle(
