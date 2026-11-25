@@ -810,7 +810,7 @@ class _MielDoubleHeader extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: SizedBox(
-              height: 54,
+              height: isMobileHeader ? 62 : 58,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: isMobileHeader
