@@ -24,6 +24,7 @@ class MensajeriaView extends ConsumerStatefulWidget {
     required this.subject,
     required this.sectionIndex,
     this.sectionResetTick = 0,
+    this.onSelectSection,
     this.controlledRouteState,
     this.onRouteStateChanged,
     this.scrollController,
@@ -35,6 +36,7 @@ class MensajeriaView extends ConsumerStatefulWidget {
   final Subject subject;
   final int sectionIndex;
   final int sectionResetTick;
+  final ValueChanged<int>? onSelectSection;
   final MensajeriaViewRouteState? controlledRouteState;
   final ValueChanged<MensajeriaViewRouteState>? onRouteStateChanged;
   final ScrollController? scrollController;
@@ -53,6 +55,8 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
       (_internalScrollController ??= ScrollController());
 
   final FocusNode _subjectFilterFocusNode = FocusNode();
+  late final TextEditingController _filterSenderController;
+  late final TextEditingController _filterSubjectController;
 
   InboxMessageSummary? _localSelectedMessage;
   int _localCurrentPage = 1;
@@ -77,9 +81,22 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   String _filterReadState = '0'; // 0: Todos, 1: Leídos, 2: No leídos
   String _filterAttachmentState = '0'; // 0: Todos, 1: Sí, 2: No
 
+  bool get _hasActiveFilters =>
+      _filterSenderQuery.trim().isNotEmpty ||
+      _filterSubjectQuery.trim().isNotEmpty ||
+      _filterReadState != '0' ||
+      _filterAttachmentState != '0';
+
   final Map<String, bool> _localUnreadOverrides = <String, bool>{};
   final Map<String, bool> _localFavoriteOverrides = <String, bool>{};
   final Set<String> _locallyDeletedDraftKeys = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _filterSenderController = TextEditingController(text: _filterSenderQuery);
+    _filterSubjectController = TextEditingController(text: _filterSubjectQuery);
+  }
 
   MensajeriaViewRouteState _effectiveRouteState() {
     return widget.controlledRouteState ??
@@ -132,7 +149,9 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
         widget.findFocusTick > 0) {
       if (_selectedMessage == null) {
         setState(() => _showFilters = true);
-        _subjectFilterFocusNode.requestFocus();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _subjectFilterFocusNode.requestFocus();
+        });
       }
     }
     if (oldWidget.sectionIndex != widget.sectionIndex ||
@@ -143,6 +162,12 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
       _showFilters = false;
       _localInlineComposeMode = false;
       _showReplyPanel = false;
+      _filterSenderController.clear();
+      _filterSubjectController.clear();
+      _filterSenderQuery = '';
+      _filterSubjectQuery = '';
+      _filterReadState = '0';
+      _filterAttachmentState = '0';
       if (widget.sectionIndex != 1) {
         _localUnifiedCrossSubjectMode = false;
       }
@@ -151,6 +176,8 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
 
   @override
   void dispose() {
+    _filterSenderController.dispose();
+    _filterSubjectController.dispose();
     _internalScrollController?.dispose();
     _subjectFilterFocusNode.dispose();
     super.dispose();
@@ -220,31 +247,25 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   // --- Sección 0: Nuevo mensaje (Fase 3 — Compositor nativo) ---
 
   Widget _buildNuevoMensajeSection(BuildContext context) {
-    final composeUrl =
-        '$kMielBaseUrl/mensajeria/redactar/comision/${widget.subject.idComision}';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         MielModuleHeader(
           title: 'Nuevo mensaje',
-          trailing: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              if (_inlineComposeMode)
-                MielActionButton(
-                  label: 'Volver a la bandeja',
-                  icon: Icons.arrow_back,
-                  onPressed: () => _updateRouteState(inlineComposeMode: false),
-                ),
-              MielActionButton(
-                label: 'Abrir en MIeL',
-                icon: Icons.open_in_new,
-                onPressed: () => openMielExternalUrl(composeUrl),
-              ),
-            ],
-          ),
+          trailing: _inlineComposeMode
+              ? Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    MielActionButton(
+                      label: 'Volver a la bandeja',
+                      icon: Icons.arrow_back,
+                      onPressed: () =>
+                          _updateRouteState(inlineComposeMode: false),
+                    ),
+                  ],
+                )
+              : null,
         ),
         const SizedBox(height: 16),
         MensajeriaComposePanel(
@@ -252,6 +273,8 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
           onSent: () {
             if (_inlineComposeMode && mounted) {
               _updateRouteState(inlineComposeMode: false);
+            } else if (widget.onSelectSection != null) {
+              widget.onSelectSection!(2);
             }
           },
         ),
@@ -265,7 +288,6 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     final palette = MielPalette.of(context);
     final box = _activeBoxKind();
     final idComision = widget.subject.idComision;
-    final composeUrl = '$kMielBaseUrl/mensajeria/redactar/comision/$idComision';
     final teachers =
         ref.watch(subjectTeachersProvider(idComision)).value ?? const [];
     final teacherNames = teachers.map((t) => t.normalizedName).toSet();
@@ -280,17 +302,17 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             box: box,
             currentPage: 1,
             totalPages: 1,
-            composeUrl: composeUrl,
             onRefresh: () => ref.invalidate(mensajeriaUnifiedInboxProvider),
           ),
           if (_showFilters) ...[
             const SizedBox(height: 12),
-            _buildFilterPanel(palette, isCompact),
+            _buildFilterPanel(palette, box, isCompact),
           ],
           const SizedBox(height: 16),
           unifiedAsync.when(
             loading: () => const MielModuleLoadingView(
-              message: 'Consultando bandejas de entrada de todas tus materias activas…',
+              message:
+                  'Consultando bandejas de entrada de todas tus materias activas…',
             ),
             error: (err, _) => MielModuleErrorView(
               message: 'No se pudo cargar la bandeja unificada: $err',
@@ -322,9 +344,13 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             box: box,
             currentPage: _currentPage,
             totalPages: 1,
-            composeUrl: composeUrl,
             onRefresh: () => ref.invalidate(mensajeriaBandejaProvider(boxKey)),
           ),
+          if (_showFilters) ...[
+            const SizedBox(height: 12),
+            _buildFilterPanel(palette, box, isCompact),
+          ],
+          const SizedBox(height: 16),
           const MielModuleLoadingView(message: 'Cargando bandeja de mensajes…'),
         ],
       ),
@@ -336,9 +362,12 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             box: box,
             currentPage: _currentPage,
             totalPages: 1,
-            composeUrl: composeUrl,
             onRefresh: () => ref.invalidate(mensajeriaBandejaProvider(boxKey)),
           ),
+          if (_showFilters) ...[
+            const SizedBox(height: 12),
+            _buildFilterPanel(palette, box, isCompact),
+          ],
           const SizedBox(height: 16),
           MielModuleErrorView(
             message: 'No se pudo cargar la bandeja de mensajes: $err',
@@ -355,12 +384,11 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             box: box,
             currentPage: pageData.currentPage,
             totalPages: pageData.totalPages,
-            composeUrl: composeUrl,
             onRefresh: () => ref.invalidate(mensajeriaBandejaProvider(boxKey)),
           ),
           if (_showFilters) ...[
             const SizedBox(height: 12),
-            _buildFilterPanel(palette, isCompact),
+            _buildFilterPanel(palette, box, isCompact),
           ],
           const SizedBox(height: 16),
           _buildMessagesTable(
@@ -382,7 +410,6 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     required MensajeriaBoxKind box,
     required int currentPage,
     required int totalPages,
-    required String composeUrl,
     required VoidCallback onRefresh,
   }) {
     return MielModuleHeader(
@@ -441,13 +468,27 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
           MielActionButton(
             label: 'Filtrar',
             icon: Icons.search,
-            onPressed: () => setState(() => _showFilters = !_showFilters),
+            primary: _showFilters || _hasActiveFilters,
+            onPressed: () {
+              setState(() => _showFilters = !_showFilters);
+              if (_showFilters) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) _subjectFilterFocusNode.requestFocus();
+                });
+              }
+            },
           ),
           MielActionButton(
             label: 'Redactar',
             icon: Icons.mode_edit,
             primary: true,
-            onPressed: () => _updateRouteState(inlineComposeMode: true),
+            onPressed: () {
+              if (widget.onSelectSection != null) {
+                widget.onSelectSection!(0);
+              } else {
+                _updateRouteState(inlineComposeMode: true);
+              }
+            },
           ),
         ],
       ),
@@ -600,7 +641,19 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     }
   }
 
-  Widget _buildFilterPanel(MielPalette palette, bool isCompact) {
+  Widget _buildFilterPanel(
+    MielPalette palette,
+    MensajeriaBoxKind box,
+    bool isCompact,
+  ) {
+    final isOutboxOrDrafts =
+        box == MensajeriaBoxKind.salida || box == MensajeriaBoxKind.borradores;
+    final personLabel =
+        isOutboxOrDrafts ? 'Destinatario:' : 'Usuario / Remitente:';
+    final personHint = isOutboxOrDrafts
+        ? 'Ej: nombre o apellido del destinatario…'
+        : 'Ej: apellido del docente…';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -635,17 +688,21 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
               children: [
                 _buildFilterTextField(
                   palette: palette,
-                  label: 'Usuario / Remitente:',
-                  hint: 'Ej: apellido del docente…',
+                  label: personLabel,
+                  hint: personHint,
+                  controller: _filterSenderController,
                   onChanged: (v) => setState(() => _filterSenderQuery = v),
+                  onSubmitted: (v) => setState(() => _filterSenderQuery = v),
                 ),
                 const SizedBox(height: 10),
                 _buildFilterTextField(
                   palette: palette,
                   label: 'Asunto:',
                   hint: 'Palabra clave en el asunto…',
+                  controller: _filterSubjectController,
                   focusNode: _subjectFilterFocusNode,
                   onChanged: (v) => setState(() => _filterSubjectQuery = v),
+                  onSubmitted: (v) => setState(() => _filterSubjectQuery = v),
                 ),
                 const SizedBox(height: 10),
                 _buildReadFilterColumn(palette),
@@ -661,9 +718,11 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                   flex: 3,
                   child: _buildFilterTextField(
                     palette: palette,
-                    label: 'Usuario / Remitente:',
-                    hint: 'Ej: apellido del docente…',
+                    label: personLabel,
+                    hint: personHint,
+                    controller: _filterSenderController,
                     onChanged: (v) => setState(() => _filterSenderQuery = v),
+                    onSubmitted: (v) => setState(() => _filterSenderQuery = v),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -673,8 +732,10 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
                     palette: palette,
                     label: 'Asunto:',
                     hint: 'Palabra clave en el asunto…',
+                    controller: _filterSubjectController,
                     focusNode: _subjectFilterFocusNode,
                     onChanged: (v) => setState(() => _filterSubjectQuery = v),
+                    onSubmitted: (v) => setState(() => _filterSubjectQuery = v),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -692,21 +753,36 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             child: Wrap(
               spacing: 8,
               children: [
+                if (_hasActiveFilters)
+                  MielActionButton(
+                    label: 'Limpiar filtros',
+                    icon: Icons.clear,
+                    onPressed: () {
+                      _filterSenderController.clear();
+                      _filterSubjectController.clear();
+                      setState(() {
+                        _filterSenderQuery = '';
+                        _filterSubjectQuery = '';
+                        _filterReadState = '0';
+                        _filterAttachmentState = '0';
+                      });
+                    },
+                  ),
                 MielActionButton(
-                  label: 'Limpiar filtros',
+                  label: 'Aplicar',
+                  icon: Icons.filter_list,
+                  primary: true,
                   onPressed: () {
                     setState(() {
-                      _filterSenderQuery = '';
-                      _filterSubjectQuery = '';
-                      _filterReadState = '0';
-                      _filterAttachmentState = '0';
+                      _filterSenderQuery = _filterSenderController.text.trim();
+                      _filterSubjectQuery =
+                          _filterSubjectController.text.trim();
                     });
                   },
                 ),
                 MielActionButton(
                   label: 'Cerrar',
-                  icon: Icons.check,
-                  primary: true,
+                  icon: Icons.close,
                   onPressed: () => setState(() => _showFilters = false),
                 ),
               ],
@@ -721,7 +797,9 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
     required MielPalette palette,
     required String label,
     required String hint,
+    required TextEditingController controller,
     required ValueChanged<String> onChanged,
+    ValueChanged<String>? onSubmitted,
     FocusNode? focusNode,
   }) {
     return Column(
@@ -742,8 +820,10 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             borderRadius: BorderRadius.circular(2),
           ),
           child: TextField(
+            controller: controller,
             focusNode: focusNode,
             onChanged: onChanged,
+            onSubmitted: onSubmitted,
             style: TextStyle(fontSize: 13, color: palette.textPrimary),
             decoration: InputDecoration.collapsed(
               hintText: hint,
@@ -873,6 +953,13 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
   }) {
     final filtered = messages.where(_matchesMessageFilter).toList();
     if (filtered.isEmpty) {
+      if (messages.isNotEmpty && _hasActiveFilters) {
+        return const MielModuleEmptyView(
+          message:
+              'No se encontraron mensajes que coincidan con los filtros aplicados.',
+          icon: Icons.search_off,
+        );
+      }
       final emptyMsg = switch (box) {
         MensajeriaBoxKind.favoritos =>
           'No se encontraron mensajes guardados en favoritos.',
