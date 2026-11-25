@@ -476,6 +476,14 @@ class PortfolioTutorOption {
   final String name;
 }
 
+/// Opción de grupo en `#formNuevaEntrega` (`select[name="idGrupo"]`).
+class PortfolioGroupOption {
+  const PortfolioGroupOption({required this.id, required this.name});
+
+  final String id;
+  final String name;
+}
+
 /// Metadatos del formulario `#formNuevaEntrega` en `/portafolio/entregas/...`.
 class PortfolioSubmissionFormMeta {
   const PortfolioSubmissionFormMeta({
@@ -484,6 +492,12 @@ class PortfolioSubmissionFormMeta {
     this.allowsLink = false,
     this.requiresFile = true,
     this.maxSizeMb = 40,
+    this.allowsGroup = false,
+    this.isGroupDefault = false,
+    this.groupCheckboxName = 'entregaGrupal',
+    this.groupCheckboxValue = '1',
+    this.groupSelectName = 'idGrupo',
+    this.groups = const [],
   });
 
   final bool canSubmit;
@@ -491,6 +505,12 @@ class PortfolioSubmissionFormMeta {
   final bool allowsLink;
   final bool requiresFile;
   final int maxSizeMb;
+  final bool allowsGroup;
+  final bool isGroupDefault;
+  final String groupCheckboxName;
+  final String groupCheckboxValue;
+  final String groupSelectName;
+  final List<PortfolioGroupOption> groups;
 }
 
 /// Detalle completo de una práctica (`/portafolio/entregas/...`).

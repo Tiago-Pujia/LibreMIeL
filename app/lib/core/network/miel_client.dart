@@ -179,6 +179,11 @@ abstract class MielWriter {
     String observations = '',
     String? externalLink,
     String? attachmentPath,
+    bool isGroupDelivery = false,
+    String? groupId,
+    String groupCheckboxName = 'entregaGrupal',
+    String groupCheckboxValue = '1',
+    String groupSelectName = 'idGrupo',
   });
 
   // --- Foros (forov2) ---
@@ -1002,6 +1007,11 @@ class DioMielClient implements MielInteractiveReader, MielWriter {
     String observations = '',
     String? externalLink,
     String? attachmentPath,
+    bool isGroupDelivery = false,
+    String? groupId,
+    String groupCheckboxName = 'entregaGrupal',
+    String groupCheckboxValue = '1',
+    String groupSelectName = 'idGrupo',
   }) {
     return _enqueue(() async {
       final hasLink = externalLink != null && externalLink.trim().isNotEmpty;
@@ -1027,6 +1037,21 @@ class DioMielClient implements MielInteractiveReader, MielWriter {
         ),
       );
       formData.fields.add(MapEntry('observaciones', observations.trim()));
+      if (isGroupDelivery) {
+        final chkName =
+            groupCheckboxName.isNotEmpty ? groupCheckboxName : 'entregaGrupal';
+        final chkVal =
+            groupCheckboxValue.isNotEmpty ? groupCheckboxValue : '1';
+        formData.fields.add(MapEntry(chkName, chkVal));
+        if (groupId != null && groupId.isNotEmpty && groupId != '0') {
+          final selName =
+              groupSelectName.isNotEmpty ? groupSelectName : 'idGrupo';
+          formData.fields.add(MapEntry(selName, groupId));
+          if (selName != 'idGrupo') {
+            formData.fields.add(MapEntry('idGrupo', groupId));
+          }
+        }
+      }
       if (hasLink) {
         formData.fields.add(MapEntry('enlace', externalLink.trim()));
       }

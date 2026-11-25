@@ -484,6 +484,14 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
     final webUrl = practice.detailUrl.isNotEmpty
         ? practice.detailUrl
         : '$kMielBaseUrl/portafolio/entregas/comision/${widget.subject.idComision}/id/${practice.idPractica}';
+    final rawDeliverySubtitle = practice.deliveryType.isNotEmpty
+        ? practice.deliveryType
+        : (detailAsync.asData?.value.deliveryModeLabel ?? '');
+    final deliverySubtitle = rawDeliverySubtitle
+        .replaceAll(RegExp(r'obligatoria\s*grupal', caseSensitive: false), 'obligatoria grupal')
+        .replaceAll(RegExp(r'opcional\s*grupal', caseSensitive: false), 'opcional grupal')
+        .replaceAll(RegExp(r'obligatoria\s*individual', caseSensitive: false), 'obligatoria individual')
+        .replaceAll(RegExp(r'opcional\s*individual', caseSensitive: false), 'opcional individual');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -523,10 +531,12 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
             ],
           ],
         ),
-        if (practice.deliveryType.isNotEmpty) ...[
+        if (deliverySubtitle.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(
-            'Entrega ${practice.deliveryType.toLowerCase()}',
+            deliverySubtitle.toLowerCase().startsWith('entrega ')
+                ? deliverySubtitle
+                : 'Entrega ${deliverySubtitle.toLowerCase()}',
             style: TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
@@ -559,6 +569,7 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                     idComision: widget.subject.idComision,
                     idPractica: practice.idPractica,
                     practiceTitle: practice.title,
+                    deliveryType: deliverySubtitle,
                     formMeta: detail.submissionForm,
                     webUrl: webUrl,
                     onSubmitted: () {
@@ -619,15 +630,6 @@ class _PortafolioViewState extends ConsumerState<PortafolioView> {
                   for (final deliv in detail.deliveries)
                     _buildDeliveryBlock(context, palette, deliv, isCompact),
                 ],
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: MielActionButton(
-                    label: 'Volver',
-                    primary: true,
-                    onPressed: () => _setSelectedPractice(null),
-                  ),
-                ),
               ],
             );
           },
