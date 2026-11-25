@@ -7,29 +7,32 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-25
+
 ### Added
+- **Perfil de MIeL (lectura y modificación fiel a MIeL):**
+  - Pantalla de perfil replicando el diseño oficial de MIeL y parsing de datos personales inyectados vía jQuery inline (`miel_perfil_parser.dart`).
+  - Edición de datos personales/contacto, cambio de contraseña, previsualización y actualización/eliminación de foto de avatar (`MielWriter` hacia `/perfil/event/*`).
+- **Portafolio — Entregas grupales:**
+  - Soporte de entrega grupal y selección de grupo en entregas de práctica (`portafolio_submission_card.dart`, `portafolio_parser.dart`).
 - **Inicio con el sistema en segundo plano:**
-  - Registro de argumento `--minimized` en `AutostartService` para Linux (archivo `.desktop`), Windows (Registro `HKCU Run`) y macOS (`LaunchAgents plist`).
-  - Modificación del runner nativo de Linux (`my_application.cc`) y Windows (`main.cpp` / `flutter_window.cpp`) para evitar la presentación visible de la ventana en el primer fotograma (`first-frame`) cuando se recibe la bandera `--minimized` o `--hidden`.
-  - Propagación de argumentos de entrada en `main(List<String> args)` y supresión de ventana en `DesktopTrayService.initialize(startMinimized: true)` para mantener la aplicación silenciosa en la bandeja del sistema hasta la interacción del usuario.
-- **Perfil de MIeL (Lectura y Modificación de Datos Personales):**
-  - Modelo inmutable `MielUserProfile` con lista de carreras universitarias disponibles (`CareerOption`), datos personales, contacto y detección de avatar personalizado.
-  - Parser puro `parsePerfilHtml` (`miel_perfil_parser.dart`) con extracción de carrera, DNI, género, fecha de nacimiento, emails, teléfono, domicilio y URL de avatar desde `style="background-image:..."`.
-  - Extensión de `MielInteractiveReader` con `fetchPerfilHtml()` y `MielWriter` con mutaciones multipart (`updatePerfil` hacia `/perfil/event/modificarUsuario/`, `deleteAvatar` hacia `/perfil/event/eliminarAvatar/` y `changePassword` hacia `/perfil/event/cambiarClave/`).
-  - Nueva interfaz modal interactiva `MielProfileDialog` accesible desde el diálogo de usuario en `HomeShell`, permitiendo previsualizar y cambiar la foto de perfil (vía `file_selector`), editar campos personales/contacto y cambiar contraseña de forma segura.
-  - Cobertura de pruebas unitarias en `test/parsers/miel_perfil_parser_test.dart` y actualización de `test/platform/autostart_service_test.dart`.
-- **Widgets Android:**
-  - Prototipo web interactivo autocontenido en [`docs/prototypes/android_widgets.html`](prototypes/android_widgets.html) con simulación en tiempo real de los diseños compacto (`2×2`/`3×2`), barra resumen (`4×1`) y tablero feed/materias (`4×2`/`4×3`), selector de modo claro/oscuro y pruebas de conectividad.
-- **Integración de tareas y mejoras pendientes en la Tabla General de Estado:**
-  - Registro directo en la **Tabla General de Estado** de [`docs/STATUS.md`](STATUS.md) y especificación en [`docs/ROADMAP.md`](ROADMAP.md) e [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md):
-    - **1. Ejecución de fases restantes:** Fase 11 (iOS e iPadOS con plan completo en `PLAN_IMPLEMENTACION_FASE_11.md`), Fase 6 (Buscador Global Offline FTS5) y Fase 7 (Integración con IA / Asistente de estudio local-first y BYOK).
-    - **2. Actualización de widgets Android:** Optimización de layouts `RemoteViews`, refresco confiable tras background sync (`WorkManager`) y deep-linking a materias.
-    - **3. Habilitar modificación de perfil de MIeL:** Extensión de `MielInteractiveReader` y `MielWriter` para consulta y edición de perfil (`/principal/perfil/`), subida de avatar e invalidación reactiva de caché.
-    - **4. Inicio de sistema en segundo plano:** Flag de arranque silencioso (`--minimized` / `--tray-only`) para que LibreMIeL inicie en la bandeja del sistema (System Tray) sin abrir la ventana completa al encender la PC.
-    - **5. Revisión del panel de configuración:** Reorganización modular y verificación de persistencia en SQLite de todas las opciones en `SettingsScreen`.
-    - **6. Corrección de descargas en celulares:** Compatibilidad con Scoped Storage en Android 10–14+, permisos limpios, guardado accesible y apertura con `FileProvider`.
-    - **7. Revisión y comparativa integral de UI contra MIeL:** Auditoría visual módulo por módulo para garantizar máxima fidelidad y paridad con la web oficial de MIeL (`2025.2.0`).
-    - **8. Auditoría integral del proyecto con Gemini (Paso final):** Revisión exhaustiva final de código, arquitectura, invariantes técnicas de `AGENTS.md`, pruebas y seguridad.
+  - Registro de argumento `--minimized` en `AutostartService` para Linux, Windows y macOS, supresión de `first-frame` en runners nativos y arranque silencioso en bandeja del sistema (`DesktopTrayService`).
+- **Widgets Android e identidad visual oficial:**
+  - Modernización de widgets Android (`2×2`/`3×2`, `4×1`, `4×2`/`4×3`) integrando el isotipo oficial de LibreMIeL (`ic_widget_logo.png`) y prototipo interactivo en [`docs/prototypes/android_widgets.html`](prototypes/android_widgets.html).
+  - Incorporación de identidad visual oficial, paleta cromática y generador de íconos normalizados en `branding/`.
+- **Barra lateral:**
+  - Enlaces inferiores de **Sitio web** y **Reportar Bug** (WhatsApp) junto a **Abrir MIeL web** y **Repositorio GitHub**.
+- **Documentación:**
+  - Registro de tareas pendientes y seguimiento en [`docs/STATUS.md`](STATUS.md), [`docs/ROADMAP.md`](ROADMAP.md) y [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
+
+### Changed
+- Mayor altura y espaciado en la barra superior de marca con el logotipo institucional.
+- En **Mi perfil**, se quitó el acceso redundante a Ajustes de LibreMIeL para mantener fidelidad con el menú de MIeL.
+- En **Mensajería > Nuevo mensaje**, se quitó el botón `Abrir en MIeL`, se conservó el retorno directo a la bandeja de origen (**Volver a la bandeja**) y se incorporó filtrado tokenizado en tiempo real con etiqueta `Destinatario:` en **Salida** y **Borradores**.
+
+### Fixed
+- **Zoom de interfaz y hit-testing (`BrowserZoomViewport`):** reemplazo de `Transform.scale` + `OverflowBox` por `FittedBox` para corregir clics, zona interactiva y hover del puntero con zoom menor al `100%` en la parte inferior de la barra lateral izquierda y en **Mensajería > Redactar / Filtrar**, además de limpiar entradas duplicadas en el historial de navegación.
+- **Despliegue de GitHub Pages (`pages.yml`):** separación en jobs `build` y `deploy` con acciones actualizadas a Node 24 para evitar errores al consultar metadatos del artefacto.
 
 ## [0.2.1] - 2026-11-23
 
