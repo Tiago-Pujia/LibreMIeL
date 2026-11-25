@@ -1,4 +1,6 @@
 import 'package:drift/native.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libremiel/app/app_providers.dart';
@@ -154,7 +156,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
   }
 
-  Widget buildTestApp(AppDatabase db) {
+  Widget buildTestApp(AppDatabase db, {double uiZoomScale = 1.0}) {
     return ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(db),
@@ -162,10 +164,11 @@ void main() {
         mielWriterProvider.overrideWith((_) async => _FakeWriter()),
         appSessionProvider.overrideWith(
           () => _TestSessionController(
-            const AppSessionState(
+            AppSessionState(
               isChecking: false,
               isAuthenticated: true,
               studentName: 'ESTUDIANTE, DEMO',
+              uiZoomScale: uiZoomScale,
             ),
           ),
         ),
@@ -450,6 +453,98 @@ void main() {
         find.widgetWithText(MielModuleHeader, 'Borradores'),
         findsOneWidget,
       );
+
+      await cleanUp(tester, db);
+    },
+  );
+
+  testWidgets(
+    'Con zoom 0.8: barra lateral inferior y Mensajería > Redactar/Filtrar reciben hover, cursor click, tap y navegación limpia',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 720);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final db = await createTestDb();
+
+      await tester.pumpWidget(buildTestApp(db, uiZoomScale: 0.8));
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeShell)),
+      );
+      container.read(navigationHistoryProvider.notifier).navigateTo(
+        const NavigationHistoryEntry(
+          section: BrowserShellSection.module,
+          subjectId: '117967',
+          tool: MielToolKind.mensajeria,
+          moduleSectionIndex: 1,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        pointer: 1,
+      );
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+
+      // 1. Verificar hover y cursor click en los 4 enlaces inferiores del sidebar
+      for (final label in [
+        'Abrir MIeL web',
+        'Sitio web',
+        'Repositorio GitHub',
+        'Reportar Bug',
+      ]) {
+        await mouse.moveTo(tester.getCenter(find.text(label)));
+        await tester.pumpAndSettle();
+        expect(
+          RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1),
+          SystemMouseCursors.click,
+          reason: 'El cursor debe cambiar a click sobre "$label" a zoom 0.8',
+        );
+      }
+
+      // 2. Verificar hover, cursor click y tap en Filtrar (extremo derecho)
+      final filtrarBtn = find.widgetWithText(MielActionButton, 'Filtrar');
+      await mouse.moveTo(tester.getCenter(filtrarBtn));
+      await tester.pumpAndSettle();
+      expect(
+        RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1),
+        SystemMouseCursors.click,
+      );
+
+      await tester.tap(filtrarBtn);
+      await tester.pumpAndSettle();
+      expect(find.text('Filtrar mensajes'), findsOneWidget);
+
+      // 3. Verificar hover, cursor click, tap y entrada única en historial para Redactar
+      final historyCountBefore =
+          container.read(navigationHistoryProvider).entries.length;
+      final redactarBtn = find.widgetWithText(MielActionButton, 'Redactar');
+      await mouse.moveTo(tester.getCenter(redactarBtn));
+      await tester.pumpAndSettle();
+      expect(
+        RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1),
+        SystemMouseCursors.click,
+      );
+
+      await tester.tap(redactarBtn);
+      await tester.pumpAndSettle();
+
+      final historyAfterRedactar = container.read(navigationHistoryProvider);
+      expect(historyAfterRedactar.current.moduleSectionIndex, 0);
+      expect(historyAfterRedactar.entries.length, historyCountBefore + 1);
+
+      // Un solo paso atrás debe devolver inmediatamente a la Bandeja de Entrada
+      container.read(navigationHistoryProvider.notifier).goBack();
+      await tester.pumpAndSettle();
+      expect(
+        container.read(navigationHistoryProvider).current.moduleSectionIndex,
+        1,
+      );
+      expect(find.text('Bandeja de Entrada'), findsOneWidget);
 
       await cleanUp(tester, db);
     },

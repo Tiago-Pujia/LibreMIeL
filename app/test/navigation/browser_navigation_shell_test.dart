@@ -448,7 +448,98 @@ void main() {
         );
 
         expect(find.text('Zoomed Content'), findsOneWidget);
-        expect(find.byType(Transform), findsWidgets);
+        expect(find.byType(FittedBox), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'BrowserZoomViewport mantiene hit-test y hover en bordes inferiores y derechos con zoom 0.8 y 1.2',
+      (tester) async {
+        final mouse = await tester.createGesture(
+          kind: PointerDeviceKind.mouse,
+        );
+        await mouse.addPointer(location: Offset.zero);
+        addTearDown(mouse.removePointer);
+
+        for (final scale in [0.8, 1.2]) {
+          var bottomLeftTaps = 0;
+          var topRightTaps = 0;
+          var bottomLeftHovered = false;
+          var topRightHovered = false;
+
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: BrowserZoomViewport(
+                  zoomScale: scale,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          onEnter: (_) => topRightHovered = true,
+                          onExit: (_) => topRightHovered = false,
+                          child: GestureDetector(
+                            onTap: () => topRightTaps++,
+                            child: const SizedBox(
+                              width: 120,
+                              height: 44,
+                              child: Center(child: Text('TopRightBtn')),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          onEnter: (_) => bottomLeftHovered = true,
+                          onExit: (_) => bottomLeftHovered = false,
+                          child: GestureDetector(
+                            onTap: () => bottomLeftTaps++,
+                            child: const SizedBox(
+                              width: 160,
+                              height: 44,
+                              child: Center(child: Text('BottomLeftBtn')),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await mouse.moveTo(tester.getCenter(find.text('TopRightBtn')));
+          await tester.pumpAndSettle();
+          expect(
+            topRightHovered,
+            isTrue,
+            reason: 'Hover debe funcionar en borde derecho a zoom $scale',
+          );
+
+          await tester.tap(find.text('TopRightBtn'));
+          await tester.pumpAndSettle();
+          expect(topRightTaps, 1);
+
+          await mouse.moveTo(tester.getCenter(find.text('BottomLeftBtn')));
+          await tester.pumpAndSettle();
+          expect(
+            bottomLeftHovered,
+            isTrue,
+            reason: 'Hover debe funcionar en borde inferior a zoom $scale',
+          );
+
+          await tester.tap(find.text('BottomLeftBtn'));
+          await tester.pumpAndSettle();
+          expect(bottomLeftTaps, 1);
+        }
       },
     );
 

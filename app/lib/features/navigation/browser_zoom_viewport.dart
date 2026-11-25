@@ -23,7 +23,7 @@ class BrowserZoomViewport extends StatelessWidget {
         final w = constraints.maxWidth;
         final h = constraints.maxHeight;
 
-        if (w <= 0 || h <= 0) {
+        if (!w.isFinite || !h.isFinite || w <= 0 || h <= 0) {
           return child;
         }
 
@@ -35,15 +35,12 @@ class BrowserZoomViewport extends StatelessWidget {
           width: w,
           height: h,
           child: ClipRect(
-            child: Transform.scale(
-              scale: zoomScale,
+            child: FittedBox(
+              fit: BoxFit.fill,
               alignment: Alignment.topLeft,
-              child: OverflowBox(
-                alignment: Alignment.topLeft,
-                minWidth: logicalW,
-                maxWidth: logicalW,
-                minHeight: logicalH,
-                maxHeight: logicalH,
+              child: SizedBox(
+                width: logicalW,
+                height: logicalH,
                 child: MediaQuery(
                   data: mq.copyWith(size: Size(logicalW, logicalH)),
                   child: child,

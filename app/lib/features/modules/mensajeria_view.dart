@@ -259,40 +259,32 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
       children: [
         MielModuleHeader(
           title: 'Nuevo mensaje',
-          trailing: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              MielActionButton(
-                label: 'Volver a la bandeja',
-                icon: Icons.arrow_back,
-                onPressed: () {
-                  setState(() {
-                    _localInlineComposeMode = false;
-                    _localSelectedMessage = null;
-                  });
-                  _updateRouteState(
-                    inlineComposeMode: false,
-                    clearSelectedMessage: true,
-                  );
-                  if (widget.onSelectSection != null) {
-                    widget.onSelectSection!(_lastBoxSectionIndex);
-                  }
-                },
-              ),
-            ],
-          ),
+          trailing: (_inlineComposeMode || widget.onSelectSection != null)
+              ? MielActionButton(
+                  label: 'Volver a la bandeja',
+                  icon: Icons.arrow_back,
+                  onPressed: () {
+                    if (widget.sectionIndex == 0 &&
+                        widget.onSelectSection != null) {
+                      widget.onSelectSection!(_lastBoxSectionIndex);
+                    } else {
+                      _updateRouteState(
+                        inlineComposeMode: false,
+                        clearSelectedMessage: true,
+                      );
+                    }
+                  },
+                )
+              : null,
         ),
         const SizedBox(height: 16),
         MensajeriaComposePanel(
           subject: widget.subject,
           onSent: () {
-            if (mounted) {
-              setState(() => _localInlineComposeMode = false);
-              _updateRouteState(inlineComposeMode: false);
-            }
-            if (widget.onSelectSection != null) {
+            if (widget.sectionIndex == 0 && widget.onSelectSection != null) {
               widget.onSelectSection!(2);
+            } else if (mounted) {
+              _updateRouteState(inlineComposeMode: false);
             }
           },
         ),
@@ -505,17 +497,13 @@ class _MensajeriaViewState extends ConsumerState<MensajeriaView> {
             icon: Icons.mode_edit,
             primary: true,
             onPressed: () {
-              setState(() {
-                _localInlineComposeMode = true;
-                _showFilters = false;
-                _localSelectedMessage = null;
-              });
-              _updateRouteState(
-                inlineComposeMode: true,
-                clearSelectedMessage: true,
-              );
               if (widget.onSelectSection != null) {
                 widget.onSelectSection!(0);
+              } else {
+                _updateRouteState(
+                  inlineComposeMode: true,
+                  clearSelectedMessage: true,
+                );
               }
             },
           ),

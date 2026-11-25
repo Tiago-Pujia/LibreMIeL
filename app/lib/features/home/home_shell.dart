@@ -368,6 +368,19 @@ class _HomeShellState extends ConsumerState<HomeShell>
     return true;
   }
 
+  void _selectModuleSection(int idx) {
+    final current = ref.read(navigationHistoryProvider).current;
+    _moduleSectionNavTick++;
+    _navigateTo(
+      current.copyWith(
+        moduleSectionIndex: idx,
+        clearForoTopicId: true,
+        clearPortafolioPractice: true,
+        mensajeriaState: const MensajeriaViewRouteState(),
+      ),
+    );
+  }
+
   void _closeDrawerIfOpen() {
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.of(context).pop();
@@ -436,17 +449,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
       onSelectHome: _goHome,
       onSelectNovedades: _goNovedades,
       onSelectAjustes: _goAjustes,
-      onSelectModuleSection: (idx) {
-        _moduleSectionNavTick++;
-        _navigateTo(
-          currentEntry.copyWith(
-            moduleSectionIndex: idx,
-            clearForoTopicId: true,
-            clearPortafolioPractice: true,
-            mensajeriaState: const MensajeriaViewRouteState(),
-          ),
-        );
-      },
+      onSelectModuleSection: _selectModuleSection,
       onSelectForoTopic: (topicId) {
         _navigateTo(
           currentEntry.copyWith(
@@ -485,17 +488,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
         tool: activeTool,
         sectionIndex: activeModuleSectionIndex,
         sectionResetTick: _moduleSectionNavTick,
-        onSelectSection: (idx) {
-          _moduleSectionNavTick++;
-          _navigateTo(
-            currentEntry.copyWith(
-              moduleSectionIndex: idx,
-              clearForoTopicId: true,
-              clearPortafolioPractice: true,
-              mensajeriaState: const MensajeriaViewRouteState(),
-            ),
-          );
-        },
+        onSelectSection: _selectModuleSection,
         selectedForoTopicId: activeForoTopicId,
         onSelectForoTopic: (topicId) {
           _navigateTo(
@@ -1696,55 +1689,49 @@ class _SidebarItemState extends State<_SidebarItem> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        opaque: true,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: Material(
-          color: bg,
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+        child: InkWell(
+          onTap: widget.onTap,
+          onHover: (hovered) {
+            if (_hovered != hovered) {
+              setState(() => _hovered = hovered);
+            }
+          },
+          mouseCursor: SystemMouseCursors.click,
           borderRadius: BorderRadius.circular(4),
-          child: InkWell(
-            onTap: widget.onTap,
-            onHover: (hovered) {
-              if (_hovered != hovered) {
-                setState(() => _hovered = hovered);
-              }
-            },
-            mouseCursor: SystemMouseCursors.click,
-            borderRadius: BorderRadius.circular(4),
-            hoverColor: palette.sidebarHover,
-            splashColor: palette.sidebarSelected.withValues(alpha: 0.35),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              child: Row(
-                children: [
-                  Icon(widget.icon, size: 19, color: iconColor),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Text(
-                      widget.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: widget.selected
-                            ? FontWeight.w500
-                            : FontWeight.w400,
-                        color: palette.textPrimary,
-                      ),
+          hoverColor: palette.sidebarHover,
+          splashColor: palette.sidebarSelected.withValues(alpha: 0.35),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            child: Row(
+              children: [
+                Icon(widget.icon, size: 19, color: iconColor),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: widget.selected
+                          ? FontWeight.w500
+                          : FontWeight.w400,
+                      color: palette.textPrimary,
                     ),
                   ),
-                  if (widget.badgeCount > 0) ...[
-                    const SizedBox(width: 6),
-                    MielRedBadge(
-                      count: widget.badgeCount,
-                      backgroundColor: palette.badgeRed,
-                      compact: true,
-                    ),
-                  ],
+                ),
+                if (widget.badgeCount > 0) ...[
+                  const SizedBox(width: 6),
+                  MielRedBadge(
+                    count: widget.badgeCount,
+                    backgroundColor: palette.badgeRed,
+                    compact: true,
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
         ),
